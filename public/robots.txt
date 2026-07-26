@@ -1,0 +1,129 @@
+# robots.txt — DaloaMarket
+# https://daloamarket.shop
+# Généré le 2026-07-02
+
+# ── Crawlers autorisés (Google, Bing, Yandex, etc.) ──
+User-agent: *
+Crawl-delay: 1
+
+# Pages publiques indexables
+Allow: /
+Allow: /about
+Allow: /how-it-works
+Allow: /faq
+Allow: /help
+Allow: /terms
+Allow: /privacy
+Allow: /search
+Allow: /c/
+Allow: /electronique
+Allow: /vehicules
+Allow: /mode
+Allow: /maison-deco
+Allow: /sports-loisirs
+Allow: /livres
+Allow: /alimentaire
+Allow: /listings/
+Allow: /become-pro
+Allow: /seller-guide
+Allow: /seller/
+Allow: /explore
+
+# Pages privées / authentification
+Disallow: /login
+Disallow: /register
+Disallow: /auth/
+Disallow: /complete-profile
+Disallow: /banned
+Disallow: /profile
+Disallow: /settings
+
+# Pages vendeur / transaction (non pertinentes pour le SEO)
+Disallow: /mes-statistiques
+Disallow: /mes-paiements
+Disallow: /mes-revenus
+Disallow: /mes-commandes
+Disallow: /messages
+Disallow: /create-listing
+Disallow: /claim-listing
+Disallow: /acheter-pack
+Disallow: /acheter-credits
+Disallow: /paiement-annonce/
+
+# Paiement / admin / API
+Disallow: /checkout/
+Disallow: /payment/
+Disallow: /suivi/
+Disallow: /admin
+Disallow: /api/
+Disallow: /panier
+
+# Fichiers internes
+Disallow: /src/
+Disallow: /node_modules/
+Disallow: /@vite/
+Disallow: /@react-refresh
+Disallow: /@id/
+
+# ── Googlebot ──
+User-agent: Googlebot
+Allow: /
+Allow: /listings/
+Allow: /profile/seller/
+Disallow: /login
+Disallow: /register
+Disallow: /auth/
+Disallow: /admin
+Disallow: /api/
+Disallow: /payment/
+Disallow: /checkout/
+
+# ── GPTBot (OpenAI) ──
+User-agent: GPTBot
+Allow: /
+Allow: /about
+Allow: /how-it-works
+Allow: /faq
+Allow: /help
+Allow: /terms
+Allow: /privacy
+Allow: /search
+Allow: /listings/
+Allow: /llms.txt
+Disallow: /login
+Disallow: /register
+Disallow: /auth/
+Disallow: /admin
+Disallow: /api/
+Disallow: /profile
+Disallow: /payment/
+
+# ── anthropic-ai / Claude ──
+User-agent: anthropic-ai
+Allow: /
+Allow: /llms.txt
+Allow: /about
+Allow: /faq
+Disallow: /admin
+Disallow: /api/
+Disallow: /auth/
+
+# ── PerplexityBot ──
+User-agent: PerplexityBot
+Allow: /
+Allow: /llms.txt
+Disallow: /admin
+Disallow: /api/
+
+# ── AdsBot (Google Shopping) ──
+User-agent: AdsBot-Google
+Allow: /
+Allow: /listings/
+Allow: /profile/seller/
+Allow: /search
+
+# Fichiers de référencement
+Sitemap: https://daloamarket.shop/sitemap.xml
+
+# LLMs.txt — Documentation pour IA / LLM
+LLMs-Txt: https://daloamarket.shop/llms.txt

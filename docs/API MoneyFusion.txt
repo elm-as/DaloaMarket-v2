@@ -1,0 +1,607 @@
+Clé API : moneyfusion_v1_6918e17a0c3b0ebf6737b0df_EC43B4EC480A82FE465EB3C57FAE239213961F4F2D47F199C9CFB43C016ACA79
+
+
+Bon à savoir
+Simplifiez le traitement de vos paiements grâce à l'intégration de Fusion Pay.
+
+Important
+
+Veuillez lire attentivement toutes les sections pour comprendre la documentation.
+
+Cette documentation vous guidera dans l'intégration des API de Fusion Pay dans votre site e-commerce et/ou votre application mobile.
+
+Prérequis
+Compte Money Fusion Enterprise
+Vos informations, saisies lors de la création du compte, servent de référence numérique au sein des systèmes Money Fusion. Nous utilisons ces informations pour identifier votre compte et les applications que vous créez.
+
+Ces informations sont nécessaires à des fins de vérification.
+
+Pour commencer
+Configuration du compte
+Assurez-vous d'avoir un compte Money Fusion
+Créez-en un si nécessaire
+Accès au compte
+Connectez-vous à votre compte
+
+Cliquez sur "API de paiement" dans le menu de gauche.
+
+Création d'une application
+Illustration création d'application
+
+Un lien API sera généré après validation. Il permettra à votre serveur d’effectuer des requêtes vers l’API Fusion Pay.
+
+Règles de sécurité
+
+L’URL du site doit être valide et publiquement accessible.
+Le callback_url (facultatif). URL de redirection après paiement si disponible doit appartenir au domaine principal ou à un sous-domaine autorisé.
+Seules les adresses IP enregistrées pourront consommer l’API.
+Toute IP non déclarée sera automatiquement bloquée.
+Astuce pratique
+
+Si vous tentez un paiement depuis une IP non autorisée, vous recevrez le message suivant :
+
+IP non autorisée ou application non approuvée (xxx.198.xx.252)
+
+L’IP affichée entre parenthèses est celle que vous devez enregistrer dans votre application Fusion Pay.
+
+API Web
+Vous pouvez utiliser l'api web pour developper votre application
+
+Pour commencer, j'utiliserai axios. N'hésitez pas à utiliser n'importe quel client http, par exemple fetch
+
+Demande de paiement
+pay.js
+
+const axios = require("axios") ;
+const apiUrl = "YOUR_API_URL" ; // Obtenez ceci depuis votre tableau de bord
+const makePayment = async (paymentData) => {
+  try {
+    const response = await axios.post(apiUrl, paymentData, {
+      headers : {
+        "Content-Type" : "application/json",
+      },
+    }) ;
+    return response.data ;
+  } catch (error) {
+    lancer l'erreur ;
+  }
+};
+Exemple de données de paiement
+paymentData.js
+
+const paymentData = {
+  totalPrice: 200,
+  article: [
+    {
+      sac: 100,
+      chaussure: 100,
+    },
+  ],
+  personal_Info: [
+    {
+      userId: 1,
+      orderId: 123,
+    },
+  ],
+  numeroSend: " 01010101 ",
+  nomclient: " John Doe ",
+  return_url: " https://your-domain.com/callback ",
+  webhook_url: "https://your-domain.com/my-webhook-url", // Le webhook doit accepter les requêtes POST pour recevoir les données.
+};
+Champs
+Champ	Type	Description	Exemple	Exigé
+totalPrice	Number	Montant total à payer	200	Oui
+article	Array<Object>	Liste des articles avec leur prix	[{"sac": 100, "chaussure": 100}]	Oui
+numeroSend	String	Numéro de téléphone du client	"01010101"	Oui
+nomclient	String	Nom du client	"John Doe"	Oui
+personal_Info	Array<Object>	Autres informations personnelles	[{"userId": 1, "orderId": 123}]	Non
+return_url	String	url à rediriger après le paiement	https://your-domain.com/callback	Non
+webhook_url	String	url (POST) de où seront renvoyés les détails de la transaction	https://your-domain.com/my-webhook-url	Non
+Exemple de réponse
+
+{
+  "statut": true,
+  "token": "5d58823b084564",
+  "message": "paiement en cours",
+  "url": "https://www.pay.moneyfusion.net/pay/6596aded36bd58823b084564"
+}
+Objet de la réponse
+Field	Type	Description
+statut	Boolean	Statut de la demande de paiement
+token	String	Jeton de paiement unique pour le suiv
+message	String	Message d'état
+url	String	URL de la page de paiement
+Vérification de l'état des paiements
+Vérifier l'état du paiement
+checkPaymentStatus.js
+
+const checkPaymentStatus = async (token) => {
+  try {
+    const response = await axios.get(
+      `https://www.pay.moneyfusion.net/paiementNotif/${token}`
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+Exemple de réponse
+
+{
+  "statut": true,
+  "data": {
+    "_id": "65df163b11ab882694573060",
+    "tokenPay": "0d1d8bc9b6d2819c",
+    "numeroSend": "01010101",
+    "nomclient": "John Doe",
+    "personal_Info": [
+      {
+        "userId": 1,
+        "orderId": 123
+      }
+    ],
+    "numeroTransaction": "0708889205",
+    "Montant": 200,
+    "frais": 5,
+    "statut": "paid",
+    "moyen": "orange",
+    "return_url": "https://your-domain.com/callback",
+    "createdAt": "2024-02-28T11:17:15.285Z"
+  },
+  "message": "details paiement"
+}
+Types de statut de paiement
+Status	Description
+pending	Le paiement est en cours de traitement
+failure	Échec du paiement
+no paid	Paiement non effectué
+paid	Paiement réussi
+Champs de données de la réponse d'état
+Field	Type	Description
+_id	String	Transaction ID
+tokenPay	String	Payment token
+numeroSend	String	Numéro de téléphone du client
+nomclient	String	Nom du client
+personal_Info	Array<Object>	Autres informations personnelles
+Montant	Number	Montant de la transaction
+frais	Number	Frais de transaction
+statut	String	État des paiements
+moyen	String	Mode de paiement
+createdAt	String	Horaire de la transaction
+Suivi des Transactions en Temps Réel via Webhook
+Structure des données reçues
+
+{
+  "event": "payin.session.pending",
+  "personal_Info": [
+    {
+      "userId": 1,
+      "orderId": 123
+    }
+  ],
+  "tokenPay": "Le4Cnmm1Ac9yTgZMKQbz",
+  "numeroSend": "01010101",
+  "nomclient": "Kwameson",
+  "numeroTransaction": "01010101",
+  "Montant": 194,
+  "frais": 6,
+  "return_url": " https://your-domain.com/callback ",
+  "webhook_url": "https://your-domain.com/my-webhook-url",
+  "createdAt": "2025-05-09T12:50:45.412Z"
+}
+Liste des Événements Webhook Disponibles
+Événement	Description
+payin.session.pending	Paiement initié et en attente de traitement
+payin.session.completed	Paiement effectué avec succès
+payin.session.cancelled	Paiement annulé ou échoué
+Gestion des Notifications Multiples pour le Webhook
+Important à savoir
+Il est possible que moneyfusion envoie plusieurs notifications pour une même transaction, notamment dans les cas suivants :
+
+Répétition de l'événement payin.session.pending pendant la phase de traitement.
+Envoi de l'événement payin.session.completed après confirmation du paiement.
+Éventuel payin.session.cancelled en cas d'échec ou d'annulation.
+Recommandations de traitement
+Pour garantir un traitement fiable et éviter les doublons :
+
+Identifie chaque transaction de manière unique grâce au champ tokenPay.
+Vérifie l'état actuel de la transaction dans ta base de données avant d'effectuer une mise à jour.
+Ignore les événements déjà traités ou ceux qui ne représentent pas une évolution de statut.
+Exemple de logique de filtrage
+
+if (transactionExists && incomingStatus === currentStatus) {
+  // Ne rien faire : notification redondante
+} else {
+  // Mettre à jour le statut de la transaction
+}
+
+Wordpress
+Fusion Pay WooCommerce Payment Gateway est un plugin WordPress personnalisé qui vous permet d'intégrer le système de paiement MoneyFusion dans votre site WordPress WooCommerce.
+
+Caractéristiques
+Installation et configuration faciles
+Traitement sécurisé des paiements grâce à MoneyFusion
+Paramètres de passerelle de paiement personnalisables
+Mises à jour en temps réel de l'état des paiements via des webhooks
+Enregistrement détaillé des transactions et options de débogage
+Statuts de commande personnalisés pour un meilleur suivi des paiements
+Intégration complète de WooCommerce pour des paiements en ligne transparents
+Installation
+Téléchargez le plugin à partir de ce lien.
+Installez-le ou téléchargez le dossier fusionpay dans le répertoire /wp-content/plugins/.
+Activez le plugin dans le menu « Plugins » de WordPress.
+Intégration de WooCommerce
+Pour utiliser Fusion Pay avec WooCommerce :
+
+Assurez-vous que WooCommerce est installé et activé.
+
+Allez dans WooCommerce > Paramètres > Paiements.
+
+Activez « Fusion Pay » comme méthode de paiement.
+woocommerce-fusionpay-activation
+
+Cliquez sur « Gérer » à côté de Fusion Pay pour configurer les paramètres de la passerelle:
+
+Enable/Disable: Activer ou désactiver le mode de paiement
+Title: Personnaliser la façon dont la méthode de paiement apparaît aux clients (par défaut : « Fusion Pay »)
+Description: Fournir des informations sur ce mode de paiement à vos clients
+API URL: Entrez votre URL API Fusion Pay unique (créez une application sur moneyfusion pour obtenir l'url).
+Return URL: URL où les clients seront redirigés après le paiement
+Webhook URL: URL que vous devez configurer pour recevoir les notifications de paiement.
+Debug Log: Permet de résoudre les problèmes de paiement. Trouvé sur https://your-site.com/wp-admin/admin.php?page=wc-status&tab=logs et source fusion-pay
+form
+
+Save your settings and the payment gateway will be available at checkout.
+
+Les clients peuvent désormais sélectionner Fusion Pay comme option de paiement lors de la validation de leur commande.
+
+form
+
+Payment Status Handling
+Le plugin gère automatiquement les statuts de paiement suivants de MoneyFusion :
+
+paid - Paiement réussi (commande marquée comme terminée)
+pending - Le paiement est en cours de traitement (commande marquée comme étant en cours de traitement)
+failure - Le paiement a échoué (la commande est marquée comme ayant échoué)
+no paid - Paiement non effectué (commande marquée comme en attente)
+Webhook Integration
+Pour les mises à jour automatiques de l'état de la commande, laissez le point de terminaison du webhook dans le tableau de bord de woocommerce :
+
+Webhook URL: https://your-site.com/wc-api/wc_fusion_pay_gateway
+Cela permet à votre boutique WooCommerce de recevoir automatiquement les mises à jour de l'état des paiements.
+
+Troubleshooting
+Si vous rencontrez des problèmes avec la passerelle :
+
+Activez le journal de débogage dans les paramètres de la passerelle.
+Vérifiez les journaux d'état du système WooCommerce pour toute erreur.
+Vérifiez que l'URL de votre API est correctement saisie
+Si l'option de paiement n'est pas visible, allez sur la page de paiement et entrez [woocommerce_checkout] dans la section raccourci pour plus d'informations :
+Voir la vidéo
+
+Python
+Elle permet d'intéragir avec l'API de paiement de MoneyFusion. Elle facilite la création et la récupération des paiements via des requêtes HTTP.
+
+Installation
+vous pourrez l'installer avec :
+
+
+pip install apiMoneyFusion
+Utilisation
+Importation
+
+from apiMoneyFusion import PaymentClient
+Initialisation du client
+
+client = PaymentClient(api_key_url="https://api.moneyfusion.net")
+Créer un paiement
+
+payment = client.create_payment(
+    total_price="10000",
+    articles=[{"name": "Article 1", "price": "5000", "quantity": 1}],
+    numero_send="0101010101",
+    nom_client="assemienDev",
+    user_id=1,
+    order_id=123,
+    return_url="https://votre-domaine.com/callback"
+)
+print(payment)
+Réponse attendue :
+
+
+{
+  "statut": true,
+  "token": "f5EJ33JYmxqosi8BvaEt",
+  "message": "paiement en cours",
+  "url": "https://payin.moneyfusion.net/payment/f5EJ33JYmxqosi8BvaEt/10000/John Doe"
+}
+Récupérer un paiement
+
+payment_info = client.get_payment("8L5teSc5TaIkP3ds9Dlx")
+print(payment_info)
+Réponse attendue :
+
+
+{
+  "statut": true,
+  "data": {
+    "_id": "6748d365967cb4766fdd1616",
+    "tokenPay": "8L5teSc5TaIkP3ds9Dlx",
+    "numeroSend": "None",
+    "nomclient": "assemienDev",
+    "personal_Info": [{ "userId": 1, "orderId": 123 }],
+    "numeroTransaction": "",
+    "Montant": 475,
+    "frais": 25,
+    "statut": "paid",
+    "moyen": "card",
+    "return_url": "https://votre-domaine.com/callback",
+    "createdAt": "2024-11-28T20:32:37.037Z"
+  },
+  "message": "details paiement"
+}
+
+C# / .NET
+Ce guide vous montre comment intégrer l'API de paiement de Money Fusion dans une application .NET, que ce soit côté backend (ASP.NET Core) ou frontend (MAUI mobile).
+
+🔧 Côté Backend (ASP.NET Core)
+1. Créez un modèle de requête FusionPayRequest
+
+public class FusionPayRequest
+{
+    public decimal totalPrice { get; set; }
+    public Article[] article { get; set; }
+    public PersonalInfo[] personal_Info { get; set; }
+    public string numeroSend { get; set; }
+    public string nomclient { get; set; }
+    public string return_url { get; set; }
+    public string webhook_url { get; set; }
+}
+2. Exemple d’endpoint pour initier un paiement
+
+[HttpPost("initiate/{ArticleId}")]
+public async Task<IActionResult> InitiateFusionPay(string ArticleId)
+{
+    var payload = new FusionPayRequest
+    {
+        totalPrice = 1000,
+        article = new[] { new Article { nom = "Nom de l'article", montant = 1000 } },
+        personal_Info = new[] { new PersonalInfo { userId = "utilisateur123", orderId = "article123" } },
+        numeroSend = "01010101",
+        nomclient = "Client Test",
+        return_url = "https://votreapp.com/PageDeRemerciement",
+        webhook_url = "https://votreapp.com/votre/WebHook"
+    };
+    var client = _httpClientFactory.CreateClient("FusionPay");
+    var response = await client.PostAsJsonAsync("MonApp/cléidentifiant/pay/", payload);
+    var result = await response.Content.ReadFromJsonAsync<FusionPayResponse>();
+    return Ok(new { checkoutUrl = result.url });
+}
+📱 Côté Frontend (MAUI)
+1. Ouvrir une WebView avec l’URL du paiement
+
+PaymentWebView.Source = "https://fusionpay.url/vers/checkout";
+2. Capturer la redirection après paiement réussi
+
+if (e.Url.StartsWith("VotreUrl://personnalisé", StringComparison.OrdinalIgnoreCase))
+{
+    await Shell.Current.GoToAsync("//PageDeRedirection");
+}
+✅ Résultat
+Le paiement est initié via Money Fusion.
+L'utilisateur est redirigé automatiquement vers votre app.
+Le webhook vous notifie de la réussite.
+🎯 Exemple de Webhook (confirmation de paiement)
+Lorsque FusionPay reçoit un paiement, il envoie une requête HTTP POST à votre endpoint fusionpay-webhook. Voici comment le gérer côté backend en .NET :
+
+🎯 Exemple de code C# (.NET) pour le Webhook
+
+[AllowAnonymous]
+[HttpPost("fusionpay-webhook")]
+public async Task<IActionResult> HandleFusionPayWebhook([FromBody] FusionPayWebhook payload)
+{
+    Debug.WriteLine($"[FusionPay] Webhook reçu – Token: {payload.tokenPay}, Statut: {payload.statut}");
+    if (payload.personal_Info == null || payload.personal_Info.Length == 0)
+        return BadRequest(new { Message = "Données invalides." });
+    var transactionId = payload.tokenPay;
+    var userId = payload.personal_Info[0].userId;
+    var articleId = payload.personal_Info[0].orderId;
+    var alreadyProcessed = await _context.PurchasedArticles
+        .AnyAsync(p => p.TransactionId == transactionId);
+    if (alreadyProcessed)
+        return Ok(new { Message = "Déjà traité" });
+    if (payload.statut == "paid")
+    {
+        var article = await _context.Articles.FindAsync(aricleId);
+        if (article == null)
+            return NotFound("Article non trouvé");
+        var purchase = new PurchasedArticle
+        {
+            UserId = userId,
+            ArticleId = articleId,
+            TransactionId = transactionId,
+            PurchaseDate = DateTime.UtcNow,
+            Title = article.Title,
+            Price = article.Price,
+            Description = article.Description,
+        };
+        _context.PurchasedArticles.Add(purchase);
+        var pending = await _context.PendingPayments
+            .FirstOrDefaultAsync(p => p.TransactionId == transactionId);
+        if (pending != null)
+            pending.IsCompleted = true;
+        await _context.SaveChangesAsync();
+        return Ok(new { Message = "Paiement confirmé et livre ajouté." });
+    }
+    return BadRequest(new { Message = "Paiement non accepté", payload.statut });
+}
+📦 Exemple de données reçues (JSON)
+
+{
+  "tokenPay": "ABC123456",
+  "statut": "paid",
+  "personal_Info": [
+    {
+      "userId": "UTILISATEUR123",
+      "orderId": "LIVRE456"
+    }
+  ]
+}
+
+Payout
+Cette documentation décrit comment intégrer l'API de retrait de Money Fusion ainsi que la gestion des webhooks liés aux événements de retrait.
+
+Authentification
+Illustration Authentification
+
+Avant de faire une requête de retrait, vous devez (Allez dans la section Paramètre) :
+
+Générer une clé API depuis votre tableau de bord Money Fusion.
+Ajouter l'adresse IP de votre serveur (qui initie la requête) dans votre dashboard.
+Inclure cette clé API dans l’en-tête des requêtes HTTP :
+
+moneyfusion-private-key: VOTRE_CLE_API
+Content-Type: application/json
+Endpoint de retrait
+POST https://pay.moneyfusion.net/api/v1/withdraw
+
+Corps de la requête (JSON)
+
+{
+  "countryCode": "ci",
+  "phone": "05xxxxxxxxx", // MTN
+  "amount": 200,
+  "withdraw_mode": "mtn-ci",
+  "webhook_url": "https://votre-serveur.com/api/withdraw/callback"
+}
+Réponse en cas de succès
+
+{
+  "tokenPay": "D0h6fjyjkCfi",
+  "statut": true,
+  "message": "Retrait soumis avec succès"
+}
+Réponse en cas d’erreur
+
+{
+  "statut": false,
+  "message": "Tous les champs (countryCode, phone, amount, withdraw_mode) sont requis."
+}
+🔐 À propos du tokenPay
+Le champ tokenPay est un identifiant unique généré lors de l’initiation d’un retrait.
+Il permet de suivre et vérifier la transaction. Ce token doit être conservé côté client ou serveur car il sera réutilisé pour :
+
+Valider et identifier la transaction dans les notifications envoyées par webhook.
+Faire le lien entre la demande initiale et son statut final.
+Ce token garantit ainsi la traçabilité et la sécurité du processus de retrait.
+
+Paramètres requis ou Non (JSON body)
+Champ	Type	Obligatoire	Description
+countryCode	string	✅	Code du pays (ex: ci pour Côte d’Ivoire)
+phone	string	✅	Numéro à retirer
+amount	number	✅	Montant à retirer
+withdraw_mode	string	✅	Méthode de retrait
+webhook_url	string	NON	URL vers laquelle Money Fusion enverra la notification
+Méthodes de retrait prises en charge (withdraw_mode)
+Les valeurs disponibles pour withdraw_mode et countryCode sont retournées dynamiquement via :
+
+
+GET https://pay.moneyfusion.net/api/v1/withdraw/methods
+Exemple de réponse :
+
+
+{
+  "success": true,
+  "data": [
+    {
+      "country": "Côte d'Ivoire",
+      "code": "ci",
+      "currency": "XOF",
+      "paymentMethods": [
+        { "key": "mtn-ci", "name": "MTN" },
+        { "key": "orange-money-ci", "name": "Orange" },
+        { "key": "moov-ci", "name": "Moov" },
+        { "key": "wave-ci", "name": "Wave" }
+      ]
+    }
+  ]
+}
+code → valeur à utiliser pour countryCode
+paymentMethods[].key → valeur à utiliser pour withdraw_mode
+Webhooks
+Votre serveur doit écouter les événements suivants via l’URL webhook_url fournie :
+
+
+-payout.session.completed;
+-payout.session.cancelled;
+Exemple de payload webhook :
+
+{
+  "event": "payout.session.cancelled",
+  "tokenPay": "D0h6fjyjkCfi",
+  "montant": 205,
+  "numeroRetrait": "07xxxxxxxxx",
+  "moyen": "orange-money-ci",
+  "webhook_url": "https://votre-serveur.com/api/withdraw/callback",
+  "createdAt": "2025-07-17T17:35:23.468Z"
+}
+Événements possibles
+Événement	Description
+payout.session.completed	Le retrait a été effectué avec succès
+payout.session.cancelled	Le retrait a échoué ou a été annulé
+Exemple de code (Node.js / Express)
+
+// Endpoint Webhook
+app.post("/api/withdraw/callback", (req, res) => {
+  const { event, tokenPay, montant, numeroRetrait, moyen, createdAt } =
+    req.body;
+  if (event === "payout.session.completed") {
+    // Marquez le retrait comme réussi dans votre DB
+  } else if (event === "payout.session.cancelled") {
+    // Mettez à jour le retrait comme échoué
+  }
+});
+
+Domaine personalisé
+Ce guide vous montre comment connecter votre domaine à MoneyFusion.
+
+Pour utiliser votre domaine personnalisé, vous devez configurer vos enregistrements DNS afin de le relier à notre serveur.
+
+Accéder à la gestion DNS
+Connectez-vous à votre fournisseur de domaine (GoDaddy, Namecheap, OVH, etc.), puis ouvrez la section :
+
+Gestion DNS / DNS Management
+
+Étape 2 : Ajouter les enregistrements DNS
+Vous devez ajouter deux enregistrements DNS obligatoires :
+
+Type	Nom (Host)	Valeur
+A	@	66.29.149.126
+CNAME	www	moneyfusion.net
+Explications
+A (@) → connecte mondomaine.com à notre serveur
+CNAME (www) → redirige www.mondomaine.com vers le domaine principal
+Supprimez tous les anciens enregistrements @ et www avant d’ajouter les nouveaux.
+
+Attendre la propagation DNS
+La propagation DNS peut prendre de quelques minutes à 24 heures voire même jusqu’à 48 heures dans certains cas.
+
+Vérification externe
+👉 https://dnschecker.org
+
+Vérifier et ajouter votre domaine
+Connectez-vous à votre espace MoneyFusion
+Modifier votre boutique
+Entrez votre domaine (mondomaine.com)
+Enregistez les modifications
+Résultat
+✅ Domaine validé
+✅ Connecté automatiquement à votre boutique
+Le système vérifie automatiquement que votre domaine pointe vers 66.29.149.126.
+
+Problèmes courants
+Mauvaise IP dans l’enregistrement A
+CNAME www absent ou incorrect
+Conflit avec un ancien enregistrement
+Propagation DNS non terminée
+

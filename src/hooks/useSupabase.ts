@@ -1,0 +1,1 @@
+export { useSupabase } from '../contexts/supabaseContextTypes';

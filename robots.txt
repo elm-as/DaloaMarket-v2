@@ -1,0 +1,37 @@
+# robots.txt - DaloaMarket
+# https://daloamarket.com
+
+User-agent: *
+
+# Pages publiques autorisées
+Allow: /
+Allow: /about
+Allow: /how-it-works
+Allow: /faq
+Allow: /help
+Allow: /terms
+Allow: /privacy
+Allow: /search
+Allow: /listings/
+Allow: /profile/seller/
+
+# Pages privées / sensibles bloquées
+Disallow: /login
+Disallow: /register
+Disallow: /auth/
+Disallow: /complete-profile
+Disallow: /banned
+Disallow: /profile
+Disallow: /settings
+Disallow: /mes-statistiques
+Disallow: /messages
+Disallow: /create-listing
+Disallow: /claim-listing
+Disallow: /acheter-credits
+Disallow: /paiement-annonce/
+Disallow: /payment/
+Disallow: /admin
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://daloamarket.com/sitemap.xml

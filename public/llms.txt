@@ -1,0 +1,54 @@
+# DaloaMarket — Documentation pour IA, LLM et moteurs de recherche
+# Standard llms.txt (https://llmstxt.org)
+# Généré le 2026-07-02
+
+## DaloaMarket
+> Marketplace 100% ivoirienne de proximité — Achetez et vendez à Daloa, Côte d'Ivoire.
+
+DaloaMarket est une plateforme de petites annonces locales dédiée à la ville de Daloa (centre-ouest de la Côte d'Ivoire). Fondée en 2025, elle permet aux habitants de publier gratuitement des annonces pour vendre leurs produits, et aux acheteurs de trouver les meilleures affaires près de chez eux.
+
+## Pages essentielles
+
+- [Accueil](https://daloamarket.shop/) — Page d'accueil avec les annonces récentes et tendances.
+- [Recherche](https://daloamarket.shop/search) — Recherche avancée par catégorie, prix, quartier.
+- [Comment ça marche](https://daloamarket.shop/how-it-works) — Guide étape par étape pour acheter et vendre.
+- [FAQ](https://daloamarket.shop/faq) — Questions fréquentes sur l'utilisation de la plateforme.
+- [À propos](https://daloamarket.shop/about) — Histoire et mission de DaloaMarket.
+- [Aide](https://daloamarket.shop/help) — Centre d'assistance et contact.
+
+## Fonctionnalités principales
+
+- Publication d'annonces gratuite et illimitée pour tous les utilisateurs.
+- Recherche par catégories (Mode, Électronique, Immobilier, Véhicules, Sports, Maison, etc.), prix et quartiers de Daloa.
+- Profils vendeurs publics avec historique, avis et boutique personnalisée.
+- Messagerie intégrée entre acheteurs et vendeurs.
+- Système de panier pour commander plusieurs articles.
+- Système de livraison avec GPS et OTP pour les commandes.
+
+## Pages légales
+
+- [Conditions d'utilisation](https://daloamarket.shop/terms)
+- [Politique de confidentialité](https://daloamarket.shop/privacy)
+
+## Technique
+
+- Stack : React 18 + TypeScript + Vite 6 + Tailwind CSS 3
+- Backend : Supabase (PostgreSQL, Auth, Storage)
+- Paiement : Money Fusion (Mobile Money Orange, MTN, Wave, Moov + cartes Visa/Mastercard)
+- Déploiement : Netlify (frontend) + Railway (API paiement)
+- PWA installable sur iOS et Android
+- Site statique rendu côté client (CSR)
+
+## Villes couvertes
+
+- Daloa (siège, zone principale) — 6.8774° N, -6.4502° W
+- Projets d'expansion : autres villes ivoiriennes
+
+## Quartiers de Daloa couverts
+
+Abattoir, Belleville, Commerce, Dioulabougou, Gbèkè, Huberson, Kennedy, Labia, Lobia, Marché, Orly, Petit Paris, Résidentiel 2, Sodecci, Soleil, Sud B, Tazibouo, Terminus, Zone Industrielle
+
+## Contact
+
+- Email : support@daloamarket.shop
+- Site web : https://daloamarket.shop

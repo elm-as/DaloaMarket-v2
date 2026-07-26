@@ -1,0 +1,11 @@
+/@vite/*          /@vite/:splat          200
+/@react-refresh   /@react-refresh        200
+/@id/*            /@id/:splat            200
+/node_modules/*   /node_modules/:splat   200
+/env.mjs          /env.mjs               200
+/src/*            /src/:splat            200
+/assets/*         /assets/:splat         200
+/llms.txt         /llms.txt              200
+/sitemap.xml      /.netlify/functions/sitemap  200
+/api/*            /.netlify/functions/:splat  200
+/*                /index.html            200
