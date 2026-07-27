@@ -8,6 +8,7 @@ import { usePageTitle } from '../hooks/usePageTitle';
 import { friendlyError } from '../lib/messages';
 import { Button } from '../components/ui/Button';
 import { cn } from '../lib/utils';
+import { trackCompleteRegistration } from '../lib/analytics';
 
 interface RegisterFormData {
   email: string;
@@ -45,6 +46,7 @@ export default function RegisterPage() {
     try {
       const { error } = await signUp(data.email, data.password);
       if (error) throw error;
+      trackCompleteRegistration({ content_name: 'Register' });
     } catch (err: any) {
       setAuthError(friendlyError(err));
     } finally {

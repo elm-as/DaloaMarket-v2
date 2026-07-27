@@ -11,6 +11,34 @@ function getAnonymousViewerId(): string {
   return id;
 }
 
+declare global {
+  interface Window {
+    fbq?: (...args: any[]) => void;
+  }
+}
+
+/** Événement Facebook Pixel: CompleteRegistration (Inscription / Profil complété). */
+export function trackCompleteRegistration(params?: Record<string, any>): void {
+  try {
+    if (typeof window !== 'undefined' && window.fbq) {
+      window.fbq('track', 'CompleteRegistration', params);
+    }
+  } catch (err) {
+    console.error('FB Pixel error:', err);
+  }
+}
+
+/** Événement personnalisé / standard Facebook Pixel. */
+export function trackFbEvent(eventName: string, params?: Record<string, any>): void {
+  try {
+    if (typeof window !== 'undefined' && window.fbq) {
+      window.fbq('track', eventName, params);
+    }
+  } catch (err) {
+    console.error('FB Pixel error:', err);
+  }
+}
+
 /** Incrémente le compteur de vues d'une annonce (unique par viewer/24h, exclut le propriétaire). */
 export async function incrementListingViews(listingId: string, userId?: string | null): Promise<void> {
   if (!isSupabaseConfigured) return;

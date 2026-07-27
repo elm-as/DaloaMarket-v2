@@ -10,6 +10,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { cn, validateIvorianPhone, DISTRICTS } from '../lib/utils';
+import { trackCompleteRegistration } from '../lib/analytics';
 
 interface ProfileFormData {
   full_name: string;
@@ -69,6 +70,7 @@ export default function CompleteProfilePage() {
         payout_network: data.payout_network || null,
         payout_number: data.payout_number || null,
       });
+      trackCompleteRegistration({ content_name: 'CompleteProfile' });
       navigate(from);
     } catch (err: any) {
       setErrorMsg(friendlyError(err));
