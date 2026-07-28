@@ -13,7 +13,7 @@ DaloaMarket est une application web progressive (PWA) qui permet aux habitants d
 
 - **Marketplace complète** : Publication d'annonces avec photos, recherche, filtres par catégorie, système de messagerie entre acheteurs et vendeurs
 - **Paiement sécurisé** : Intégration Money Fusion (mobile money) avec système d'escrow (séquestre)
-- **Système de livraison** : Connexion avec [DaloaDelivery](../DaloaDelivery/) pour la livraison par moto, vélo, voiture ou triporteur
+- **Système de livraison** : Connexion avec [DaloaDelivery](https://github.com/elm-as/DaloaDelivery) pour la livraison par moto, vélo, voiture ou triporteur
 - **Monétisation** : Badges vendeur Pro, boosts, bumps, packs d'annonces (désactivable via feature flags)
 - **Administration** : Dashboard admin avec KPIs, gestion des utilisateurs, modération des annonces
 
@@ -264,11 +264,9 @@ Voir [railway-server/README.md](./railway-server/README.md) pour le déploiement
 
 ---
 
-## 🔗 Connexion avec DaloaDelivery
+## 🔗 Connexion avec DaloaDelivery & DaloaPay
 
-Ce projet partage sa base Supabase avec [DaloaDelivery](../DaloaDelivery/). Les tables clés partagées sont `delivery_assignments`, `orders`, `delivery_persons`, et `escrow_transactions`.
-
-Voir le [README combiné](../README.md) pour l'architecture complète de l'écosystème.
+Ce projet partage sa base Supabase avec [DaloaDelivery](https://github.com/elm-as/DaloaDelivery) et communique avec le microservice de paiement [DaloaPay](https://github.com/elm-as/DaloaPay). Les tables clés partagées sont `delivery_assignments`, `orders`, `delivery_persons`, et `escrow_transactions`.
 
 ---
 
