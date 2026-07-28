@@ -15,7 +15,7 @@ import { ArrowLeft, MessageSquare } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMessageRead } from '../contexts/MessageReadContext';
 import { censorMessageContent } from '../lib/censor';
-import { getSellerPath } from '../lib/utils';
+import { extractUuid, getSellerPath } from '../lib/utils';
 
 interface Message {
   id: string;
@@ -66,13 +66,54 @@ const ChatPage: React.FC = () => {
     setError(null);
 
     try {
+      let activeListingId = listingId;
+      let activeOtherUserId = otherUserId;
+
+      if (!extractUuid(activeListingId)) {
+        const cleanId = activeListingId.split('-').pop()?.slice(0, 8) || activeListingId.slice(0, 8);
+        const { data: listings } = await supabase
+          .from('listings')
+          .select('id')
+          .neq('status', 'deleted')
+          .order('created_at', { ascending: false })
+          .limit(100);
+
+        const found = listings?.find((l: any) => l.id.startsWith(cleanId));
+        if (found) {
+          activeListingId = found.id;
+        }
+      }
+
+      if (!extractUuid(activeOtherUserId)) {
+        const cleanId = activeOtherUserId.split('-').pop()?.slice(0, 8) || activeOtherUserId.slice(0, 8);
+        const { data: users } = await supabase
+          .from('users')
+          .select('id')
+          .limit(100);
+
+        const found = users?.find((u: any) => u.id.startsWith(cleanId));
+        if (found) {
+          activeOtherUserId = found.id;
+        }
+      }
+
+      if (!extractUuid(activeListingId) || !extractUuid(activeOtherUserId)) {
+        setError('Impossible de charger la conversation.');
+        setLoading(false);
+        return;
+      }
+
+      if (activeListingId !== listingId || activeOtherUserId !== otherUserId) {
+        navigate(`/messages/${activeListingId}/${activeOtherUserId}`, { replace: true });
+      }
+
       const { data: msgs, error: msgError } = await supabase
         .from('messages')
         .select('*')
         .or(
-          `and(sender_id.eq.${currentUserId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${currentUserId})`
+          `and(sender_id.eq.${currentUserId},receiver_id.eq.${activeOtherUserId}),and(sender_id.eq.${activeOtherUserId},receiver_id.eq.${currentUserId})`
         )
-        .eq('listing_id', listingId)
+        .eq('listing_id', activeListingId)
         .order('created_at', { ascending: true });
 
       if (msgError) throw msgError;
@@ -82,7 +123,7 @@ const ChatPage: React.FC = () => {
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, full_name, avatar_url')
-        .eq('id', otherUserId)
+        .eq('id', activeOtherUserId)
         .single();
 
       if (userError && userError.code !== 'PGRST116') throw userError;
@@ -91,7 +132,7 @@ const ChatPage: React.FC = () => {
       const { data: listingData, error: listingError } = await supabase
         .from('listings')
         .select('title')
-        .eq('id', listingId)
+        .eq('id', activeListingId)
         .single();
 
       if (listingError && listingError.code !== 'PGRST116') throw listingError;
@@ -127,7 +168,7 @@ const ChatPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentUserId, otherUserId, listingId, refreshUnread]);
+  }, [currentUserId, otherUserId, listingId, refreshUnread, navigate]);
 
   useEffect(() => {
     fetchMessages();
@@ -135,7 +176,7 @@ const ChatPage: React.FC = () => {
 
   // Real-time subscription
   useEffect(() => {
-    if (!currentUserId || !otherUserId || !listingId) return;
+    if (!currentUserId || !otherUserId || !listingId || !extractUuid(listingId) || !extractUuid(otherUserId)) return;
 
     const channel = supabase
       .channel(`chat:${listingId}:${currentUserId}:${otherUserId}`)

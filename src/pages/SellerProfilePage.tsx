@@ -175,9 +175,9 @@ const SellerProfilePage: React.FC = () => {
   }, [fetchSellerData]);
 
   const handleContact = () => {
-    if (!user || !sellerId || listings.length === 0) return;
+    if (!user || !seller || listings.length === 0) return;
     const listingId = listings[0].id;
-    navigate(`/messages/${listingId}/${sellerId}`);
+    navigate(`/messages/${listingId}/${seller.id}`);
   };
 
 

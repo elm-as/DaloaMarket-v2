@@ -78,6 +78,9 @@ function AppContent() {
   if (userProfile?.banned && !isBannedPath) {
     return <Navigate to="/banned" replace />;
   }
+  if (!userProfile?.banned && isBannedPath) {
+    return <Navigate to="/" replace />;
+  }
 
   // Handle Maintenance Mode
   const isAuthOrAdminPath = location.pathname.startsWith('/admin') || location.pathname.startsWith('/login') || location.pathname.startsWith('/auth');

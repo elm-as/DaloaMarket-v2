@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Users } from 'lucide-react';
+import { Search, Users, AlertTriangle, ShieldAlert, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { EmptyState } from '../ui/EmptyState';
@@ -9,6 +9,7 @@ import { ErrorState } from '../ui/ErrorState';
 import { Button } from '../ui/Button';
 import { cn, formatDate } from '../../lib/utils';
 import { useSupabase } from '../../hooks/useSupabase';
+import { BanUserModal } from './BanUserModal';
 
 export const AdminUsersTab: React.FC = () => {
   const { user, userProfile } = useSupabase();
@@ -20,6 +21,9 @@ export const AdminUsersTab: React.FC = () => {
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(0);
   const [userTotal, setUserTotal] = useState(0);
+
+  // Modal state for banning
+  const [userToBan, setUserToBan] = useState<{ id: string; email: string; name?: string | null } | null>(null);
 
   const fetchUsers = useCallback(async (page = 0) => {
     setLoading(true);
@@ -49,10 +53,48 @@ export const AdminUsersTab: React.FC = () => {
     fetchUsers(page);
   };
 
-  const toggleBan = async (userId: string, currentBanned: boolean) => {
-    const { error: err } = await supabase.from('users').update({ banned: !currentBanned }).eq('id', userId);
-    if (err) { toast.error('Erreur'); return; }
-    toast.success(currentBanned ? 'Utilisateur debanni' : 'Utilisateur banni');
+  const handleOpenBanModal = (u: any) => {
+    setUserToBan({
+      id: u.id,
+      email: u.email || 'N/A',
+      name: u.full_name,
+    });
+  };
+
+  const handleConfirmBan = async (reason: string) => {
+    if (!userToBan) return;
+    const { error: err } = await supabase
+      .from('users')
+      .update({
+        banned: true,
+        ban_reason: reason,
+      } as any)
+      .eq('id', userToBan.id);
+
+    if (err) {
+      toast.error('Erreur lors du bannissement');
+      return;
+    }
+    toast.success('Utilisateur banni avec succès');
+    fetchUsers(userPage);
+  };
+
+  const handleUnban = async (userId: string) => {
+    const { error: err } = await supabase
+      .from('users')
+      .update({
+        banned: false,
+        ban_reason: null,
+        ban_appeal_status: null,
+        ban_appeal_reason: null,
+      } as any)
+      .eq('id', userId);
+
+    if (err) {
+      toast.error('Erreur lors du débannissement');
+      return;
+    }
+    toast.success('Utilisateur débanni');
     fetchUsers(userPage);
   };
 
@@ -73,12 +115,13 @@ export const AdminUsersTab: React.FC = () => {
         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-on-surface-variant)]" />
         <input
           type="text"
-          placeholder="Rechercher un utilisateur..."
+          placeholder="Rechercher par nom ou email..."
           value={userSearch}
           onChange={(e) => setUserSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-3 rounded-2xl border border-[var(--color-outline)] bg-[var(--color-surface)] text-[var(--color-on-surface)]"
         />
       </div>
+
       {allUsers.length === 0 ? (
         <EmptyState title="Aucun utilisateur" icon={<Users size={48} />} />
       ) : (
@@ -97,6 +140,7 @@ export const AdminUsersTab: React.FC = () => {
                 const isCurrentUserAdmin = currentUserRole === 'admin';
                 const isLocked = isTargetSuperAdmin && !isCurrentUserSuperAdmin;
                 const isSelf = u.id === user?.id;
+                const hasAppeal = u.ban_appeal_status === 'pending';
 
                 return (
                   <div key={u.id} className="bg-[var(--color-surface)] p-4 rounded-2xl border border-[var(--color-outline)] shadow-sm space-y-3">
@@ -112,6 +156,21 @@ export const AdminUsersTab: React.FC = () => {
                         {u.banned ? 'Banni' : 'Actif'}
                       </span>
                     </div>
+
+                    {u.banned && u.ban_reason && (
+                      <div className="text-xs bg-red-500/10 text-red-600 p-2 rounded-lg border border-red-500/20">
+                        <span className="font-semibold">Motif :</span> {u.ban_reason}
+                      </div>
+                    )}
+
+                    {hasAppeal && (
+                      <div className="text-xs bg-amber-500/10 text-amber-700 p-2 rounded-lg border border-amber-500/30 flex items-start gap-1.5">
+                        <MessageSquare size={14} className="shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-bold">Contestation reçue :</span> "{u.ban_appeal_reason}"
+                        </div>
+                      </div>
+                    )}
 
                     <div className="flex items-center justify-between text-xs pt-2 border-t border-[var(--color-outline)]">
                       <div>
@@ -147,7 +206,7 @@ export const AdminUsersTab: React.FC = () => {
                         variant={u.banned ? 'tonal' : 'outlined'}
                         color={u.banned ? 'success' : 'error'}
                         disabled={isLocked || isSelf}
-                        onClick={() => toggleBan(u.id, u.banned)}
+                        onClick={() => (u.banned ? handleUnban(u.id) : handleOpenBanModal(u))}
                         className="w-full active:scale-[0.97]"
                       >
                         {u.banned ? 'Débannir' : 'Bannir'}
@@ -166,7 +225,8 @@ export const AdminUsersTab: React.FC = () => {
                   <th className="p-3">Nom</th>
                   <th className="p-3">Email</th>
                   <th className="p-3">Rôle</th>
-                  <th className="p-3">Banni</th>
+                  <th className="p-3">Statut & Raison</th>
+                  <th className="p-3">Contestation</th>
                   <th className="p-3">Date</th>
                   <th className="p-3">Actions</th>
                 </tr>
@@ -183,13 +243,13 @@ export const AdminUsersTab: React.FC = () => {
                     const isCurrentUserSuperAdmin = currentUserRole === 'superadmin';
                     const isCurrentUserAdmin = currentUserRole === 'admin';
                     
-                    // Un non-superadmin ne peut pas modifier un superadmin
                     const isLocked = isTargetSuperAdmin && !isCurrentUserSuperAdmin;
                     const isSelf = u.id === user?.id;
+                    const hasAppeal = u.ban_appeal_status === 'pending';
 
                     return (
                       <tr key={u.id} className="border-b border-[var(--color-outline)]">
-                        <td className="p-3">{u.full_name || 'N/A'}</td>
+                        <td className="p-3 font-medium">{u.full_name || 'N/A'}</td>
                         <td className="p-3">{u.email || 'N/A'}</td>
                         <td className="p-3">
                           <select
@@ -210,33 +270,54 @@ export const AdminUsersTab: React.FC = () => {
                             )}
                           </select>
                         </td>
-                      <td className="p-3">
-                        <span className={cn(
-                          'px-2 py-0.5 rounded-full text-xs',
-                          u.banned ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                        )}>
-                          {u.banned ? 'Oui' : 'Non'}
-                        </span>
-                      </td>
-                      <td className="p-3 whitespace-nowrap">{formatDate(u.created_at)}</td>
-                      <td className="p-3">
-                        <Button
-                          size="sm"
-                          variant={u.banned ? 'tonal' : 'outlined'}
-                          color={u.banned ? 'success' : 'error'}
-                          disabled={isLocked || isSelf}
-                          onClick={() => toggleBan(u.id, u.banned)}
-                          className="active:scale-[0.97]"
-                        >
-                          {u.banned ? 'Debannir' : 'Bannir'}
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        <td className="p-3">
+                          <div className="flex flex-col gap-1">
+                            <span className={cn(
+                              'px-2 py-0.5 rounded-full text-xs font-semibold w-max',
+                              u.banned ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                            )}>
+                              {u.banned ? 'Banni' : 'Actif'}
+                            </span>
+                            {u.banned && u.ban_reason && (
+                              <span className="text-[11px] text-red-600 max-w-xs truncate" title={u.ban_reason}>
+                                Motif : {u.ban_reason}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          {hasAppeal ? (
+                            <span
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-amber-100 text-amber-800 font-medium cursor-help"
+                              title={u.ban_appeal_reason}
+                            >
+                              <ShieldAlert size={14} />
+                              Contesté ({u.ban_appeal_reason?.slice(0, 20)}...)
+                            </span>
+                          ) : (
+                            <span className="text-xs text-[var(--color-on-surface-variant)] opacity-60">Aucune</span>
+                          )}
+                        </td>
+                        <td className="p-3 whitespace-nowrap text-xs">{formatDate(u.created_at)}</td>
+                        <td className="p-3">
+                          <Button
+                            size="sm"
+                            variant={u.banned ? 'tonal' : 'outlined'}
+                            color={u.banned ? 'success' : 'error'}
+                            disabled={isLocked || isSelf}
+                            onClick={() => (u.banned ? handleUnban(u.id) : handleOpenBanModal(u))}
+                            className="active:scale-[0.97]"
+                          >
+                            {u.banned ? 'Débannir' : 'Bannir'}
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
+
           <div className="flex items-center justify-between mt-4">
             <span className="text-sm text-[var(--color-on-surface-variant)]">
               {userTotal} utilisateurs au total
@@ -248,7 +329,7 @@ export const AdminUsersTab: React.FC = () => {
                 onClick={() => goToUserPage(userPage - 1)}
                 disabled={userPage === 0}
               >
-                Precedent
+                Précédent
               </Button>
               <Button
                 size="sm"
@@ -262,6 +343,15 @@ export const AdminUsersTab: React.FC = () => {
           </div>
         </>
       )}
+
+      {/* Modal pour saisir la raison de bannissement */}
+      <BanUserModal
+        isOpen={!!userToBan}
+        userEmail={userToBan?.email || ''}
+        userName={userToBan?.name}
+        onClose={() => setUserToBan(null)}
+        onConfirm={handleConfirmBan}
+      />
     </motion.div>
   );
 };

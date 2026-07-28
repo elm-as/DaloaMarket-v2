@@ -655,10 +655,10 @@ const ListingDetailPage: React.FC = () => {
                 icon={<MessageCircle className="h-4 w-4" />}
                 onClick={() => {
                   if (!user) {
-                    navigate('/login', { state: { from: `/listings/${id}` } });
+                    navigate('/login', { state: { from: `/listings/${listing.id}` } });
                     return;
                   }
-                  navigate(`/messages/${id}/${listing.user_id}`);
+                  navigate(`/messages/${listing.id}/${listing.user_id}`);
                 }}
               >
                 Envoyer un message

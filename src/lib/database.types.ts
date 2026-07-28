@@ -22,6 +22,10 @@ export interface Database {
           first_listing_at: string | null
           banned: boolean
           role: string
+          ban_reason: string | null
+          ban_appeal_reason: string | null
+          ban_appeal_status: string | null
+          ban_appealed_at: string | null
           pro_until: string | null
           latitude: number | null
           longitude: number | null
@@ -49,6 +53,10 @@ export interface Database {
           first_listing_at?: string | null
           banned?: boolean
           role?: string
+          ban_reason?: string | null
+          ban_appeal_reason?: string | null
+          ban_appeal_status?: string | null
+          ban_appealed_at?: string | null
           pro_until?: string | null
           latitude?: number | null
           longitude?: number | null
@@ -74,6 +82,10 @@ export interface Database {
           rating?: number | null
           banned?: boolean
           role?: string
+          ban_reason?: string | null
+          ban_appeal_reason?: string | null
+          ban_appeal_status?: string | null
+          ban_appealed_at?: string | null
           pro_until?: string | null
           latitude?: number | null
           longitude?: number | null
@@ -792,6 +804,10 @@ export interface Database {
       delete_listing_secure: {
         Args: { p_listing_id: string }
         Returns: Json
+      }
+      submit_ban_appeal: {
+        Args: { p_reason: string }
+        Returns: boolean
       }
     }
     Enums: {

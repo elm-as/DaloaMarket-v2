@@ -215,18 +215,42 @@ const ListingCreatePage: React.FC = () => {
 
   const onSubmit = async (values: ListingFormValues) => {
     if (!user) return;
+
+    // 1. Intercepter la touche "Entrée" aux étapes 1 et 2 pour passer à l'étape suivante au lieu de publier prématurément
+    if (currentStep < 3 && !isEditing) {
+      handleNextStep();
+      return;
+    }
+
+    // 2. Validation stricte de la présence d'au moins une photo
+    const totalPhotos = photos.length + existingPhotos.length;
+    if (totalPhotos === 0) {
+      toast.error("Veuillez ajouter au moins une photo pour votre annonce.");
+      setCurrentStep(1);
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      let listingId = editId;
+      const listingId = editId || crypto.randomUUID();
 
-      if (isEditing && listingId) {
-        let finalPhotos = existingPhotos;
-        if (photos.length > 0) {
-          const newUrls = await uploadPhotos(listingId);
-          finalPhotos = [...existingPhotos, ...newUrls];
-        }
+      // 3. Uploader les photos AVANT d'insérer l'annonce dans la base de données
+      let uploadedUrls: string[] = [];
+      if (photos.length > 0) {
+        uploadedUrls = await uploadPhotos(listingId);
+      }
 
+      const finalPhotos = [...existingPhotos, ...uploadedUrls];
+
+      if (finalPhotos.length === 0) {
+        toast.error("Veuillez ajouter au moins une photo pour votre annonce.");
+        setCurrentStep(1);
+        setSubmitting(false);
+        return;
+      }
+
+      if (isEditing && editId) {
         const { error } = await supabase
           .from('listings')
           .update({
@@ -241,15 +265,17 @@ const ListingCreatePage: React.FC = () => {
             stock: parseInt(values.stock, 10) || 1,
             photos: finalPhotos,
           } as any)
-          .eq('id', listingId);
+          .eq('id', editId);
 
         if (error) throw error;
         toast.success('Annonce modifiée avec succès !');
-        navigate(getListingPath(listingId, values.title));
+        navigate(getListingPath(editId, values.title));
       } else {
+        // Enregistrement atomique de l'annonce avec ses photos
         const { data: newListing, error: createError } = await supabase
           .from('listings')
           .insert({
+            id: listingId,
             user_id: user.id,
             title: values.title.trim(),
             price: parseInt(values.price, 10),
@@ -261,28 +287,19 @@ const ListingCreatePage: React.FC = () => {
             contact_phone: values.phone.trim(),
             stock: parseInt(values.stock, 10) || 1,
             status: 'active',
-            photos: [],
+            photos: finalPhotos,
           } as any)
           .select('id')
           .single();
 
         if (createError) throw createError;
-        listingId = newListing.id;
 
-        if (photos.length > 0) {
-          const uploadedUrls = await uploadPhotos(listingId);
-          await supabase
-            .from('listings')
-            .update({ photos: uploadedUrls })
-            .eq('id', listingId);
-        }
-
-        setCreatedListingId(listingId);
+        setCreatedListingId(newListing.id);
         setShowSuccessModal(true);
       }
     } catch (err: unknown) {
       console.error('Erreur publication:', err);
-      toast.error("Erreur lors de la publication de l'annonce.");
+      toast.error("Erreur lors de la publication de l'annonce. Vérifiez vos photos et réessayez.");
     } finally {
       setSubmitting(false);
     }
