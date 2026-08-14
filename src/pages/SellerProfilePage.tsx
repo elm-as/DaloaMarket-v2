@@ -326,46 +326,47 @@ const SellerProfilePage: React.FC = () => {
       </div>
 
       {/* ── 2. SELLER IDENTITY OVERLAPPING CARD ── */}
-      <div className="relative z-10 max-w-3xl mx-auto px-4 -mt-12 sm:-mt-16">
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 p-5 sm:p-7 relative overflow-hidden">
+      <div className="relative z-10 max-w-3xl mx-auto px-4 -mt-12 sm:-mt-14">
+        {/* Floating Full Unclipped Avatar */}
+        <div className="relative flex justify-center z-20">
+          <div
+            className="w-22 h-22 sm:w-26 sm:h-26 rounded-full p-1 bg-white ring-4 ring-white shadow-2xl transition-transform hover:scale-105"
+            style={{
+              border: `3px solid ${themeColor}`,
+              boxShadow: `0 12px 30px -4px ${themeColor}50`,
+            }}
+          >
+            {seller.shop_logo_url || seller.avatar_url ? (
+              <img
+                src={seller.shop_logo_url || seller.avatar_url || ''}
+                alt={shopTitle}
+                className="w-full h-full rounded-full object-cover bg-gray-50"
+              />
+            ) : (
+              <div
+                className="w-full h-full rounded-full flex items-center justify-center text-white font-black text-2xl uppercase"
+                style={{ backgroundColor: themeColor }}
+              >
+                {shopTitle.charAt(0)}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* White Card Container */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 p-5 sm:p-7 pt-4 sm:pt-5 -mt-11 sm:-mt-13 relative">
           {/* Subtle Ambient Brand Glow */}
           <div
-            className="absolute top-0 left-0 right-0 h-1"
+            className="absolute top-0 left-8 right-8 h-1 rounded-b-full opacity-90 pointer-events-none"
             style={{ background: `linear-gradient(90deg, transparent, ${themeColor}, transparent)` }}
           />
           <div
-            className="absolute inset-0 pointer-events-none"
+            className="absolute inset-0 rounded-3xl pointer-events-none"
             style={{ background: `radial-gradient(circle at 50% 0%, ${themeColor}10, transparent 65%)` }}
           />
 
-          {/* Logo / Avatar (Properly centered & framed) */}
-          <div className="relative flex justify-center -mt-14 sm:-mt-16 mb-2">
-            <div
-              className="w-20 h-20 sm:w-24 sm:h-24 rounded-full p-1 bg-white ring-4 ring-white shadow-xl transition-transform hover:scale-105"
-              style={{
-                border: `2.5px solid ${themeColor}`,
-                boxShadow: `0 10px 25px -4px ${themeColor}40`,
-              }}
-            >
-              {seller.shop_logo_url || seller.avatar_url ? (
-                <img
-                  src={seller.shop_logo_url || seller.avatar_url || ''}
-                  alt={shopTitle}
-                  className="w-full h-full rounded-full object-cover bg-gray-50"
-                />
-              ) : (
-                <div
-                  className="w-full h-full rounded-full flex items-center justify-center text-white font-black text-xl sm:text-2xl uppercase"
-                  style={{ backgroundColor: themeColor }}
-                >
-                  {shopTitle.charAt(0)}
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Seller Information */}
-          <div className="text-center relative z-10 space-y-3">
+          <div className="text-center relative z-10 pt-7 sm:pt-8 space-y-3">
             {/* Title + Badges in ONE unified line */}
             <div className="flex items-center justify-center gap-2 flex-wrap">
               <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
