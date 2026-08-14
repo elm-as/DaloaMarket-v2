@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Search, MessageSquare, User, Home, Plus, ShoppingBag, ClipboardList } from 'lucide-react';
+import { Search, MessageSquare, User, Home, Plus, ShoppingCart, Package } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSupabase } from '../../hooks/useSupabase';
 import { useMessageRead } from '../../contexts/MessageReadContext';
@@ -33,7 +33,7 @@ const AppBar: React.FC = () => {
         paddingTop: 'env(safe-area-inset-top, 0px)',
       }}
     >
-      {/* MOBILE BAR - unchanged, shown on <lg screens */}
+      {/* MOBILE BAR - shown on <lg screens */}
       <div
         className="lg:hidden flex items-center w-full px-3 gap-2 h-14"
         style={{
@@ -77,19 +77,19 @@ const AppBar: React.FC = () => {
           </span>
         </Link>
 
-        {/* Actions mobiles : uniquement Panier (si connecté) + Compte */}
+        {/* Actions mobiles : Panier + Commandes */}
         <div className="flex items-center gap-0.5 flex-shrink-0">
           {user && (
             <Link
               to="/panier"
               className="relative flex items-center justify-center rounded-xl active:scale-[0.92] transition-transform"
-              style={{ width: 42, height: 42 }}
+              style={{ width: 40, height: 40 }}
               aria-label={`Panier${itemCount > 0 ? ` (${itemCount} articles)` : ''}`}
             >
-              <ShoppingBag
+              <ShoppingCart
                 style={{
-                  width: 22,
-                  height: 22,
+                  width: 21,
+                  height: 21,
                   color: location.pathname === '/panier' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)',
                   opacity: location.pathname === '/panier' ? 1 : 0.7,
                 }}
@@ -97,7 +97,7 @@ const AppBar: React.FC = () => {
               />
               {itemCount > 0 && (
                 <motion.span
-                  className="absolute top-1 right-1 min-w-[17px] h-[17px] bg-[var(--color-primary)] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 ring-2 ring-white"
+                  className="absolute top-0.5 right-0.5 min-w-[17px] h-[17px] bg-[var(--color-primary)] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 ring-2 ring-white"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', stiffness: 500 }}
@@ -112,13 +112,13 @@ const AppBar: React.FC = () => {
             <Link
               to="/mes-commandes"
               className="relative flex items-center justify-center rounded-xl active:scale-[0.92] transition-transform"
-              style={{ width: 42, height: 42 }}
+              style={{ width: 40, height: 40 }}
               aria-label={`Commandes${activeOrderCount > 0 ? ` (${activeOrderCount} en cours)` : ''}`}
             >
-              <ClipboardList
+              <Package
                 style={{
-                  width: 22,
-                  height: 22,
+                  width: 21,
+                  height: 21,
                   color: location.pathname === '/mes-commandes' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)',
                   opacity: location.pathname === '/mes-commandes' ? 1 : 0.7,
                 }}
@@ -126,7 +126,7 @@ const AppBar: React.FC = () => {
               />
               {activeOrderCount > 0 && (
                 <motion.span
-                  className="absolute top-1 right-1 min-w-[17px] h-[17px] bg-[var(--color-primary)] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 ring-2 ring-white"
+                  className="absolute top-0.5 right-0.5 min-w-[17px] h-[17px] bg-[var(--color-primary)] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 ring-2 ring-white"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', stiffness: 500 }}
@@ -236,7 +236,7 @@ const AppBar: React.FC = () => {
                 background: location.pathname === '/panier' ? 'var(--color-primary-50)' : 'transparent',
               }}
             >
-              <ShoppingBag style={{ width: 18, height: 18 }} />
+              <ShoppingCart style={{ width: 18, height: 18 }} />
               <span className="hidden xl:inline">Panier</span>
               {itemCount > 0 && (
                 <motion.span
