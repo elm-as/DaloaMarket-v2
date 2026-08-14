@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertTriangle,
   ArrowRight,
+  Bike,
   BookOpen,
   Car,
   ChevronRight,
@@ -18,6 +19,9 @@ import {
   Shirt,
   Sparkles,
   UtensilsCrossed,
+  Tag,
+  Zap,
+  Package,
 } from 'lucide-react';
 
 import { useSupabase } from '../hooks/useSupabase';
@@ -32,24 +36,24 @@ import { SectionHeader } from '../components/ui/SectionHeader';
 import ListingCard from '../components/listings/ListingCard';
 import ListingCardSkeleton from '../components/listings/ListingCardSkeleton';
 
-const CATEGORY_STYLE: Record<string, { icon: React.ReactNode; bg: string; border: string }> = {
-  fashion: { icon: <Shirt className="h-5 w-5" />, bg: 'bg-pink-50 text-pink-600', border: 'border-pink-200' },
-  electronics: { icon: <Monitor className="h-5 w-5" />, bg: 'bg-blue-50 text-blue-600', border: 'border-blue-200' },
-  home: { icon: <Home className="h-5 w-5" />, bg: 'bg-amber-50 text-amber-600', border: 'border-amber-200' },
-  vehicles: { icon: <Car className="h-5 w-5" />, bg: 'bg-red-50 text-red-600', border: 'border-red-200' },
-  sports: { icon: <Dumbbell className="h-5 w-5" />, bg: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-200' },
-  books: { icon: <BookOpen className="h-5 w-5" />, bg: 'bg-cyan-50 text-cyan-600', border: 'border-cyan-200' },
-  food: { icon: <UtensilsCrossed className="h-5 w-5" />, bg: 'bg-orange-50 text-orange-600', border: 'border-orange-200' },
+const CATEGORY_STYLE: Record<string, { icon: React.ReactNode; bg: string; border: string; emoji: string }> = {
+  fashion: { icon: <Shirt className="h-4 w-4" />, bg: 'bg-pink-50 text-pink-600', border: 'border-pink-200', emoji: '👗' },
+  electronics: { icon: <Monitor className="h-4 w-4" />, bg: 'bg-blue-50 text-blue-600', border: 'border-blue-200', emoji: '📱' },
+  home: { icon: <Home className="h-4 w-4" />, bg: 'bg-amber-50 text-amber-600', border: 'border-amber-200', emoji: '🛋️' },
+  vehicles: { icon: <Car className="h-4 w-4" />, bg: 'bg-red-50 text-red-600', border: 'border-red-200', emoji: '🚗' },
+  sports: { icon: <Dumbbell className="h-4 w-4" />, bg: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-200', emoji: '⚽' },
+  books: { icon: <BookOpen className="h-4 w-4" />, bg: 'bg-cyan-50 text-cyan-600', border: 'border-cyan-200', emoji: '📚' },
+  food: { icon: <UtensilsCrossed className="h-4 w-4" />, bg: 'bg-orange-50 text-orange-600', border: 'border-orange-200', emoji: '🍲' },
 };
 
-const CATEGORY_ICONS: Record<string, React.ReactNode> = {
-  fashion: <Shirt className="h-5 w-5" />,
-  electronics: <Monitor className="h-5 w-5" />,
-  home: <Home className="h-5 w-5" />,
-  vehicles: <Car className="h-5 w-5" />,
-  sports: <Dumbbell className="h-5 w-5" />,
-  books: <BookOpen className="h-5 w-5" />,
-  food: <UtensilsCrossed className="h-5 w-5" />,
+const CATEGORY_SYNONYMS: Record<string, string[]> = {
+  fashion: ['fashion', 'mode', 'Mode & Accessoires', 'vetements', 'chaussures', 'accessoires'],
+  electronics: ['electronics', 'electronique', 'Électronique & High-tech', 'high-tech', 'telephone', 'informatique'],
+  home: ['home', 'maison', 'maison-deco', 'Maison & Jardin', 'meubles', 'electromenager'],
+  vehicles: ['vehicles', 'vehicules', 'Auto & Moto', 'voiture', 'moto'],
+  sports: ['sports', 'sports-loisirs', 'Sports & Loisirs', 'sport'],
+  books: ['books', 'livres', 'Livres & Culture', 'scolaire', 'culture'],
+  food: ['food', 'alimentaire', 'Alimentaire', 'Alimentaire & Produits locaux', 'nourriture', 'produits locaux'],
 };
 
 interface ListingData {
@@ -140,7 +144,7 @@ const HomePage: React.FC = () => {
     return map;
   }, [cartItems]);
 
-  const fetchListings = useCallback(async () => {
+  const fetchListings = useCallback(async (cat: string) => {
     if (!isSupabaseConfigured) {
       setError('Base de données non configurée');
       setLoading(false);
@@ -150,34 +154,48 @@ const HomePage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data: boostedData } = await supabase
-        .from('listings')
-        .select('*, users!listings_user_id_fkey(full_name, avatar_url)')
-        .eq('status', 'active')
-        .gt('boosted_until', new Date().toISOString())
-        .order('boosted_until', { ascending: false })
-        .limit(6);
+      if (cat === 'all') {
+        // Mode général : annonces boostées + dernières annonces diversifiées
+        const { data: boostedData } = await supabase
+          .from('listings')
+          .select('*, users!listings_user_id_fkey(full_name, avatar_url)')
+          .eq('status', 'active')
+          .gt('boosted_until', new Date().toISOString())
+          .order('boosted_until', { ascending: false })
+          .limit(6);
 
-      const boostedListings = (boostedData || []) as ListingData[];
-      const boostedIds = new Set(boostedListings.map(b => b.id));
+        const boostedListings = (boostedData || []) as ListingData[];
+        const boostedIds = new Set(boostedListings.map(b => b.id));
 
-      const { data, error: fetchError } = await supabase
-        .from('listings')
-        .select('*, users!listings_user_id_fkey(full_name, avatar_url)')
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(30);
+        const { data, error: fetchError } = await supabase
+          .from('listings')
+          .select('*, users!listings_user_id_fkey(full_name, avatar_url)')
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(30);
 
-      if (fetchError) throw fetchError;
+        if (fetchError) throw fetchError;
 
-      const rawListings = (data || []) as unknown as ListingData[];
-      const filteredRaw = rawListings.filter(l => !boostedIds.has(l.id));
+        const rawListings = (data || []) as unknown as ListingData[];
+        const filteredRaw = rawListings.filter(l => !boostedIds.has(l.id));
 
-      // Diversification pour éviter qu'un seul vendeur n'accapare le fil d'actualité
-      const diversifiedListings = diversifySellers(filteredRaw, 2);
-      
-      const combined = [...boostedListings, ...diversifiedListings].slice(0, 20);
-      setListings(interleaveBoosted(combined));
+        const diversifiedListings = diversifySellers(filteredRaw, 2);
+        const combined = [...boostedListings, ...diversifiedListings].slice(0, 24);
+        setListings(interleaveBoosted(combined));
+      } else {
+        // Mode catégorie ciblée : interroger la base avec tous les synonymes
+        const synonyms = CATEGORY_SYNONYMS[cat] || [cat];
+        const { data, error: fetchError } = await supabase
+          .from('listings')
+          .select('*, users!listings_user_id_fkey(full_name, avatar_url)')
+          .eq('status', 'active')
+          .in('category', synonyms)
+          .order('created_at', { ascending: false })
+          .limit(30);
+
+        if (fetchError) throw fetchError;
+        setListings((data || []) as unknown as ListingData[]);
+      }
     } catch (err: unknown) {
       console.error('HomePage fetch error:', err);
       const message = err instanceof Error ? err.message : (isSupabaseConfigured ? 'Impossible de charger les annonces' : 'Base de données non configurée');
@@ -187,9 +205,10 @@ const HomePage: React.FC = () => {
     }
   }, []);
 
+  // Déclencher la recherche dès que la catégorie sélectionnée change
   useEffect(() => {
-    fetchListings();
-  }, [fetchListings]);
+    fetchListings(selectedCategory);
+  }, [selectedCategory, fetchListings]);
 
   const mapToListingCard = (l: ListingData): ListingCardMapped => ({
     id: l.id,
@@ -213,12 +232,14 @@ const HomePage: React.FC = () => {
     cart_qty: cartQtyByListingId[l.id] || 0,
   });
 
+  const currentCategoryObj = CATEGORIES.find((cat) => cat.id === selectedCategory);
+
   return (
     <motion.div
       className="min-h-screen bg-gray-50/70"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.4, ease: [0.2, 0, 0, 1] }}
+      transition={{ duration: 0.3 }}
     >
       {showLocationWarning && (
         <div className="mx-4 mt-4 flex items-center justify-between gap-3 rounded-2xl border border-orange-100 bg-white px-4 py-3 shadow-sm shadow-orange-100/60">
@@ -243,58 +264,35 @@ const HomePage: React.FC = () => {
         </div>
       )}
 
-      {/* HERO — NOUVEAU DESIGN MODERNE THEME DM */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-orange-500 to-amber-600 px-4 pt-6 pb-12 rounded-b-[36px] shadow-lg shadow-orange-500/20 sm:px-6 md:pb-16 md:pt-12 lg:px-12 lg:pt-16">
-        {/* Ambient background glows */}
-        <div className="pointer-events-none absolute -top-12 -right-10 w-44 h-44 rounded-full bg-white/15 blur-xl" />
-        <div className="pointer-events-none absolute -bottom-14 -left-8 w-36 h-36 rounded-full bg-white/10 blur-xl" />
-        <div className="pointer-events-none absolute top-1/3 left-1/2 w-48 h-48 -translate-x-1/2 rounded-full bg-amber-300/10 blur-2xl" />
+      {/* HERO — DESIGN HARMONISÉ */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-primary via-orange-600 to-amber-700 px-4 pt-6 pb-12 rounded-b-[36px] shadow-lg shadow-orange-500/20 sm:px-6 md:pb-16 md:pt-10 lg:px-12">
+        <div className="pointer-events-none absolute -top-12 -right-10 w-48 h-48 rounded-full bg-white/15 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-14 -left-8 w-36 h-36 rounded-full bg-black/10 blur-xl" />
 
         <div className="relative z-10 mx-auto max-w-2xl lg:max-w-5xl">
           <div className="lg:flex lg:items-center lg:justify-between lg:gap-12">
             <div className="flex-1 text-left">
-              {/* Brand Pill Badge */}
-              <motion.div
-                className="mb-2.5 inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-md px-3.5 py-1 text-[11px] font-black text-white border border-white/25 shadow-xs"
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1, duration: 0.3 }}
-              >
+              {/* Badge Local */}
+              <div className="mb-2.5 inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md px-3.5 py-1 text-[11px] font-black text-white border border-white/20 shadow-xs">
                 <Sparkles className="w-3.5 h-3.5 text-amber-200 fill-amber-200" />
-                <span>Le marché local de Daloa</span>
-              </motion.div>
+                <span>Marketplace & Livraison · Daloa</span>
+              </div>
 
               {/* Headline */}
-              <motion.h1
-                className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-[1.12]"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.4 }}
-              >
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-[1.12]">
                 Tout Daloa,{' '}
                 <span className="bg-gradient-to-r from-amber-200 via-amber-100 to-yellow-200 bg-clip-text text-transparent block sm:inline">
                   au même endroit.
                 </span>
-              </motion.h1>
+              </h1>
 
               {/* Subtitle */}
-              <motion.p
-                className="mt-2.5 max-w-md text-xs sm:text-sm font-medium text-orange-100/90 leading-relaxed"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.4 }}
-              >
-                Achetez et vendez facilement entre voisins. Paiement 100% protégé et livraison partout dans la ville.
-              </motion.p>
+              <p className="mt-2.5 max-w-md text-xs sm:text-sm font-medium text-orange-100/90 leading-relaxed">
+                Achetez et vendez en toute confiance. Paiement séquestre garanti et livraison géolocalisée.
+              </p>
 
-              {/* Search Bar & Action Buttons */}
-              <motion.div
-                className="mt-4 max-w-xl space-y-2.5"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.4 }}
-              >
-                {/* Search Trigger */}
+              {/* Search Bar & Actions */}
+              <div className="mt-4 max-w-xl space-y-2.5">
                 <Link
                   to="/search"
                   className="flex h-12 w-full items-center gap-3 rounded-2xl bg-white px-3.5 text-left shadow-xl shadow-orange-950/15 transition-all active:scale-[0.99] border border-orange-100/60 group"
@@ -311,40 +309,34 @@ const HomePage: React.FC = () => {
                   </span>
                 </Link>
 
-                {/* Quick Actions */}
                 <div className="flex items-center gap-2">
                   <Link
                     to="/create-listing"
                     className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-white px-4 text-xs font-black text-orange-600 shadow-md shadow-orange-950/10 hover:bg-orange-50 active:scale-95 transition-all"
                   >
                     <Plus className="h-4 w-4 stroke-[3]" />
-                    <span>Vendre un article</span>
+                    <span>Publier une annonce</span>
                   </Link>
                   <Link
                     to="/search"
                     className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 px-4 text-xs font-extrabold text-white hover:bg-white/30 active:scale-95 transition-all"
                   >
-                    <span>Voir les annonces</span>
+                    <span>Tout le catalogue</span>
                   </Link>
                 </div>
-              </motion.div>
+              </div>
             </div>
 
-            {/* Desktop Side Feature Cards */}
-            <motion.div
-              className="hidden w-64 grid-cols-1 gap-3 lg:grid"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.5, duration: 0.4 }}
-            >
+            {/* Desktop Side Highlights */}
+            <div className="hidden w-64 grid-cols-1 gap-3 lg:grid">
               <div className="rounded-3xl border border-white/30 bg-white/20 backdrop-blur-md p-4 text-white shadow-lg">
                 <div className="flex items-center gap-2.5 mb-1">
                   <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
                     <Shield className="h-4 w-4 text-white" />
                   </div>
-                  <span className="text-xs font-black">Escrow Sécurisé</span>
+                  <span className="text-xs font-black">Séquestre Escrow</span>
                 </div>
-                <p className="text-[11px] text-orange-100 font-medium">Paiement protégé jusqu'à réception</p>
+                <p className="text-[11px] text-orange-100 font-medium">Fonds bloqués jusqu'à confirmation OTP</p>
               </div>
 
               <div className="rounded-3xl border border-white/30 bg-white/20 backdrop-blur-md p-4 text-white shadow-lg">
@@ -352,23 +344,18 @@ const HomePage: React.FC = () => {
                   <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
                     <MapPin className="h-4 w-4 text-white" />
                   </div>
-                  <span className="text-xs font-black">100% Local</span>
+                  <span className="text-xs font-black">100% Daloa</span>
                 </div>
-                <p className="text-[11px] text-orange-100 font-medium">Vendeurs et livreurs à Daloa</p>
+                <p className="text-[11px] text-orange-100 font-medium">Commerçants & livreurs de proximité</p>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── FLOATING TRUST BAR (OVERLAPPING HERO) ── */}
+      {/* FLOATING TRUST STRIP */}
       <section className="relative z-20 -mt-6 px-4">
-        <motion.div
-          className="mx-auto max-w-2xl bg-white rounded-3xl p-3 border border-gray-100 shadow-lg shadow-gray-200/50 flex items-center justify-around gap-2"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45, duration: 0.35 }}
-        >
+        <div className="mx-auto max-w-2xl bg-white rounded-3xl p-3 border border-gray-100 shadow-lg shadow-gray-200/50 flex items-center justify-around gap-2">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
               <Shield className="h-4 w-4" />
@@ -402,153 +389,102 @@ const HomePage: React.FC = () => {
               <span className="text-[10px] text-gray-400 font-semibold hidden sm:inline">Sans commission</span>
             </div>
           </div>
-        </motion.div>
+        </div>
       </section>
 
-      {/* DALOADELIVERY BANNER */}
-      <section className="px-4 pt-4 pb-1">
+      {/* DALOADELIVERY LINK BANNER */}
+      <section className="px-4 pt-3 pb-1">
         <a
           href="https://delivery.daloamarket.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-between gap-3 max-w-2xl lg:max-w-5xl mx-auto px-4 py-2.5 bg-white rounded-2xl shadow-sm border border-orange-100/80 no-underline active:scale-[0.99] hover:bg-orange-50/50 transition-all group"
+          className="flex items-center justify-between gap-2.5 max-w-2xl lg:max-w-5xl mx-auto px-3.5 py-2 bg-white rounded-2xl shadow-xs border border-orange-100/80 no-underline active:scale-[0.99] hover:bg-orange-50/50 transition-all group"
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="text-base flex-shrink-0">🏍️</span>
+            <div className="w-7 h-7 rounded-xl bg-orange-50 text-primary flex items-center justify-center flex-shrink-0">
+              <Bike className="w-4 h-4" />
+            </div>
             <p className="text-xs font-medium text-gray-700 truncate">
-              Besoin d'une course ou d'un livreur ? <span className="text-orange-600 font-extrabold">DaloaDelivery</span>
+              Besoin d'un coursier ? <span className="text-primary font-black">DaloaDelivery</span>
             </p>
           </div>
-          <ChevronRight className="h-4 w-4 text-orange-500 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+          <ChevronRight className="h-4 w-4 text-primary flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
         </a>
       </section>
 
-      {/* CATEGORIES — grille de découverte, desktop uniquement (sur mobile la rangée de pills ci-dessous suffit) */}
-      <section className="hidden lg:block pt-8 pb-4">
-        <SectionHeader
-          title="Categories"
-          action={{
-            label: 'Voir tout',
-            onClick: () => navigate('/search'),
-          }}
-        />
-        <div className="px-4 lg:px-8">
-          <motion.div
-            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.9, duration: 0.4 }}
-          >
-            {CATEGORIES.map((cat, i) => (
-              <motion.div
-                key={cat.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.9 + i * 0.05, duration: 0.3 }}
-              >
-                <Link
-                  to={`/search?category=${cat.id}`}
-                  className="no-underline"
-                >
-                  <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-white border border-gray-100 hover:border-[var(--color-primary)]/30 hover:shadow-md active:scale-[0.97] transition-all duration-200"
-                    style={{ boxShadow: 'var(--elevation-1)' }}
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0">
-                      {CATEGORY_ICONS[cat.id] || <ChevronRight className="h-5 w-5 text-[var(--color-primary)]" />}
-                    </div>
-                    <span className="flex-1 text-sm font-semibold text-[var(--color-on-surface)] truncate">
-                      {cat.label}
-                    </span>
-                    <ChevronRight className="h-4 w-4 text-[var(--color-on-surface-variant)] flex-shrink-0" />
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* MOBILE CATEGORY STRIP — Pills fluides sans troncature */}
-      <section className="pb-2 pt-5 lg:hidden">
-        <SectionHeader
-          title="Explorer par catégorie"
-          action={{
-            label: 'Tout voir',
-            onClick: () => navigate('/search'),
-          }}
-        />
-        <div className="no-scrollbar flex items-center gap-2 overflow-x-auto px-4 pb-2 pt-1">
-          <button
-            type="button"
-            onClick={() => setSelectedCategory('all')}
-            aria-pressed={selectedCategory === 'all'}
-            className={cn(
-              'flex h-10 shrink-0 items-center gap-2 rounded-2xl px-3.5 text-xs font-extrabold transition-all active:scale-95 whitespace-nowrap shadow-2xs',
-              selectedCategory === 'all'
-                ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-md shadow-orange-500/25 ring-2 ring-orange-500/20'
-                : 'border border-gray-200/80 bg-white text-gray-700 hover:border-orange-300 hover:text-orange-600'
-            )}
-          >
-            <div
+      {/* CATEGORY SELECTOR STRIP — PILLS COMPACTES ET FLUIDES */}
+      <section className="pt-3 pb-1">
+        <div className="px-4 lg:px-8 max-w-5xl mx-auto">
+          <SectionHeader
+            title="Explorer par catégorie"
+            action={{
+              label: 'Tout voir',
+              onClick: () => navigate(selectedCategory === 'all' ? '/search' : `/search?category=${selectedCategory}`),
+            }}
+          />
+          <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 -mx-4 px-4 sm:mx-0 sm:px-0">
+            {/* Pill: Toutes les annonces */}
+            <button
+              type="button"
+              onClick={() => setSelectedCategory('all')}
+              aria-pressed={selectedCategory === 'all'}
               className={cn(
-                'flex h-6 w-6 items-center justify-center rounded-xl transition-colors',
-                selectedCategory === 'all' ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-600'
+                'flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-bold transition-all active:scale-95 whitespace-nowrap shadow-2xs',
+                selectedCategory === 'all'
+                  ? 'bg-gradient-to-r from-orange-500 via-primary to-amber-600 text-white shadow-xs font-black'
+                  : 'border border-gray-200/80 bg-white text-gray-700 hover:border-orange-300 hover:text-primary'
               )}
             >
-              <Search className="h-3.5 w-3.5" />
-            </div>
-            <span>Toutes les annonces</span>
-          </button>
+              <Search className={cn('h-3.5 w-3.5', selectedCategory === 'all' ? 'text-white' : 'text-primary')} />
+              <span>Toutes</span>
+            </button>
 
-          {CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory === cat.id;
-            const style = CATEGORY_STYLE[cat.id] || {
-              icon: <Search className="h-3.5 w-3.5" />,
-              bg: 'bg-orange-50 text-orange-600',
-              border: 'border-orange-100',
-            };
+            {/* Category Pills */}
+            {CATEGORIES.map((cat) => {
+              const isSelected = selectedCategory === cat.id;
+              const style = CATEGORY_STYLE[cat.id] || {
+                icon: <Tag className="h-3.5 w-3.5" />,
+                bg: 'text-primary',
+                border: 'border-orange-100',
+              };
 
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setSelectedCategory(cat.id)}
-                aria-pressed={isSelected}
-                className={cn(
-                  'flex h-10 shrink-0 items-center gap-2 rounded-2xl px-3.5 text-xs font-extrabold transition-all active:scale-95 whitespace-nowrap shadow-2xs',
-                  isSelected
-                    ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-md shadow-orange-500/25 ring-2 ring-orange-500/20'
-                    : 'border border-gray-200/80 bg-white text-gray-700 hover:border-orange-300 hover:text-orange-600'
-                )}
-              >
-                <div
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat.id)}
+                  aria-pressed={isSelected}
                   className={cn(
-                    'flex h-6 w-6 items-center justify-center rounded-xl transition-colors',
-                    isSelected ? 'bg-white/20 text-white' : style.bg
+                    'flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-bold transition-all active:scale-95 whitespace-nowrap shadow-2xs',
+                    isSelected
+                      ? 'bg-gradient-to-r from-orange-500 via-primary to-amber-600 text-white shadow-xs font-black'
+                      : 'border border-gray-200/80 bg-white text-gray-700 hover:border-orange-300 hover:text-primary'
                   )}
                 >
-                  {style.icon}
-                </div>
-                <span>{cat.label}</span>
-              </button>
-            );
-          })}
+                  <span className={cn('flex items-center justify-center', isSelected ? 'text-white' : style.bg)}>
+                    {style.icon}
+                  </span>
+                  <span>{cat.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      {/* LATEST LISTINGS */}
-      <section className="pb-4 pt-6 lg:pt-8">
-        <SectionHeader
-          title={selectedCategory === 'all' ? 'Dernières annonces' : `Annonces · ${CATEGORIES.find((cat) => cat.id === selectedCategory)?.label || 'Sélection'}`}
-          action={{
-            label: 'Voir tout',
-            onClick: () => navigate('/search'),
-          }}
-        />
+      {/* LISTINGS FEED */}
+      <section className="pb-8 pt-1">
+        <div className="px-4 lg:px-8 max-w-5xl mx-auto">
+          <SectionHeader
+            title={selectedCategory === 'all' ? 'Dernières annonces' : (currentCategoryObj?.label || 'Catégorie')}
+            action={{
+              label: 'Voir tout',
+              onClick: () => navigate(selectedCategory === 'all' ? '/search' : `/search?category=${selectedCategory}`),
+            }}
+          />
 
-        <div className="px-4 lg:px-8">
           {loading && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mt-1.5">
               {Array.from({ length: 8 }).map((_, i) => (
                 <ListingCardSkeleton key={i} />
               ))}
@@ -558,80 +494,78 @@ const HomePage: React.FC = () => {
           {error && !loading && (
             <ErrorState
               message={error}
-              onRetry={fetchListings}
+              onRetry={() => fetchListings(selectedCategory)}
             />
           )}
 
           {!loading && !error && listings.length === 0 && (
-            <EmptyState
-              title="Aucune annonce pour le moment"
-              description="Soyez le premier à publier une annonce sur DaloaMarket."
-              action={{
-                label: 'Publier une annonce',
-                onClick: () => navigate('/create-listing'),
-              }}
-            />
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/40 p-6 sm:p-8 text-center my-2 max-w-md mx-auto">
+              <div className="w-12 h-12 rounded-2xl bg-orange-50 text-primary flex items-center justify-center mx-auto mb-3 shadow-inner">
+                {currentCategoryObj ? (CATEGORY_STYLE[currentCategoryObj.id]?.icon || <Package className="w-5 h-5" />) : <Search className="w-5 h-5" />}
+              </div>
+              <h3 className="text-sm font-black text-gray-900 mb-1">
+                {selectedCategory === 'all'
+                  ? 'Aucune annonce disponible'
+                  : `Aucun article en ${currentCategoryObj?.label || selectedCategory}`}
+              </h3>
+              <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+                Soyez le tout premier vendeur à publier dans cette catégorie à Daloa !
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Button
+                  color="primary"
+                  size="sm"
+                  onClick={() => navigate('/create-listing')}
+                  className="rounded-xl shadow-xs font-black text-xs h-10"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Publier une annonce
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="sm"
+                  onClick={() => setSelectedCategory('all')}
+                  className="rounded-xl font-bold text-xs h-10 border-gray-200 text-gray-700"
+                >
+                  Toutes les annonces
+                </Button>
+              </div>
+            </div>
           )}
 
-          {!loading && !error && listings.length > 0 && (() => {
-            const filteredListings = selectedCategory === 'all' 
-              ? listings 
-              : listings.filter(l => l.category === selectedCategory);
-
-            if (filteredListings.length === 0) {
-              return (
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50 p-8 text-center my-2">
-                  <p className="text-sm font-extrabold text-gray-900 mb-1">Aucun article dans cette catégorie pour l'instant</p>
-                  <p className="text-xs text-gray-500 mb-4">Soyez le premier à publier dans cette catégorie !</p>
-                  <Button color="primary" size="sm" onClick={() => navigate('/create-listing')}>
-                    Publier une annonce
-                  </Button>
-                </div>
-              );
-            }
-
-            return (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
-                {filteredListings.map((listing, index) => (
-                  <ListingCard
-                    key={listing.id}
-                    listing={mapToListingCard(listing)}
-                    index={index}
-                  />
-                ))}
-              </div>
-            );
-          })()}
+          {!loading && !error && listings.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mt-1.5">
+              {listings.map((listing, index) => (
+                <ListingCard
+                  key={listing.id}
+                  listing={mapToListingCard(listing)}
+                  index={index}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* CTA — rappel visible après le premier lot d'annonces */}
-      <section className="px-4 py-7 lg:py-8">
-        <motion.div
-          className="mx-auto max-w-2xl rounded-[28px] bg-gradient-to-br from-orange-500 to-amber-600 p-6 text-center shadow-lg shadow-orange-200/50 md:p-8 lg:max-w-none lg:px-8"
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4 }}
-        >
-          <h2 className="mb-2 text-lg font-extrabold text-white md:text-xl">
-            Une annonce à publier ?
-          </h2>
-          <p className="mb-5 text-sm text-orange-100">
-            Vendez simplement, gratuitement, partout à Daloa.
-          </p>
-          <Link
-            to="/create-listing"
-            className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-extrabold text-orange-600 shadow-md transition-all active:scale-[0.97]"
-          >
-            <Plus className="h-4 w-4" />
-            Publier une annonce
-          </Link>
-        </motion.div>
+      {/* BOTTOM CTA BANNER */}
+      <section className="px-4 pb-12">
+        <div className="max-w-5xl mx-auto">
+          <div className="rounded-3xl bg-gradient-to-br from-primary via-orange-600 to-amber-600 p-6 sm:p-8 text-center text-white shadow-xl shadow-orange-500/20">
+            <h2 className="text-lg sm:text-2xl font-black mb-2 tracking-tight">
+              Vous avez un article à vendre ?
+            </h2>
+            <p className="text-xs sm:text-sm text-orange-100 max-w-md mx-auto mb-5 font-medium leading-relaxed">
+              Publiez gratuitement en moins de 2 minutes et trouvez des acheteurs dans toute la ville de Daloa.
+            </p>
+            <Link
+              to="/create-listing"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-white px-6 text-xs font-black text-primary shadow-lg hover:bg-orange-50 active:scale-95 transition-all"
+            >
+              <Plus className="h-4 w-4 stroke-[3]" />
+              <span>Déposer une annonce gratuite</span>
+            </Link>
+          </div>
+        </div>
       </section>
-
-      {/* Petit espace de respiration en fin de fil (le padding bottom de la nav est géré par AppLayout) */}
-      <div className="h-5 lg:hidden" />
     </motion.div>
   );
 };

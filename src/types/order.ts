@@ -11,8 +11,11 @@ export interface Order {
   total_amount: number;
   product_amount: number;
   delivery_fee: number;
+  platform_commission?: number;
+  reserve_fee?: number;
   status: string;
   delivery_mode: string;
+  payment_method?: string;
   delivery_address: string | null;
   created_at: string;
   variant_id?: string | null;

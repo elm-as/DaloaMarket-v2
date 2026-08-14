@@ -15,6 +15,8 @@ import {
   ShoppingBag,
   Send,
   Sparkles,
+  Heart,
+  Zap,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -38,14 +40,32 @@ type FeedbackOptionKey =
 interface QuickOption {
   id: FeedbackOptionKey;
   label: string;
+  emoji: string;
   icon: React.ReactNode;
 }
 
+const SATISFACTIONS = [
+  { level: 5, emoji: '😍', label: 'Génial' },
+  { level: 4, emoji: '😊', label: 'Bien' },
+  { level: 3, emoji: '😐', label: 'Correct' },
+  { level: 2, emoji: '😕', label: 'Moyen' },
+  { level: 1, emoji: '😤', label: 'Déçu' },
+];
+
+const QUICK_IDEAS = [
+  '🌙 Mode sombre',
+  '💬 Négociation prix',
+  '🔔 Alertes WhatsApp',
+  '⚡ Filtres quartier',
+  '🛵 Suivi livreur live',
+];
+
 export const FeedbackForm: React.FC<FeedbackFormProps> = ({ userId, onSuccess, onCancel }) => {
+  const [satisfaction, setSatisfaction] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formData, setFormData] = useState({
-    dislikes: '',
+    comment: '',
     prefers_native_app: false,
     pricing_too_high: false,
     visibility_issue: false,
@@ -53,17 +73,16 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ userId, onSuccess, o
     payment_security_issue: false,
     slow_response_issue: false,
     complex_checkout_issue: false,
-    recommended_features: '',
   });
 
   const quickOptions: QuickOption[] = [
-    { id: 'prefers_native_app', label: "Application mobile", icon: <Smartphone className="w-3.5 h-3.5" /> },
-    { id: 'pricing_too_high', label: 'Frais & tarifs livraison', icon: <DollarSign className="w-3.5 h-3.5" /> },
-    { id: 'visibility_issue', label: 'Visibilité des annonces', icon: <EyeOff className="w-3.5 h-3.5" /> },
-    { id: 'search_navigation_issue', label: 'Recherche & filtres', icon: <Search className="w-3.5 h-3.5" /> },
-    { id: 'payment_security_issue', label: 'Paiement & sécurité', icon: <ShieldCheck className="w-3.5 h-3.5" /> },
-    { id: 'slow_response_issue', label: 'Temps de réponse', icon: <Clock className="w-3.5 h-3.5" /> },
-    { id: 'complex_checkout_issue', label: 'Processus de commande', icon: <ShoppingBag className="w-3.5 h-3.5" /> },
+    { id: 'prefers_native_app', label: 'App mobile', emoji: '📱', icon: <Smartphone className="w-3.5 h-3.5" /> },
+    { id: 'pricing_too_high', label: 'Tarifs livraison', emoji: '🛵', icon: <DollarSign className="w-3.5 h-3.5" /> },
+    { id: 'visibility_issue', label: 'Visibilité annonces', emoji: '👁️', icon: <EyeOff className="w-3.5 h-3.5" /> },
+    { id: 'search_navigation_issue', label: 'Recherche & filtres', emoji: '🔍', icon: <Search className="w-3.5 h-3.5" /> },
+    { id: 'payment_security_issue', label: 'Paiement sécurisé', emoji: '🔒', icon: <ShieldCheck className="w-3.5 h-3.5" /> },
+    { id: 'slow_response_issue', label: 'Rapidité / Fluidité', emoji: '⚡', icon: <Clock className="w-3.5 h-3.5" /> },
+    { id: 'complex_checkout_issue', label: 'Processus commande', emoji: '🛍️', icon: <ShoppingBag className="w-3.5 h-3.5" /> },
   ];
 
   const toggleOption = (name: FeedbackOptionKey) => {
@@ -73,30 +92,37 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ userId, onSuccess, o
     }));
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+  const handleAddQuickIdea = (idea: string) => {
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      comment: prev.comment ? `${prev.comment}, ${idea.replace(/^[^a-zA-Z0-9À-ÿ]+/, '')}` : idea.replace(/^[^a-zA-Z0-9À-ÿ]+/, ''),
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const hasAnyOptionSelected = quickOptions.some((opt) => formData[opt.id]);
-    if (!formData.dislikes.trim() && !formData.recommended_features.trim() && !hasAnyOptionSelected) {
-      toast.error('Sélectionnez au moins une option ou écrivez une suggestion.', {
-        icon: '📝',
-      });
+    if (!formData.comment.trim() && !hasAnyOptionSelected && satisfaction === null) {
+      toast.error('Choisissez une note ou partagez un commentaire.', { icon: '✨' });
       return;
     }
 
     setIsSubmitting(true);
     try {
-      // 1. Insert feedback
+      const selectedLabels = quickOptions
+        .filter((opt) => formData[opt.id])
+        .map((opt) => opt.label);
+
+      let finalComment = formData.comment.trim();
+      if (satisfaction) {
+        const satObj = SATISFACTIONS.find((s) => s.level === satisfaction);
+        const satPrefix = `[Satisfaction: ${satObj?.emoji} ${satObj?.label}]`;
+        finalComment = finalComment ? `${satPrefix} ${finalComment}` : satPrefix;
+      }
+
       const payload: Record<string, any> = {
         user_id: userId,
-        dislikes: formData.dislikes,
+        dislikes: finalComment,
         prefers_native_app: formData.prefers_native_app,
         pricing_too_high: formData.pricing_too_high,
         visibility_issue: formData.visibility_issue,
@@ -104,37 +130,31 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ userId, onSuccess, o
         payment_security_issue: formData.payment_security_issue,
         slow_response_issue: formData.slow_response_issue,
         complex_checkout_issue: formData.complex_checkout_issue,
-        recommended_features: formData.recommended_features,
+        recommended_features: finalComment,
       };
 
       let { error } = await (supabase as any).from('user_feedbacks').insert(payload);
 
-      // Fallback if schema does not have extended columns
+      // Fallback in case of restricted columns in DB schema
       if (
         error &&
         (error.code === 'PGRST204' ||
           error.message?.includes('schema cache') ||
           error.message?.includes('column'))
       ) {
-        const extraSelectedLabels: string[] = [];
-        if (formData.search_navigation_issue) extraSelectedLabels.push('Recherche & filtres');
-        if (formData.payment_security_issue) extraSelectedLabels.push('Paiement & sécurité');
-        if (formData.slow_response_issue) extraSelectedLabels.push('Temps de réponse');
-        if (formData.complex_checkout_issue) extraSelectedLabels.push('Processus de commande');
-
-        let combinedDislikes = formData.dislikes;
-        if (extraSelectedLabels.length > 0) {
-          const prefix = `[Options sélectionnées: ${extraSelectedLabels.join(', ')}]`;
-          combinedDislikes = combinedDislikes ? `${prefix}\n${combinedDislikes}` : prefix;
+        let combinedText = finalComment;
+        if (selectedLabels.length > 0) {
+          const tagsPrefix = `[Thèmes: ${selectedLabels.join(', ')}]`;
+          combinedText = combinedText ? `${tagsPrefix}\n${combinedText}` : tagsPrefix;
         }
 
         const fallbackPayload = {
           user_id: userId,
-          dislikes: combinedDislikes,
+          dislikes: combinedText,
           prefers_native_app: formData.prefers_native_app,
           pricing_too_high: formData.pricing_too_high,
           visibility_issue: formData.visibility_issue,
-          recommended_features: formData.recommended_features,
+          recommended_features: combinedText,
         };
 
         const fallbackResult = await (supabase as any).from('user_feedbacks').insert(fallbackPayload);
@@ -144,8 +164,9 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ userId, onSuccess, o
       if (error) throw error;
 
       setIsSubmitted(true);
+      toast.success('Merci pour votre aide précieuse !', { icon: '🧡' });
       if (onSuccess) {
-        setTimeout(onSuccess, 1800);
+        setTimeout(onSuccess, 1600);
       }
     } catch (err: any) {
       console.error('Error submitting feedback:', err);
@@ -157,21 +178,21 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ userId, onSuccess, o
 
   if (isSubmitted) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
+      <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
         <motion.div
-          initial={{ scale: 0, rotate: -90 }}
+          initial={{ scale: 0, rotate: -20 }}
           animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-          className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center shadow-inner"
+          transition={{ type: 'spring', stiffness: 280, damping: 18 }}
+          className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-3xl flex items-center justify-center shadow-lg shadow-emerald-500/25"
         >
           <CheckCircle2 className="w-8 h-8" />
         </motion.div>
         <div>
-          <h3 className="text-base font-black text-gray-900">
-            Merci pour votre retour !
+          <h3 className="text-lg font-black text-gray-900">
+            Avis bien reçu !
           </h3>
-          <p className="text-xs text-gray-500 max-w-xs mt-1 leading-relaxed">
-            Vos idées nous permettent d'améliorer DaloaMarket au quotidien pour toute la communauté.
+          <p className="text-xs text-gray-500 max-w-xs mt-1.5 leading-relaxed font-medium">
+            Chaque retour est lu directement par l'équipe pour façonner l'avenir de DaloaMarket. Merci !
           </p>
         </div>
       </div>
@@ -179,24 +200,41 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ userId, onSuccess, o
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Intro Header */}
-      <div className="flex items-center gap-3 p-3 rounded-2xl bg-orange-50/70 border border-orange-100/60">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
-          <Sparkles className="w-4 h-4" />
-        </div>
-        <div className="min-w-0">
-          <h4 className="text-xs font-black text-gray-900">Votre avis compte énormément</h4>
-          <p className="text-[11px] text-gray-500">
-            Dites-nous ce qui peut être simplifié ou amélioré.
-          </p>
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Sentiment Picker */}
+      <div className="bg-gradient-to-br from-orange-50/60 to-amber-50/40 rounded-3xl p-4 border border-orange-100/70 text-center">
+        <span className="text-[11px] font-black uppercase tracking-wider text-orange-950/70 block mb-2.5">
+          Comment évaluez-vous votre expérience ?
+        </span>
+        <div className="flex justify-between items-center gap-1 max-w-xs mx-auto">
+          {SATISFACTIONS.map((item) => {
+            const isSelected = satisfaction === item.level;
+            return (
+              <button
+                key={item.level}
+                type="button"
+                onClick={() => setSatisfaction(item.level)}
+                className={cn(
+                  'flex flex-col items-center gap-1 p-2 rounded-2xl transition-all duration-200 active:scale-90',
+                  isSelected
+                    ? 'bg-white shadow-md shadow-orange-500/15 scale-110 border border-orange-200'
+                    : 'hover:bg-white/60 text-gray-400 opacity-75 hover:opacity-100'
+                )}
+              >
+                <span className="text-2xl select-none transform transition-transform">{item.emoji}</span>
+                <span className={cn('text-[10px] font-bold', isSelected ? 'text-orange-600 font-black' : 'text-gray-500')}>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Selectable Chips Grid */}
+      {/* Selectable Topic Chips */}
       <div className="space-y-2">
-        <label className="text-[11px] font-black text-gray-400 uppercase tracking-wider block">
-          Points à perfectionner
+        <label className="text-[11px] font-black text-gray-500 uppercase tracking-wider block">
+          Points d'amélioration ou d'intérêt
         </label>
         <div className="flex flex-wrap gap-1.5">
           {quickOptions.map((opt) => {
@@ -209,17 +247,18 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ userId, onSuccess, o
                 className={cn(
                   'inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-bold transition-all active:scale-95 whitespace-nowrap',
                   isSelected
-                    ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-sm font-extrabold'
-                    : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200/70'
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-sm shadow-orange-500/25 ring-2 ring-orange-500/20 font-black'
+                    : 'bg-gray-50 hover:bg-gray-100/80 text-gray-700 border border-gray-200/60'
                 )}
               >
-                <span className={cn(isSelected ? 'text-white' : 'text-gray-500')}>{opt.icon}</span>
+                <span className="text-xs">{opt.emoji}</span>
                 <span>{opt.label}</span>
               </button>
             );
           })}
         </div>
 
+        {/* Tip banner for visibility */}
         <AnimatePresence>
           {formData.visibility_issue && (
             <motion.div
@@ -228,61 +267,66 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ userId, onSuccess, o
               exit={{ opacity: 0, height: 0, y: -4 }}
               className="overflow-hidden"
             >
-              <div className="mt-2 p-3 bg-blue-50/80 border border-blue-100 rounded-2xl flex gap-2.5 items-start">
-                <div className="p-1 bg-blue-100 rounded-lg shrink-0 text-blue-600 mt-0.5">
-                  <Share2 className="w-3.5 h-3.5" />
+              <div className="mt-2.5 p-3 bg-blue-50/80 border border-blue-100 rounded-2xl flex gap-2.5 items-center">
+                <div className="w-7 h-7 bg-blue-100 rounded-xl shrink-0 text-blue-600 flex items-center justify-center font-bold text-xs">
+                  💡
                 </div>
-                <div>
-                  <h5 className="text-xs font-black text-blue-900">Conseil visibilité</h5>
-                  <p className="text-[11px] text-blue-800/80 mt-0.5 leading-snug">
-                    Partagez votre lien de boutique sur WhatsApp et Facebook pour multiplier vos ventes !
-                  </p>
-                </div>
+                <p className="text-[11px] text-blue-900 font-medium leading-snug">
+                  <strong>Astuce Vendeur :</strong> Partager votre lien de vitrine sur WhatsApp booste immédiatement vos visites !
+                </p>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Textareas */}
-      <div className="space-y-3">
-        <div className="space-y-1.5">
-          <label className="text-xs font-black text-gray-700 flex items-center gap-1.5">
-            <Frown className="w-3.5 h-3.5 text-rose-500" />
-            <span>Un problème ou une frustration ?</span>
+      {/* Unified Text Feedback Box */}
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <label className="text-[11px] font-black text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+            <MessageSquare className="w-3.5 h-3.5 text-primary" />
+            <span>Vos remarques & suggestions</span>
           </label>
+          <span className="text-[10px] text-gray-400 font-bold">Facultatif</span>
+        </div>
+
+        <div className="relative">
           <textarea
-            name="dislikes"
-            value={formData.dislikes}
-            onChange={handleChange}
-            placeholder="Dites-nous ce qui ne fonctionne pas comme vous le souhaitez..."
-            className="w-full h-18 px-3.5 py-2.5 text-xs font-medium rounded-2xl border border-gray-200 bg-gray-50/50 text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-500/20 resize-none"
+            name="comment"
+            value={formData.comment}
+            onChange={(e) => setFormData((prev) => ({ ...prev, comment: e.target.value }))}
+            placeholder="Dites-nous ce qui vous plaît, ce qui bloque ou ce que vous aimeriez voir..."
+            rows={3}
+            className="w-full px-4 py-3 text-xs font-medium rounded-2xl border border-gray-200/90 bg-gray-50/40 text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 resize-none shadow-sm"
           />
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-black text-gray-700 flex items-center gap-1.5">
-            <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
-            <span>Une idée ou suggestion pour DaloaMarket ?</span>
-          </label>
-          <textarea
-            name="recommended_features"
-            value={formData.recommended_features}
-            onChange={handleChange}
-            placeholder="Ex: Mode sombre, filtres de prix, négociations rapides..."
-            className="w-full h-18 px-3.5 py-2.5 text-xs font-medium rounded-2xl border border-gray-200 bg-gray-50/50 text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-500/20 resize-none"
-          />
+        {/* Quick Suggestion Pills */}
+        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+          <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-amber-500" /> Idées :
+          </span>
+          {QUICK_IDEAS.map((idea) => (
+            <button
+              key={idea}
+              type="button"
+              onClick={() => handleAddQuickIdea(idea)}
+              className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-gray-100/80 hover:bg-orange-50 hover:text-primary hover:border-orange-200 border border-transparent text-gray-600 transition-all active:scale-95"
+            >
+              {idea}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2.5 pt-2">
+      {/* Action Buttons */}
+      <div className="flex items-center gap-2.5 pt-1">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
             disabled={isSubmitting}
-            className="flex-1 h-11 rounded-2xl border border-gray-200 text-gray-500 font-bold text-xs hover:bg-gray-50 active:scale-95 transition-all"
+            className="flex-1 h-12 rounded-2xl border border-gray-200 text-gray-600 font-bold text-xs hover:bg-gray-50 active:scale-95 transition-all"
           >
             Plus tard
           </button>
@@ -290,14 +334,14 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ userId, onSuccess, o
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex-[2] h-11 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-black text-xs shadow-md shadow-orange-500/25 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+          className="flex-[2] h-12 rounded-2xl bg-gradient-to-r from-orange-500 via-primary to-amber-600 hover:opacity-95 text-white font-black text-xs shadow-lg shadow-orange-500/25 active:scale-95 transition-all flex items-center justify-center gap-2"
         >
           {isSubmitting ? (
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : (
-            <Send className="w-3.5 h-3.5" />
+            <Send className="w-4 h-4" />
           )}
-          <span>{isSubmitting ? 'Envoi...' : 'Envoyer mon avis'}</span>
+          <span>{isSubmitting ? 'Envoi en cours...' : 'Envoyer mon avis'}</span>
         </button>
       </div>
     </form>

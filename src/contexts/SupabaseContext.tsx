@@ -60,7 +60,7 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
       }
 
-      // Auto-fill full_name and avatar_url from Google OAuth user_metadata if missing
+      // Auto-fill or initialize profile from Google OAuth user_metadata
       if (data != null) {
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         const meta = currentUser?.user_metadata;
@@ -78,6 +78,32 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 .from('users').update(patch).eq('id', userId).select('*').maybeSingle();
               if (!patchErr && patched) data = patched;
             } catch (err) { console.error('Error auto-filling Google profile:', err); }
+          }
+        }
+      } else {
+        // Automatically create initial user record in public.users for OAuth sign-ins
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser && currentUser.id === userId) {
+          const meta = currentUser.user_metadata;
+          const googleName = (meta?.full_name || meta?.name || null) as string | null;
+          const googleAvatar = (meta?.avatar_url || meta?.picture || null) as string | null;
+          try {
+            const { data: created, error: createErr } = await supabase
+              .from('users')
+              .upsert({
+                id: userId,
+                email: effectiveEmail || currentUser.email || '',
+                full_name: googleName,
+                avatar_url: googleAvatar,
+              }, { onConflict: 'id' })
+              .select('*')
+              .maybeSingle();
+
+            if (!createErr && created) {
+              data = created;
+            }
+          } catch (err) {
+            console.error('Error auto-creating initial profile for OAuth user:', err);
           }
         }
       }

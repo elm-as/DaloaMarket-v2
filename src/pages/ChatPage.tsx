@@ -16,6 +16,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMessageRead } from '../contexts/MessageReadContext';
 import { censorMessageContent } from '../lib/censor';
 import { extractUuid, getSellerPath } from '../lib/utils';
+import { notifyUserPush } from '../lib/pushNotifications';
 
 interface Message {
   id: string;
@@ -295,6 +296,16 @@ const ChatPage: React.FC = () => {
       }
 
       if (insertedData) {
+        // Envoi de la notification push au destinataire
+        const senderName = (user?.user_metadata?.full_name || user?.user_metadata?.name || 'Un utilisateur') as string;
+        notifyUserPush({
+          targetUserId: otherUserId,
+          title: `💬 Nouveau message de ${senderName}`,
+          body: censoredText.length > 80 ? censoredText.slice(0, 77) + '...' : censoredText,
+          url: `/messages/${listingId}/${currentUserId}`,
+          tag: `chat-${listingId}-${currentUserId}`,
+        }).catch((e) => console.warn('[Push Chat Notification Warning]:', e));
+
         setMessages((prev) => {
           const updated = [...prev];
           const idx = updated.findIndex((m) => m.id === tempId);

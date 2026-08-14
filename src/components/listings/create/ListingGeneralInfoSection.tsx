@@ -40,7 +40,7 @@ export const ListingGeneralInfoSection: React.FC<ListingGeneralInfoSectionProps>
             <input
               type="text"
               {...register('title', { required: 'Le titre est requis', maxLength: { value: 100, message: '100 caractères max' } })}
-              placeholder="Ex: iPhone 13 Pro Max 256Go Bleu Alpin"
+              placeholder="Ex: iPhone 13 Pro"
               maxLength={100}
               className="w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-50/70 text-sm font-semibold placeholder:text-gray-400 placeholder:font-normal focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all text-gray-900"
             />

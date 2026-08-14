@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Package, ShoppingBag, ChevronRight, Clock, Truck, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Package, ShoppingBag, ChevronRight, Clock, Truck, CheckCircle, XCircle, Store } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useSupabase } from '../hooks/useSupabase';
 import { usePageTitle } from '../hooks/usePageTitle';
@@ -20,6 +20,9 @@ interface Order {
   listing_title?: string;
   total_amount: number;
   product_amount: number;
+  delivery_fee?: number;
+  delivery_mode?: string;
+  payment_method?: string;
   status: string;
   created_at: string;
   variant_id?: string | null;
@@ -40,22 +43,29 @@ interface StatusConfig {
   icon: React.ReactNode;
 }
 
-function getStatusConfig(status: string): StatusConfig {
-  switch (status) {
+function getStatusConfig(order: Order): StatusConfig {
+  switch (order.status) {
     case 'paid':
     case 'funded':
-      return { label: 'Payée', color: 'primary', icon: <CheckCircle className="w-3.5 h-3.5" /> };
+      return { label: 'Payée (Séquestre)', color: 'primary', icon: <CheckCircle className="w-3.5 h-3.5" /> };
     case 'in_transit':
-      return { label: 'En transit', color: 'warning', icon: <Truck className="w-3.5 h-3.5" /> };
+      return { label: 'En livraison', color: 'warning', icon: <Truck className="w-3.5 h-3.5" /> };
     case 'delivered':
     case 'completed':
-      return { label: 'Livrée', color: 'success', icon: <CheckCircle className="w-3.5 h-3.5" /> };
+      return { label: 'Livrée / Reçue', color: 'success', icon: <CheckCircle className="w-3.5 h-3.5" /> };
     case 'cancelled':
       return { label: 'Annulée', color: 'error', icon: <XCircle className="w-3.5 h-3.5" /> };
     case 'disputed':
       return { label: 'Litige', color: 'error', icon: <XCircle className="w-3.5 h-3.5" /> };
+    case 'pending':
     default:
-      return { label: 'En attente', color: 'default', icon: <Clock className="w-3.5 h-3.5" /> };
+      if (order.payment_method === 'cash_at_shop') {
+        return { label: 'Réservation boutique', color: 'warning', icon: <Store className="w-3.5 h-3.5" /> };
+      }
+      if (order.payment_method === 'cod') {
+        return { label: 'Paiement à la livraison', color: 'warning', icon: <Truck className="w-3.5 h-3.5" /> };
+      }
+      return { label: 'Paiement en attente', color: 'default', icon: <Clock className="w-3.5 h-3.5" /> };
   }
 }
 
@@ -106,11 +116,29 @@ const MesCommandesPage: React.FC = () => {
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
   const filteredOrders = orders.filter((order) => {
     if (activeTab === 'achats') return order.buyer_id === user?.id;
-    // Les vendeurs ne voient pas les commandes 'pending' (non payées)
-    return order.seller_id === user?.id && order.status !== 'pending';
+    if (order.seller_id !== user?.id) return false;
+    // Les vendeurs voient les commandes payées, ainsi que les commandes COD et réservations en boutique
+    if (order.status !== 'pending') return true;
+    return order.payment_method === 'cod' || order.payment_method === 'cash_at_shop';
   });
+
+  // Commandes actives en cours (exclut livrées, annulées, litiges)
+  const activePurchasesCount = orders.filter((o) =>
+    o.buyer_id === user?.id && (
+      ['paid', 'funded', 'in_transit'].includes(o.status) ||
+      (o.status === 'pending' && ['cash_at_shop', 'cod'].includes(o.payment_method || ''))
+    )
+  ).length;
+
+  const activeSalesCount = orders.filter((o) =>
+    o.seller_id === user?.id && (
+      ['paid', 'funded', 'in_transit'].includes(o.status) ||
+      (o.status === 'pending' && ['cash_at_shop', 'cod'].includes(o.payment_method || ''))
+    )
+  ).length;
 
   const renderHeader = () => (
     <div className="relative z-20 bg-gradient-to-br from-orange-500 to-amber-600 rounded-b-[32px] shadow-lg overflow-hidden">
@@ -134,21 +162,38 @@ const MesCommandesPage: React.FC = () => {
       {!loading && !error && (
         <div className="relative px-4 -mt-7 pb-4 max-w-2xl mx-auto">
           <div className="flex bg-white rounded-3xl p-1.5 gap-1 shadow-lg border border-gray-100">
-            {TAB_FILTERS.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={cn(
-                  'flex-1 flex items-center justify-center gap-2 h-11 rounded-2xl text-[14px] font-bold transition-all duration-[var(--motion-fast)]',
-                  activeTab === tab.key
-                    ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-md'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                )}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
+            {TAB_FILTERS.map((tab) => {
+              const count = tab.key === 'achats' ? activePurchasesCount : activeSalesCount;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 h-11 rounded-2xl text-[14px] font-bold transition-all duration-[var(--motion-fast)]',
+                    activeTab === tab.key
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-md'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  )}
+                >
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                  {count > 0 && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className={cn(
+                        'min-w-[20px] h-[20px] px-1.5 rounded-full text-[11px] font-black flex items-center justify-center transition-colors',
+                        activeTab === tab.key
+                          ? 'bg-white text-orange-600 shadow-2xs'
+                          : 'bg-orange-500 text-white shadow-2xs'
+                      )}
+                    >
+                      {count > 99 ? '99+' : count}
+                    </motion.span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -209,7 +254,7 @@ const MesCommandesPage: React.FC = () => {
             {/* MOBILE LIST VIEW */}
             <div className="space-y-3 lg:hidden">
               {filteredOrders.map((order) => {
-                const statusConfig = getStatusConfig(order.status);
+                const statusConfig = getStatusConfig(order);
                 return (
                   <Card
                     key={order.id}
@@ -279,7 +324,7 @@ const MesCommandesPage: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
                   {filteredOrders.map((order) => {
-                    const statusConfig = getStatusConfig(order.status);
+                    const statusConfig = getStatusConfig(order);
                     return (
                       <tr key={order.id} className="hover:bg-gray-50/80 transition-colors">
                         <td className="px-5 py-4 font-mono text-xs font-bold text-gray-500">

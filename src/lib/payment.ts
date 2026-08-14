@@ -1,9 +1,9 @@
 /**
  * Client de paiement front-end.
- * Communique avec les fonctions Netlify (via /api/*), qui parlent à l'API Money Fusion.
+ * Communique avec le serveur Railway / Netlify (via /api/* ou VITE_PAYMENT_API_URL), qui parle à l'API Money Fusion.
  *
  * Flow:
- *   1. initiatePayment()   → POST /api/create-payment   → renvoie une URL Money Fusion
+ *   1. initiatePayment()   → POST /create-payment   → renvoie une URL Money Fusion
  *   2. redirige le user vers cette URL
  *   3. au retour, PaymentReturnPage interroge checkPaymentStatus() pour confirmer
  *   4. en parallèle, Money Fusion appelle notre webhook qui met à jour la DB
@@ -40,6 +40,14 @@ export interface PaymentStatusResponse {
   confirmedAt?: string | null;
   message?: string;
 }
+
+export const normalizeMoneyFusionUrl = (url?: string, token?: string, amount?: number, name?: string): string => {
+  if (url) return url;
+  if (token) {
+    return `https://payin.moneyfusion.net/payment/${token}/${amount || ''}/${encodeURIComponent(name || 'Client')}`;
+  }
+  return '';
+};
 
 const POST_JSON = async <T>(url: string, body: unknown): Promise<T> => {
   try {
@@ -97,14 +105,19 @@ export const createOrder = async (
   if (!PAYMENT_API_URL) {
     throw new Error("Configuration invalide: VITE_PAYMENT_API_URL non definie");
   }
-  return POST_JSON<CreateOrderResponse>(`${PAYMENT_API_URL}/create-payment`, {
+  const res = await POST_JSON<CreateOrderResponse>(`${PAYMENT_API_URL}/create-payment`, {
     type: 'order',
-    amount: input.amount || 0, // On envoie le total calculé par le front
+    amount: input.amount || 0,
     customerName: '',
     customerPhone: '',
     userId: input.buyer_id,
     orderInput: input,
   });
+
+  if (res) {
+    res.payment_url = normalizeMoneyFusionUrl(res.payment_url, res.token, res.total_amount);
+  }
+  return res;
 };
 
 export const initiatePayment = async (
@@ -113,7 +126,11 @@ export const initiatePayment = async (
   if (!PAYMENT_API_URL) {
     throw new Error('Configuration invalide: VITE_PAYMENT_API_URL non définie');
   }
-  return POST_JSON<InitiatePaymentResponse>(`${PAYMENT_API_URL}/create-payment`, input);
+  const res = await POST_JSON<InitiatePaymentResponse>(`${PAYMENT_API_URL}/create-payment`, input);
+  if (res) {
+    res.paymentUrl = normalizeMoneyFusionUrl(res.paymentUrl, res.token, input.amount, input.customerName);
+  }
+  return res;
 };
 
 export const checkPaymentStatus = async (

@@ -402,7 +402,10 @@ const CheckoutPage: React.FC = () => {
 
     setPaying(true);
     try {
-      if (paymentMethod === 'cash_at_shop' || deliveryMode === 'pickup') {
+      // ─────────────────────────────────────────────────────────────
+      // SCÉNARIO 4 : Retrait en boutique + Paiement au retrait (Cash at shop)
+      // ─────────────────────────────────────────────────────────────
+      if (paymentMethod === 'cash_at_shop') {
         const itemsToProcess = isCartMode
           ? cartItems.map((ci) => ({ listingId: ci.listing_id, variantId: ci.variant_id, quantity: ci.quantity }))
           : [{ listingId: listing!.id, variantId: requestedVariantId, quantity: 1 }];
@@ -413,28 +416,39 @@ const CheckoutPage: React.FC = () => {
           const itemBuyerFee = Math.round(itemProductAmount * BUYER_FEE_RATE);
           const itemTotal = itemProductAmount + itemBuyerFee;
 
-          const { error: orderErr } = await supabase
+          const rawOrderPayload: Record<string, any> = {
+            buyer_id: user.id,
+            seller_id: selection.sellerId,
+            listing_id: item.listingId,
+            unit_price: selection.unitPrice,
+            quantity: selection.quantity,
+            product_amount: itemProductAmount,
+            delivery_fee: 0,
+            platform_commission: itemBuyerFee,
+            reserve_fee: 0,
+            total_amount: itemTotal,
+            delivery_address: "Retrait en boutique",
+            delivery_mode: "pickup_point",
+            payment_method: "cash_at_shop",
+            status: "pending",
+          };
+          if (selection.variantId) rawOrderPayload.variant_id = selection.variantId;
+          if (selection.variantLabel) rawOrderPayload.variant_label = selection.variantLabel;
+
+          let { error: orderErr } = await supabase
             .from("orders")
-            .insert({
-              buyer_id: user.id,
-              seller_id: selection.sellerId,
-              listing_id: item.listingId,
-              variant_id: selection.variantId,
-              variant_label: selection.variantLabel,
-              unit_price: selection.unitPrice,
-              quantity: selection.quantity,
-              product_amount: itemProductAmount,
-              delivery_fee: 0,
-              platform_commission: itemBuyerFee,
-              total_amount: itemTotal,
-              delivery_address: "Retrait en boutique",
-              delivery_mode: "pickup",
-              payment_method: paymentMethod === 'cash_at_shop' ? "cash_at_shop" : "online",
-              status: "pending_seller_confirmation",
-            } as any);
+            .insert(rawOrderPayload as any);
+
+          if (orderErr && (orderErr.code === 'PGRST204' || orderErr.message?.includes('column') || (orderErr as any).status === 400)) {
+            const fallbackPayload = { ...rawOrderPayload };
+            delete fallbackPayload.variant_id;
+            delete fallbackPayload.variant_label;
+            const retryRes = await supabase.from("orders").insert(fallbackPayload as any);
+            orderErr = retryRes.error;
+          }
 
           if (orderErr) {
-            throw new Error(orderErr.message || "Erreur de création de la commande");
+            throw new Error(orderErr.message || "Erreur de création de la réservation");
           }
         }
 
@@ -442,13 +456,16 @@ const CheckoutPage: React.FC = () => {
 
         toast.success(
           itemsToProcess.length > 1
-            ? "Vos réservations ont été enregistrées avec succès ! Vous réglerez chaque vendeur directement en boutique."
-            : "Réservation enregistrée ! Vous réglerez le vendeur directement à la boutique."
+            ? "Vos réservations en boutique ont été enregistrées avec succès ! Vous réglerez directement sur place."
+            : "Réservation enregistrée ! Vous réglerez le vendeur directement à sa boutique."
         );
         navigate("/mes-commandes");
         return;
       }
 
+      // ─────────────────────────────────────────────────────────────
+      // SCÉNARIO 2 : Livraison à domicile + Paiement à la livraison (COD)
+      // ─────────────────────────────────────────────────────────────
       if (paymentMethod === 'cod') {
         const itemsToProcess = isCartMode
           ? cartItems.map((ci) => ({ listingId: ci.listing_id, variantId: ci.variant_id, quantity: ci.quantity }))
@@ -464,27 +481,51 @@ const CheckoutPage: React.FC = () => {
           const itemDelivery = i === 0 ? (deliveryFee - perItemDeliveryFee * (itemsToProcess.length - 1)) : perItemDeliveryFee;
           const itemTotal = itemProductAmount + itemBuyerFee + itemDelivery;
 
-          const { data: orderData, error: orderErr } = await supabase
+          const rawCodPayload: Record<string, any> = {
+            buyer_id: user.id,
+            seller_id: selection.sellerId,
+            listing_id: item.listingId,
+            unit_price: selection.unitPrice,
+            quantity: selection.quantity,
+            product_amount: itemProductAmount,
+            delivery_fee: itemDelivery,
+            platform_commission: itemBuyerFee,
+            reserve_fee: 0,
+            total_amount: itemTotal,
+            delivery_address: deliveryAddress || "Daloa",
+            delivery_lat: deliveryLatitude || null,
+            delivery_lng: deliveryLongitude || null,
+            delivery_mode: "delivery",
+            payment_method: "cod",
+            status: "pending",
+          };
+          if (selection.variantId) rawCodPayload.variant_id = selection.variantId;
+          if (selection.variantLabel) rawCodPayload.variant_label = selection.variantLabel;
+
+          let orderData: { id: string } | null = null;
+          let orderErr: any = null;
+
+          const insertRes = await supabase
             .from("orders")
-            .insert({
-              buyer_id: user.id,
-              seller_id: selection.sellerId,
-              listing_id: item.listingId,
-              variant_id: selection.variantId,
-              variant_label: selection.variantLabel,
-              unit_price: selection.unitPrice,
-              quantity: selection.quantity,
-              product_amount: itemProductAmount,
-              delivery_fee: itemDelivery,
-              platform_commission: itemBuyerFee,
-              total_amount: itemTotal,
-              delivery_address: deliveryAddress || "Daloa",
-              delivery_mode: "delivery",
-              payment_method: "cod",
-              status: "pending_seller_confirmation",
-            } as any)
+            .insert(rawCodPayload as any)
             .select("id")
             .single();
+
+          orderData = insertRes.data;
+          orderErr = insertRes.error;
+
+          if (orderErr && (orderErr.code === 'PGRST204' || orderErr.message?.includes('column') || orderErr.status === 400)) {
+            const fallbackCodPayload = { ...rawCodPayload };
+            delete fallbackCodPayload.variant_id;
+            delete fallbackCodPayload.variant_label;
+            const retryRes = await supabase
+              .from("orders")
+              .insert(fallbackCodPayload as any)
+              .select("id")
+              .single();
+            orderData = retryRes.data;
+            orderErr = retryRes.error;
+          }
 
           if (orderErr || !orderData) {
             throw new Error(orderErr?.message || "Erreur de création de la commande");
@@ -499,6 +540,7 @@ const CheckoutPage: React.FC = () => {
               status: "pending_seller_confirmation",
               delivery_price: itemDelivery,
               dropoff_location: deliveryAddress || "Daloa",
+              pickup_location: "Boutique du vendeur",
               pickup_otp: Math.floor(100000 + Math.random() * 900000).toString(),
               delivery_otp: Math.floor(100000 + Math.random() * 900000).toString(),
             } as any);
@@ -519,7 +561,14 @@ const CheckoutPage: React.FC = () => {
         return;
       }
 
+      // ─────────────────────────────────────────────────────────────
+      // SCÉNARIOS 1 & 3 : Paiement en ligne (Escrow Séquestre)
+      // (Scenario 1 = Livraison domicile, Scenario 3 = Retrait en boutique)
+      // ─────────────────────────────────────────────────────────────
       const { createOrder } = await import("../lib/payment");
+      const isPickupMode = deliveryMode === 'pickup';
+      const resolvedDeliveryMode = isPickupMode ? 'pickup_point' : 'delivery';
+      const resolvedAddress = isPickupMode ? 'Retrait en boutique' : (deliveryAddress || 'Daloa');
 
       const processItem = async (targetListingId: string, targetVariantId?: string, targetQty: number = 1, targetAmount: number = total) => {
         const result = await createOrder({
@@ -527,10 +576,10 @@ const CheckoutPage: React.FC = () => {
           listing_id: targetListingId,
           variant_id: targetVariantId,
           quantity: targetQty,
-          delivery_address: deliveryAddress || "Daloa",
-          delivery_mode: "delivery",
-          delivery_lat: deliveryLatitude,
-          delivery_lng: deliveryLongitude,
+          delivery_address: resolvedAddress,
+          delivery_mode: resolvedDeliveryMode,
+          delivery_lat: isPickupMode ? undefined : deliveryLatitude,
+          delivery_lng: isPickupMode ? undefined : deliveryLongitude,
           amount: targetAmount,
         });
         if (result.payment_url) {

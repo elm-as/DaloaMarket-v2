@@ -22,20 +22,20 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   return (
     <div
       className={cn(
-        'flex items-center justify-between px-4 py-3',
+        'flex items-center justify-between gap-2 px-1 py-2',
         className,
       )}
     >
-      <h2 className="text-[20px] font-extrabold tracking-tight text-[var(--color-on-surface)]">
+      <h2 className="text-sm sm:text-base font-black tracking-tight text-gray-900 truncate flex-1 min-w-0">
         {title}
       </h2>
       {action && (
         <button
           onClick={action.onClick}
-          className="inline-flex items-center gap-1 min-h-[44px] min-w-[44px] px-2 text-[14px] font-semibold text-[var(--color-primary)] rounded-[var(--radius-md)] hover:bg-[var(--color-primary-50)] active:scale-[0.97] transition-all duration-[var(--motion-fast)]"
+          className="inline-flex items-center gap-0.5 text-xs font-black text-primary hover:opacity-80 active:scale-95 transition-all flex-shrink-0 whitespace-nowrap py-1 px-1.5 rounded-lg hover:bg-orange-50"
         >
           <span>{action.label}</span>
-          {action.icon || <ChevronRight className="w-4 h-4" />}
+          {action.icon || <ChevronRight className="w-3.5 h-3.5" />}
         </button>
       )}
     </div>

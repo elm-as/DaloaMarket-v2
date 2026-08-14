@@ -342,16 +342,23 @@ const SellerProfilePage: React.FC = () => {
               <img
                 src={seller.shop_logo_url || seller.avatar_url || ''}
                 alt={shopTitle}
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = 'none';
+                  const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (fallback) fallback.style.display = 'flex';
+                }}
                 className="w-full h-full rounded-full object-cover bg-gray-50"
               />
-            ) : (
-              <div
-                className="w-full h-full rounded-full flex items-center justify-center text-white font-black text-2xl uppercase"
-                style={{ backgroundColor: themeColor }}
-              >
-                {shopTitle.charAt(0)}
-              </div>
-            )}
+            ) : null}
+            <div
+              className={cn(
+                'w-full h-full rounded-full items-center justify-center text-white font-black text-3xl uppercase select-none',
+                seller.shop_logo_url || seller.avatar_url ? 'hidden' : 'flex'
+              )}
+              style={{ backgroundColor: themeColor }}
+            >
+              {shopTitle.charAt(0)}
+            </div>
           </div>
         </div>
 

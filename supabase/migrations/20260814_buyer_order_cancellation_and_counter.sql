@@ -1,16 +1,44 @@
--- ============================================================
--- RPC : cancel_order_buyer — Annulation d'une commande par l'acheteur
--- DaloaMarket / DaloaDelivery — À exécuter dans l'éditeur SQL Supabase
--- ============================================================
--- Scénarios gérés :
---   1. Retrait boutique Cash : Aucune transaction financière, simple annulation.
---   2. Paiement à la livraison (COD) : Aucun débit, simple annulation.
---   3. Payé en ligne (MoneyFusion) : Remboursement intégral + Compteur anti-abus.
--- ============================================================
+-- ============================================================================
+-- MIGRATION: 20260814_buyer_order_cancellation_and_counter.sql
+-- ============================================================================
+-- 1. Ajout des colonnes de suivi des annulations sur la table users
+-- 2. Configuration anti-abus par défaut dans system_settings
+-- 3. Suppression des anciennes surcharges de cancel_order_buyer
+-- 4. RPC cancel_order_buyer avec gestion fine selon le mode de paiement :
+--    - En ligne (MoneyFusion) : Remboursement intégral + Compteur anti-abus
+--    - Cash boutique / COD : Annulation simple sans débit ni remboursement
+-- 5. RPC reset_user_cancellations pour les administrateurs
+-- 6. Réinitialisation des annulations consécutives lors d'une livraison réussie
+-- ============================================================================
 
+-- 1. Colonnes sur public.users
+ALTER TABLE public.users
+  ADD COLUMN IF NOT EXISTS cancellation_count integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS consecutive_cancellations integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS last_cancellation_at timestamptz;
+
+COMMENT ON COLUMN public.users.cancellation_count IS 'Nombre total de commandes annulées par cet utilisateur.';
+COMMENT ON COLUMN public.users.consecutive_cancellations IS 'Nombre d''annulations consécutives de commandes payées en ligne sans achat finalisé avec succès (anti-abus frais MoneyFusion).';
+COMMENT ON COLUMN public.users.last_cancellation_at IS 'Date et heure de la dernière annulation effectuée par l''utilisateur.';
+
+-- 2. Configuration dans system_settings
+INSERT INTO public.system_settings (key, value)
+VALUES (
+  'cancellation_settings',
+  jsonb_build_object(
+    'max_consecutive_cancellations', 3,
+    'enabled', true,
+    'notice', 'Vous avez atteint la limite de 3 annulations consécutives. Afin d''éviter les frais de transaction répétés, veuillez contacter le support pour toute demande d''annulation.'
+  )
+)
+ON CONFLICT (key) DO NOTHING;
+
+-- 3. Supprimer les anciennes signatures pour éviter l'erreur 42725 (not unique)
 DROP FUNCTION IF EXISTS public.cancel_order_buyer(uuid, uuid);
 DROP FUNCTION IF EXISTS public.cancel_order_buyer(uuid);
+DROP FUNCTION IF EXISTS public.reset_user_cancellations(uuid);
 
+-- 4. RPC cancel_order_buyer : Annulation par l'acheteur
 CREATE OR REPLACE FUNCTION public.cancel_order_buyer(
   p_order_id uuid
 )
@@ -190,3 +218,55 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public.cancel_order_buyer(uuid) TO authenticated;
+
+-- 5. RPC reset_user_cancellations : Réinitialisation du compteur d'un utilisateur par un admin/modo
+CREATE OR REPLACE FUNCTION public.reset_user_cancellations(
+  p_user_id uuid
+)
+RETURNS json AS $$
+DECLARE
+  v_admin_id uuid := auth.uid();
+BEGIN
+  IF v_admin_id IS NULL THEN
+    RETURN json_build_object('success', false, 'reason', 'not_authenticated');
+  END IF;
+
+  -- Vérifier les permissions de modération
+  IF NOT EXISTS (
+    SELECT 1 FROM public.users
+    WHERE id = v_admin_id
+      AND LOWER(role) IN ('admin', 'superadmin', 'moderator', 'moderateur', 'modo')
+  ) THEN
+    RETURN json_build_object('success', false, 'reason', 'unauthorized', 'message', 'Action réservée aux administrateurs.');
+  END IF;
+
+  UPDATE public.users
+  SET consecutive_cancellations = 0
+  WHERE id = p_user_id;
+
+  RETURN json_build_object('success', true, 'message', 'Compteur d''annulations consécutives réinitialisé.');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.reset_user_cancellations(uuid) TO authenticated;
+
+-- 6. Réinitialisation du compteur consécutif lors de la livraison d'une commande
+CREATE OR REPLACE FUNCTION public.reset_buyer_consecutive_cancellations_on_delivery()
+RETURNS trigger AS $$
+BEGIN
+  -- Dès qu'une commande passe à delivered ou completed, réinitialiser consecutive_cancellations de l'acheteur
+  IF NEW.status IN ('delivered', 'completed') AND (OLD.status IS NULL OR OLD.status NOT IN ('delivered', 'completed')) THEN
+    UPDATE public.users
+    SET consecutive_cancellations = 0
+    WHERE id = NEW.buyer_id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trg_reset_buyer_cancellations_on_order ON public.orders;
+
+CREATE TRIGGER trg_reset_buyer_cancellations_on_order
+AFTER UPDATE ON public.orders
+FOR EACH ROW
+EXECUTE FUNCTION public.reset_buyer_consecutive_cancellations_on_delivery();

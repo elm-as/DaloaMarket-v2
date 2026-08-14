@@ -24,7 +24,7 @@ export default function CompleteProfilePage() {
   usePageTitle('Compléter mon profil');
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, userProfile, createUserProfile } = useSupabase();
+  const { user, userProfile, isProfileComplete, createUserProfile } = useSupabase();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -53,7 +53,7 @@ export default function CompleteProfilePage() {
     );
   }
 
-  if (userProfile && userProfile.full_name) {
+  if (isProfileComplete) {
     return <Navigate to={from} replace />;
   }
 

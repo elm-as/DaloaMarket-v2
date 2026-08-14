@@ -2,6 +2,8 @@ import { supabase, isSupabaseConfigured } from './supabase';
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 
+const PUSH_API_URL = import.meta.env.VITE_PAYMENT_API_URL || 'https://daloapay.onrender.com';
+
 /**
  * Convert a base64url string to a Uint8Array (needed for applicationServerKey).
  */
@@ -21,6 +23,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
  */
 export function isPushSupported(): boolean {
   return (
+    typeof window !== 'undefined' &&
     'serviceWorker' in navigator &&
     'PushManager' in window &&
     'Notification' in window
@@ -31,7 +34,7 @@ export function isPushSupported(): boolean {
  * Get the current notification permission state.
  */
 export function getPermissionState(): NotificationPermission {
-  if (!('Notification' in window)) return 'denied';
+  if (typeof window === 'undefined' || !('Notification' in window)) return 'denied';
   return Notification.permission;
 }
 
@@ -40,8 +43,13 @@ export function getPermissionState(): NotificationPermission {
  */
 export async function getExistingSubscription(): Promise<PushSubscription | null> {
   if (!isPushSupported()) return null;
-  const registration = await navigator.serviceWorker.ready;
-  return registration.pushManager.getSubscription();
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    return await registration.pushManager.getSubscription();
+  } catch (err) {
+    console.warn('[Push] Error getting subscription:', err);
+    return null;
+  }
 }
 
 /**
@@ -64,11 +72,44 @@ export async function subscribeToPush(userId: string): Promise<PushSubscription 
     // Check for existing subscription first
     let subscription = await registration.pushManager.getSubscription();
 
+    // Verify that existing subscription matches the current VAPID public key
+    if (subscription) {
+      try {
+        const rawAppKey = subscription.options?.applicationServerKey;
+        const currentKeyBytes = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+        let matches = false;
+        if (rawAppKey) {
+          const subKeyBytes = new Uint8Array(rawAppKey);
+          if (
+            subKeyBytes.length === currentKeyBytes.length &&
+            subKeyBytes.every((v, i) => v === currentKeyBytes[i])
+          ) {
+            matches = true;
+          }
+        }
+        if (!matches) {
+          console.log('[Push] Existing subscription was signed with old/different VAPID key. Renewing...');
+          await subscription.unsubscribe();
+          subscription = null;
+        }
+      } catch (keyErr) {
+        console.warn('[Push] Error validating subscription key, renewing:', keyErr);
+        if (subscription) {
+          await subscription.unsubscribe().catch(() => {});
+        }
+        subscription = null;
+      }
+    }
+
     if (!subscription) {
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as any,
       });
+    }
+
+    if (!subscription) {
+      return null;
     }
 
     // Extract keys from the subscription
@@ -78,8 +119,7 @@ export async function subscribeToPush(userId: string): Promise<PushSubscription 
     const keys_auth = subscriptionJSON.keys?.auth || '';
 
     // Persist to Supabase (upsert to handle re-subscriptions)
-    const { error } = await supabase
-      .from('push_subscriptions')
+    const { error } = await (supabase.from('push_subscriptions' as any) as any)
       .upsert(
         {
           user_id: userId,
@@ -87,6 +127,7 @@ export async function subscribeToPush(userId: string): Promise<PushSubscription 
           keys_p256dh,
           keys_auth,
           user_agent: navigator.userAgent,
+          updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id,endpoint' }
       );
@@ -115,8 +156,7 @@ export async function unsubscribeFromPush(userId: string): Promise<boolean> {
 
     if (subscription) {
       // Remove from DB first
-      await supabase
-        .from('push_subscriptions')
+      await (supabase.from('push_subscriptions' as any) as any)
         .delete()
         .eq('user_id', userId)
         .eq('endpoint', subscription.endpoint);
@@ -133,37 +173,90 @@ export async function unsubscribeFromPush(userId: string): Promise<boolean> {
 }
 
 /**
- * Send a push notification via the Netlify function (admin only).
- * `target` is 'all' or an array of user IDs.
+ * Broadcast a push notification via backend API (Admin).
  */
-export async function sendPushNotification(params: {
-  target: 'all' | string[];
+export async function broadcastPushNotification(params: {
   title: string;
   body: string;
   url?: string;
-  accessToken: string;
-}): Promise<{ success: boolean; sent?: number; expired?: number; failed?: number; total?: number; error?: string }> {
+  image?: string;
+}): Promise<{ success: boolean; sent?: number; total?: number; error?: string }> {
   try {
-    const response = await fetch('/.netlify/functions/send-push-notification', {
+    const response = await fetch(`${PUSH_API_URL}/push/broadcast`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${params.accessToken}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        target: params.target,
         title: params.title,
         body: params.body,
         url: params.url || '/',
+        image: params.image || null,
       }),
     });
-
     const data = await response.json();
-    if (!response.ok) {
-      return { success: false, error: data.error || 'Unknown error' };
-    }
     return data;
   } catch (err) {
     return { success: false, error: (err as Error).message };
   }
 }
+
+/**
+ * Send a targeted push notification to a specific user (Chat, Orders, etc.).
+ */
+export async function notifyUserPush(params: {
+  targetUserId: string;
+  title: string;
+  body: string;
+  url?: string;
+  tag?: string;
+  image?: string;
+}): Promise<{ success: boolean; sent?: number; error?: string }> {
+  try {
+    const response = await fetch(`${PUSH_API_URL}/push/notify-user`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        targetUserId: params.targetUserId,
+        title: params.title,
+        body: params.body,
+        url: params.url || '/',
+        tag: params.tag || 'user-alert',
+        image: params.image || null,
+      }),
+    });
+    const data = await response.json();
+    return data;
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+/**
+ * Alias for backward compatibility
+ */
+export const sendPushNotification = async (params: {
+  target: 'all' | string[];
+  title: string;
+  body: string;
+  url?: string;
+}) => {
+  if (params.target === 'all') {
+    return broadcastPushNotification({
+      title: params.title,
+      body: params.body,
+      url: params.url,
+    });
+  }
+  if (Array.isArray(params.target) && params.target.length === 1) {
+    return notifyUserPush({
+      targetUserId: params.target[0],
+      title: params.title,
+      body: params.body,
+      url: params.url,
+    });
+  }
+  return broadcastPushNotification({
+    title: params.title,
+    body: params.body,
+    url: params.url,
+  });
+};

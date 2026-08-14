@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 
 interface OrderCountContextType {
   activeOrderCount: number;
+  activePurchasesCount: number;
+  activeSalesCount: number;
   refreshOrderCount: () => Promise<void>;
 }
 
@@ -13,33 +15,56 @@ export const useOrderCount = (): OrderCountContextType => {
   return ctx;
 };
 
-/** Statuses that represent active/in-progress orders worth badging */
-const ACTIVE_STATUSES = ['paid', 'funded', 'in_transit'];
-
 export const OrderCountProvider: React.FC<{
   children: React.ReactNode;
   userId: string | undefined;
   supabaseClient: any;
 }> = ({ children, userId, supabaseClient }) => {
   const [activeOrderCount, setActiveOrderCount] = useState(0);
+  const [activePurchasesCount, setActivePurchasesCount] = useState(0);
+  const [activeSalesCount, setActiveSalesCount] = useState(0);
   const inFlightRef = useRef(false);
 
   const refreshOrderCount = useCallback(async () => {
-    if (!userId) { setActiveOrderCount(0); return; }
+    if (!userId) {
+      setActiveOrderCount(0);
+      setActivePurchasesCount(0);
+      setActiveSalesCount(0);
+      return;
+    }
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     try {
-      const { count, error } = await supabaseClient
+      // Récupérer les commandes où l'utilisateur est acheteur ou vendeur
+      const { data, error } = await supabaseClient
         .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`)
-        .in('status', ACTIVE_STATUSES);
+        .select('id, buyer_id, seller_id, status, payment_method')
+        .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`);
 
-      if (!error && count !== null) {
-        setActiveOrderCount(count);
+      if (!error && Array.isArray(data)) {
+        let purchases = 0;
+        let sales = 0;
+
+        data.forEach((order) => {
+          // Condition de commande active / en cours :
+          // 1. Payée ou en livraison (paid, funded, in_transit)
+          // 2. Ou en attente pour Cash boutique / Paiement à la livraison
+          const isOngoing =
+            ['paid', 'funded', 'in_transit'].includes(order.status) ||
+            (order.status === 'pending' && ['cash_at_shop', 'cod'].includes(order.payment_method));
+
+          if (isOngoing) {
+            if (order.buyer_id === userId) purchases++;
+            if (order.seller_id === userId) sales++;
+          }
+        });
+
+        setActivePurchasesCount(purchases);
+        setActiveSalesCount(sales);
+        setActiveOrderCount(purchases + sales);
       }
     } catch {
-      // silently ignore — badge stays at previous value
+      // silently ignore
     } finally {
       inFlightRef.current = false;
     }
@@ -48,16 +73,25 @@ export const OrderCountProvider: React.FC<{
   useEffect(() => {
     if (!userId) {
       setActiveOrderCount(0);
+      setActivePurchasesCount(0);
+      setActiveSalesCount(0);
       return;
     }
     refreshOrderCount();
-    // Poll every 30s — orders change less frequently than messages
-    const interval = window.setInterval(refreshOrderCount, 30_000);
+    // Poll every 25s
+    const interval = window.setInterval(refreshOrderCount, 25_000);
     return () => window.clearInterval(interval);
   }, [userId, refreshOrderCount]);
 
   return (
-    <OrderCountContext.Provider value={{ activeOrderCount, refreshOrderCount }}>
+    <OrderCountContext.Provider
+      value={{
+        activeOrderCount,
+        activePurchasesCount,
+        activeSalesCount,
+        refreshOrderCount,
+      }}
+    >
       {children}
     </OrderCountContext.Provider>
   );

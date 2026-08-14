@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Users, AlertTriangle, ShieldAlert, MessageSquare } from 'lucide-react';
+import { Search, Users, AlertTriangle, ShieldAlert, MessageSquare, RotateCcw, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { EmptyState } from '../ui/EmptyState';
@@ -21,6 +21,7 @@ export const AdminUsersTab: React.FC = () => {
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(0);
   const [userTotal, setUserTotal] = useState(0);
+  const [resettingUser, setResettingUser] = useState<string | null>(null);
 
   // Modal state for banning
   const [userToBan, setUserToBan] = useState<{ id: string; email: string; name?: string | null; ip?: string | null } | null>(null);
@@ -111,6 +112,26 @@ export const AdminUsersTab: React.FC = () => {
     fetchUsers(userPage);
   };
 
+  const handleResetCancellations = async (userId: string) => {
+    setResettingUser(userId);
+    try {
+      const { data, error } = await (supabase.rpc as any)('reset_user_cancellations', {
+        p_user_id: userId,
+      });
+
+      if (error) throw error;
+      const res = data as any;
+      if (res && res.success === false) throw new Error(res.message || 'Erreur réinitialisation');
+
+      toast.success('Compteur d\'annulations consécutives réinitialisé (0)');
+      fetchUsers(userPage);
+    } catch (err: any) {
+      toast.error(err.message || 'Erreur lors de la réinitialisation');
+    } finally {
+      setResettingUser(null);
+    }
+  };
+
   const changeRole = async (userId: string, newRole: string) => {
     const { error: err } = await supabase.from('users').update({ role: newRole }).eq('id', userId);
     if (err) { toast.error('Erreur'); return; }
@@ -154,6 +175,8 @@ export const AdminUsersTab: React.FC = () => {
                 const isLocked = isTargetSuperAdmin && !isCurrentUserSuperAdmin;
                 const isSelf = u.id === user?.id;
                 const hasAppeal = u.ban_appeal_status === 'pending';
+                const consecutive = u.consecutive_cancellations || 0;
+                const totalCancels = u.cancellation_count || 0;
 
                 return (
                   <div key={u.id} className="bg-[var(--color-surface)] p-4 rounded-2xl border border-[var(--color-outline)] shadow-sm space-y-3">
@@ -168,6 +191,32 @@ export const AdminUsersTab: React.FC = () => {
                       )}>
                         {u.banned ? 'Banni' : 'Actif'}
                       </span>
+                    </div>
+
+                    {/* Statistiques d'annulations */}
+                    <div className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded-xl border border-gray-100">
+                      <div>
+                        <span className="text-gray-500">Annulations : </span>
+                        <span className="font-bold text-gray-900">{totalCancels}</span>
+                        {consecutive > 0 && (
+                          <span className={cn(
+                            'ml-2 px-2 py-0.5 rounded-full text-[11px] font-extrabold',
+                            consecutive >= 3 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'
+                          )}>
+                            {consecutive} consécutive{consecutive > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+                      {consecutive > 0 && (
+                        <button
+                          onClick={() => handleResetCancellations(u.id)}
+                          disabled={resettingUser === u.id}
+                          className="text-[11px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 active:scale-95 transition-transform"
+                        >
+                          <RotateCcw size={12} className={resettingUser === u.id ? 'animate-spin' : ''} />
+                          Reset
+                        </button>
+                      )}
                     </div>
 
                     {u.banned && u.ban_reason && (
@@ -238,6 +287,7 @@ export const AdminUsersTab: React.FC = () => {
                   <th className="p-3">Nom</th>
                   <th className="p-3">Email</th>
                   <th className="p-3">Rôle</th>
+                  <th className="p-3">Annulations</th>
                   <th className="p-3">Statut & Raison</th>
                   <th className="p-3">Contestation</th>
                   <th className="p-3">Date</th>
@@ -259,6 +309,8 @@ export const AdminUsersTab: React.FC = () => {
                     const isLocked = isTargetSuperAdmin && !isCurrentUserSuperAdmin;
                     const isSelf = u.id === user?.id;
                     const hasAppeal = u.ban_appeal_status === 'pending';
+                    const consecutive = u.consecutive_cancellations || 0;
+                    const totalCancels = u.cancellation_count || 0;
 
                     return (
                       <tr key={u.id} className="border-b border-[var(--color-outline)] hover:bg-gray-50/50 transition-colors">
@@ -294,6 +346,34 @@ export const AdminUsersTab: React.FC = () => {
                               <option value="superadmin">SuperAdmin</option>
                             )}
                           </select>
+                        </td>
+                        {/* Annulations & Anti-abus */}
+                        <td className="p-3">
+                          <div className="flex flex-col gap-1 items-start">
+                            <span className="text-xs font-semibold text-gray-700">
+                              Total : <strong className="text-gray-900">{totalCancels}</strong>
+                            </span>
+                            {consecutive > 0 ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className={cn(
+                                  'px-2 py-0.5 rounded-full text-[11px] font-bold',
+                                  consecutive >= 3 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'
+                                )}>
+                                  {consecutive} conséc.
+                                </span>
+                                <button
+                                  onClick={() => handleResetCancellations(u.id)}
+                                  disabled={resettingUser === u.id}
+                                  title="Réinitialiser les annulations consécutives à 0"
+                                  className="p-1 rounded-lg hover:bg-gray-200 text-gray-600 active:scale-95 transition-all"
+                                >
+                                  <RotateCcw size={12} className={resettingUser === u.id ? 'animate-spin' : ''} />
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-emerald-600 font-medium">0 conséc.</span>
+                            )}
+                          </div>
                         </td>
                         {/* Statut & Raison */}
                         <td className="p-3">

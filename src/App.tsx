@@ -71,7 +71,7 @@ const MaintenancePage = React.lazy(() => import('./pages/MaintenancePage'));
 import { useSystemSettings } from './hooks/useSystemSettings';
 
 function AppContent() {
-  const { user, userProfile, isAdmin, loading: authLoading } = useSupabase();
+  const { user, userProfile, isAdmin, isProfileComplete, loading: authLoading } = useSupabase();
   const location = useLocation();
   const { maintenance, paymentConfig, loading: settingsLoading } = useSystemSettings();
 
@@ -120,7 +120,7 @@ function AppContent() {
           <Route path="/auth/update-password" element={<AppLayout><UpdatePasswordPage /></AppLayout>} />
           <Route path="/complete-profile" element={
             <PrivateRoute requireProfile={false}>
-              {userProfile && userProfile.full_name ? <Navigate to="/" replace /> : (
+              {isProfileComplete ? <Navigate to="/" replace /> : (
                 <AppLayout><CompleteProfilePage /></AppLayout>
               )}
             </PrivateRoute>
@@ -159,33 +159,34 @@ function AppContent() {
             </PrivateRoute>
           } />
           <Route path="/profile" element={
-            <PrivateRoute requireProfile={true}>
+            <PrivateRoute requireProfile={false}>
               <AppLayout><ProfilePage /></AppLayout>
             </PrivateRoute>
           } />
+          <Route path="/profil" element={<Navigate to="/profile" replace />} />
           <Route path="/b/:sellerId" element={<AppLayout><SellerProfilePage /></AppLayout>} />
           <Route path="/seller/:sellerId" element={<AppLayout><SellerProfilePage /></AppLayout>} />
           <Route path="/profile/seller/:sellerId" element={<AppLayout><SellerProfilePage /></AppLayout>} />
           <Route path="/boutique/:sellerId" element={<AppLayout><SellerProfilePage /></AppLayout>} />
           <Route path="/vendeur/:sellerId" element={<AppLayout><SellerProfilePage /></AppLayout>} />
           <Route path="/settings" element={
-            <PrivateRoute requireProfile={true}>
+            <PrivateRoute requireProfile={false}>
               <AppLayout><SettingsPage /></AppLayout>
             </PrivateRoute>
           } />
           <Route path="/settings/payout" element={
-            <PrivateRoute requireProfile={true}>
+            <PrivateRoute requireProfile={false}>
               <AppLayout><PayoutSetupPage /></AppLayout>
             </PrivateRoute>
           } />
           <Route path="/mes-statistiques" element={
-            <PrivateRoute requireProfile={true}>
+            <PrivateRoute requireProfile={false}>
               <AppLayout><MyStatsPage /></AppLayout>
             </PrivateRoute>
           } />
           <Route path="/mes-paiements" element={
             !PHASE0_FREE_MODE ? (
-            <PrivateRoute requireProfile={true}>
+            <PrivateRoute requireProfile={false}>
               <AppLayout><MesTransactionsPage /></AppLayout>
             </PrivateRoute>
             ) : <Navigate to="/" replace />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Truck, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Truck, XCircle, Store, ShoppingBag } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import DaloaMap from '../maps/DaloaMap';
 import { getStatusInfo } from '../../pages/OrderTrackingPage';
@@ -13,6 +13,8 @@ interface OrderTrackingHeaderProps {
 export const OrderTrackingHeader: React.FC<OrderTrackingHeaderProps> = ({ order }) => {
   const navigate = useNavigate();
   const statusInfo = getStatusInfo(order);
+  const isPickup = order.delivery_mode === 'pickup' || order.delivery_mode === 'pickup_point';
+  const isCashAtShop = order.payment_method === 'cash_at_shop';
   const delivery = order.delivery_assignment?.[0];
   const isCancelledOrDisputed = order.status === 'cancelled' || delivery?.status === 'disputed';
   const hasMap = order.seller_lat != null && order.seller_lng != null;
@@ -22,77 +24,79 @@ export const OrderTrackingHeader: React.FC<OrderTrackingHeaderProps> = ({ order 
       <div className="relative">
         <DaloaMap
           sellerPosition={[order.seller_lat!, order.seller_lng!]}
-          buyerPosition={(order.delivery_lat != null && order.delivery_lng != null) ? [order.delivery_lat, order.delivery_lng] : undefined}
-          deliveryPersonPosition={order.delivery_person_location || undefined}
-          height="240px"
+          buyerPosition={(!isPickup && order.delivery_lat != null && order.delivery_lng != null) ? [order.delivery_lat, order.delivery_lng] : undefined}
+          deliveryPersonPosition={!isPickup ? (order.delivery_person_location || undefined) : undefined}
+          height="200px"
         />
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 pointer-events-none" />
-        {/* Back button on map */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
+        
         <button
           onClick={() => navigate(-1)}
-          className="absolute top-3 left-3 z-10 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center active:scale-90 transition-transform"
+          className="absolute top-3 left-3 z-10 w-9 h-9 rounded-xl bg-white/90 backdrop-blur-md shadow-sm flex items-center justify-center text-gray-800 active:scale-95 transition-transform"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-800" />
+          <ArrowLeft className="w-4 h-4" />
         </button>
-        {/* Status badge on map */}
-        <div className="absolute bottom-3 left-3 right-3 z-10">
+
+        <div className="absolute bottom-3 left-3 right-3 z-10 flex items-center justify-between">
           <div className={cn(
-            'inline-flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-md border shadow-lg',
-            statusInfo.bgColor + '/90', statusInfo.borderColor,
+            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md border text-xs font-bold shadow-sm',
+            statusInfo.bgColor + '/95', statusInfo.borderColor, statusInfo.color
           )}>
             <div className={cn(
               'w-2 h-2 rounded-full',
-              order.status === 'delivered' ? 'bg-emerald-500' :
+              order.status === 'delivered' || order.status === 'completed' ? 'bg-emerald-500' :
               isCancelledOrDisputed ? 'bg-red-500' :
               'bg-[var(--color-primary)] animate-pulse',
             )} />
-            <span className={cn('text-[13px] font-bold', statusInfo.color)}>
-              {statusInfo.label}
-            </span>
+            <span>{statusInfo.label}</span>
           </div>
+
+          <span className="text-[11px] font-mono font-bold text-white/90 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-lg">
+            #{order.id.slice(0, 8).toUpperCase()}
+          </span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="relative bg-gradient-to-br from-[var(--color-primary)] via-[var(--color-primary-400)] to-[var(--color-secondary)] px-4 pt-4 pb-10">
-      {/* Decorative */}
-      <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3" />
-      <div className="absolute bottom-0 left-0 w-28 h-28 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
-
-      <div className="relative z-10">
-        <button
-          onClick={() => navigate(-1)}
-          className="w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center text-white active:scale-90 transition-transform border border-white/10 mb-4"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-            {isCancelledOrDisputed
-              ? <XCircle className="w-6 h-6 text-white" />
-              : order.status === 'delivered'
-                ? <CheckCircle className="w-6 h-6 text-white" />
-                : <Truck className="w-6 h-6 text-white" />
-            }
-          </div>
-          <div>
-            <h1 className="text-white font-bold text-[20px] leading-tight">Suivi de commande</h1>
-            <div className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full mt-1.5 text-[12px] font-bold',
-              'bg-white/20 backdrop-blur-sm text-white',
-            )}>
-              <div className={cn(
-                'w-1.5 h-1.5 rounded-full',
-                isCancelledOrDisputed ? 'bg-red-300' :
-                order.status === 'delivered' ? 'bg-emerald-300' :
-                'bg-white animate-pulse',
-              )} />
-              {statusInfo.label}
+    <div className="bg-white border-b border-gray-100 px-4 pt-3.5 pb-4">
+      <div className="flex items-center justify-between gap-3 max-w-2xl mx-auto">
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200/80 flex items-center justify-center text-gray-700 active:scale-95 transition-all flex-shrink-0"
+            aria-label="Retour"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="text-[15px] font-extrabold text-gray-900 leading-tight truncate">
+                {isCashAtShop
+                  ? 'Réservation Boutique'
+                  : isPickup
+                  ? 'Retrait Boutique'
+                  : 'Suivi Livraison'}
+              </h1>
             </div>
+            <p className="text-[11px] font-mono font-semibold text-gray-400">
+              Commande #{order.id.slice(0, 8).toUpperCase()}
+            </p>
           </div>
+        </div>
+
+        <div className={cn(
+          'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border flex-shrink-0 shadow-2xs',
+          statusInfo.bgColor, statusInfo.borderColor, statusInfo.color
+        )}>
+          <div className={cn(
+            'w-1.5 h-1.5 rounded-full',
+            isCancelledOrDisputed ? 'bg-red-500' :
+            order.status === 'delivered' || order.status === 'completed' ? 'bg-emerald-500' :
+            'bg-orange-500 animate-pulse',
+          )} />
+          <span>{statusInfo.label}</span>
         </div>
       </div>
     </div>

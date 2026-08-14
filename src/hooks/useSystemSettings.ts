@@ -14,6 +14,12 @@ export interface PaymentConfig {
   force_cod_only: boolean;
 }
 
+export interface CancellationConfig {
+  max_consecutive_cancellations: number;
+  enabled: boolean;
+  notice: string;
+}
+
 export function useSystemSettings() {
   const [maintenance, setMaintenance] = useState<MaintenanceConfig>({
     enabled: false,
@@ -26,6 +32,12 @@ export function useSystemSettings() {
     notice: '',
     disable_online_payments: false,
     force_cod_only: false,
+  });
+
+  const [cancellationSettings, setCancellationSettings] = useState<CancellationConfig>({
+    max_consecutive_cancellations: 3,
+    enabled: true,
+    notice: 'Vous avez atteint la limite de 3 annulations consécutives. Afin de limiter les frais de remboursement, veuillez contacter le support pour toute demande d\'annulation.',
   });
 
   const [loading, setLoading] = useState(true);
@@ -44,6 +56,8 @@ export function useSystemSettings() {
             setMaintenance(row.value as MaintenanceConfig);
           } else if (row.key === 'payment_settings') {
             setPaymentConfig(row.value as PaymentConfig);
+          } else if (row.key === 'cancellation_settings') {
+            setCancellationSettings(row.value as CancellationConfig);
           }
         });
       }
@@ -79,6 +93,7 @@ export function useSystemSettings() {
   return {
     maintenance,
     paymentConfig,
+    cancellationSettings,
     loading,
     refreshSettings: fetchSettings,
   };

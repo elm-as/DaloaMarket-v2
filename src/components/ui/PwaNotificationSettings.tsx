@@ -4,9 +4,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Smartphone,
-  Send,
   RefreshCw,
-  Info,
 } from 'lucide-react';
 import { usePwaNotifications } from '../../hooks/usePwaNotifications';
 import { cn } from '../../lib/utils';
@@ -19,7 +17,6 @@ export const PwaNotificationSettings: React.FC = () => {
     isSupported,
     enableNotifications,
     disableNotifications,
-    sendTestNotification,
     checkStatus,
   } = usePwaNotifications();
 
@@ -49,7 +46,7 @@ export const PwaNotificationSettings: React.FC = () => {
   };
 
   return (
-    <div className="p-5 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50 bg-white space-y-4">
+    <div className="p-5 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50 bg-white space-y-3">
       {/* Header with Title & iOS-Style Switch */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -123,25 +120,6 @@ export const PwaNotificationSettings: React.FC = () => {
           </button>
         </div>
       )}
-
-      {/* Informative Content & Test Notification */}
-      {isActive && (
-        <div className="pt-2.5 flex items-center justify-between border-t border-gray-100 text-xs">
-          <div className="flex items-center gap-1.5 text-gray-500 text-[11px]">
-            <Info className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-            <span className="truncate">Alertes actives en direct</span>
-          </div>
-          <button
-            type="button"
-            onClick={sendTestNotification}
-            className="inline-flex items-center gap-1 text-xs font-extrabold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 px-3 py-1.5 rounded-xl active:scale-95 transition-all"
-          >
-            <Send className="w-3 h-3" />
-            <span>Envoyer un test</span>
-          </button>
-        </div>
-      )}
     </div>
   );
 };
-

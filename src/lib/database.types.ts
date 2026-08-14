@@ -40,6 +40,9 @@ export interface Database {
           shop_longitude: number | null
           listing_credits: number
           pro_free_boost_used: boolean
+          cancellation_count: number
+          consecutive_cancellations: number
+          last_cancellation_at: string | null
         }
         Insert: {
           id: string
@@ -71,6 +74,9 @@ export interface Database {
           shop_longitude?: number | null
           listing_credits?: number
           pro_free_boost_used?: boolean
+          cancellation_count?: number
+          consecutive_cancellations?: number
+          last_cancellation_at?: string | null
         }
         Update: {
           id?: string
@@ -100,6 +106,9 @@ export interface Database {
           shop_longitude?: number | null
           listing_credits?: number
           pro_free_boost_used?: boolean
+          cancellation_count?: number
+          consecutive_cancellations?: number
+          last_cancellation_at?: string | null
         }
         Relationships: [
           {

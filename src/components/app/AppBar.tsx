@@ -253,6 +253,30 @@ const AppBar: React.FC = () => {
 
           {user && (
             <Link
+              to="/mes-commandes"
+              className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+              style={{
+                color: location.pathname === '/mes-commandes' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)',
+                background: location.pathname === '/mes-commandes' ? 'var(--color-primary-50)' : 'transparent',
+              }}
+            >
+              <Package style={{ width: 18, height: 18 }} />
+              <span className="hidden xl:inline">Commandes</span>
+              {activeOrderCount > 0 && (
+                <motion.span
+                  className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-[var(--color-primary)] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 500 }}
+                >
+                  {activeOrderCount > 99 ? '99+' : activeOrderCount}
+                </motion.span>
+              )}
+            </Link>
+          )}
+
+          {user && (
+            <Link
               to="/messages"
               className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
               style={{
