@@ -326,16 +326,16 @@ const SellerProfilePage: React.FC = () => {
       </div>
 
       {/* ── 2. SELLER IDENTITY OVERLAPPING CARD ── */}
-      <div className="relative z-10 max-w-3xl mx-auto px-4 -mt-10 sm:-mt-12">
-        {/* Floating Full Unclipped Avatar (Compact 80px) */}
+      <div className="relative z-10 max-w-3xl mx-auto px-4 -mt-13 sm:-mt-15">
+        {/* Floating Full Unclipped Avatar (102px Sweet Spot) */}
         <div className="relative flex justify-center z-20">
           <div
-            className="w-20 h-20 sm:w-22 sm:h-22 rounded-full p-1 bg-white ring-4 ring-white shadow-xl transition-transform hover:scale-105 shrink-0"
+            className="rounded-full p-1 bg-white ring-4 ring-white shadow-2xl transition-transform hover:scale-105 shrink-0"
             style={{
-              width: '80px',
-              height: '80px',
+              width: '102px',
+              height: '102px',
               border: `3px solid ${themeColor}`,
-              boxShadow: `0 8px 24px -4px ${themeColor}45`,
+              boxShadow: `0 10px 28px -4px ${themeColor}50`,
             }}
           >
             {seller.shop_logo_url || seller.avatar_url ? (
@@ -356,7 +356,7 @@ const SellerProfilePage: React.FC = () => {
         </div>
 
         {/* White Card Container */}
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 p-5 sm:p-7 pt-3 -mt-10 sm:-mt-11 relative">
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 p-5 sm:p-7 pt-4 -mt-12 sm:-mt-13 relative">
           {/* Subtle Ambient Brand Glow */}
           <div
             className="absolute top-0 left-8 right-8 h-1 rounded-b-full opacity-90 pointer-events-none"
@@ -368,7 +368,7 @@ const SellerProfilePage: React.FC = () => {
           />
 
           {/* Seller Information */}
-          <div className="text-center relative z-10 pt-7 sm:pt-8 space-y-3">
+          <div className="text-center relative z-10 pt-8 sm:pt-9 space-y-3">
             {/* Title + Badges in ONE unified line */}
             <div className="flex items-center justify-center gap-2 flex-wrap">
               <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
