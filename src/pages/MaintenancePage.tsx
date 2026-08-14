@@ -79,7 +79,7 @@ export default function MaintenancePage({
             <div className="flex flex-col sm:flex-row items-center gap-3 text-left">
               <div className="flex items-center gap-1.5">
                 <Mail className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-                <span className="font-medium">support@daloamarket.shop</span>
+                <span className="font-medium">support@daloamarket.com</span>
               </div>
               <span className="hidden sm:inline text-gray-300">•</span>
               <div className="flex items-center gap-1.5">

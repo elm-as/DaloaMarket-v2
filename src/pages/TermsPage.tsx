@@ -1,27 +1,30 @@
 import { Shield, FileText, Users, AlertTriangle, ShoppingBag, Ban, Scale, Zap, Mail, RefreshCw, Globe, CreditCard, Package, Star, MapPin, Bike } from 'lucide-react';
-import { usePageTitle } from '../hooks/usePageTitle';
+import { useSEO } from '../hooks/useSEO';
 import { Card } from '../components/ui/Card';
 import { PHASE0_FREE_MODE } from '../lib/featureFlags';
 
 export default function TermsPage() {
-  usePageTitle("Conditions d'utilisation");
+  useSEO('Conditions Générales d\'Utilisation (CGU) — DaloaMarket', {
+    description: 'Consultez les Conditions Générales d\'Utilisation (CGU) de DaloaMarket : règles de vente, droits et devoirs des utilisateurs.',
+    canonical: 'https://daloamarket.com/terms'
+  });
 
   return (
-    <div className="max-w-2xl lg:max-w-none mx-auto px-4 py-8 pb-20 lg:px-6">
-      <Card className="p-6 lg:p-10 rounded-2xl shadow-elevation-1">
-        <div className="text-center mb-8 pb-8 border-b border-gray-100">
-          <div className="w-16 h-16 flex items-center justify-center mx-auto mb-4 bg-white shadow-sm border border-gray-100 rounded-2xl p-2">
+    <div className="min-h-screen bg-gray-50/70 px-4 py-5 pb-28 sm:px-6 sm:py-8 lg:px-6">
+      <Card className="mx-auto max-w-3xl p-5 sm:p-7 lg:p-10 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50">
+        <div className="rounded-3xl bg-gradient-to-br from-orange-500 to-amber-600 px-5 py-6 text-center text-white mb-6">
+          <div className="w-12 h-12 flex items-center justify-center mx-auto mb-3 bg-white rounded-2xl p-2 shadow-lg">
             <img src="/logo.png" alt="DaloaMarket" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-[var(--color-on-surface)] mb-2">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight mb-2">
             Conditions Générales d'Utilisation
           </h1>
-          <p className="text-sm text-[var(--color-on-surface-variant)] max-w-lg mx-auto">
+          <p className="text-xs sm:text-sm text-orange-100 max-w-lg mx-auto">
             Dernière mise à jour : 7 juillet 2026 — Veuillez lire attentivement ces conditions avant d'utiliser DaloaMarket.
           </p>
         </div>
 
-        <div className="space-y-8 lg:space-y-10 text-[var(--color-on-surface)]">
+        <div className="space-y-6 sm:space-y-8 text-[var(--color-on-surface)]">
 
           {/* 1. Acceptation */}
           <section>
@@ -78,7 +81,7 @@ export default function TermsPage() {
                   <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">3.1 Création de compte</h4>
                   <p>Pour utiliser les fonctionnalités complètes de la Plateforme, vous devez créer un compte. Lors de l'inscription, vous vous engagez à fournir des informations exactes, complètes et à jour. Toute fausse déclaration peut entraîner la suspension ou la suppression de votre compte.</p>
                   <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">3.2 Sécurité du compte</h4>
-                  <p>Vous êtes entièrement responsable de la confidentialité de vos identifiants de connexion (email et mot de passe). Toute activité effectuée depuis votre compte est présumée être de votre fait. Vous devez immédiatement nous signaler toute utilisation non autorisée de votre compte à support@daloamarket.shop.</p>
+                  <p>Vous êtes entièrement responsable de la confidentialité de vos identifiants de connexion (email et mot de passe). Toute activité effectuée depuis votre compte est présumée être de votre fait. Vous devez immédiatement nous signaler toute utilisation non autorisée de votre compte à support@daloamarket.com.</p>
                   <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">3.3 Suppression du compte</h4>
                   <p>Vous pouvez demander la suppression de votre compte à tout moment en nous contactant. DaloaMarket se réserve également le droit de suspendre ou supprimer un compte en cas de violation des présentes CGU, de comportement frauduleux, ou de tout autre motif légitime, sans préavis ni indemnité.</p>
                 </div>
@@ -336,13 +339,13 @@ export default function TermsPage() {
                       <span className="w-5 h-5 rounded bg-[var(--color-primary-50)] flex items-center justify-center flex-shrink-0">
                         <Mail className="w-3 h-3 text-[var(--color-primary)]" />
                       </span>
-                      <span><strong className="text-[var(--color-on-surface)]">Email :</strong> support@daloamarket.shop</span>
+                      <span><strong className="text-[var(--color-on-surface)]">Email :</strong> support@daloamarket.com</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="w-5 h-5 rounded bg-[var(--color-primary-50)] flex items-center justify-center flex-shrink-0">
                         <Globe className="w-3 h-3 text-[var(--color-primary)]" />
                       </span>
-                      <span><strong className="text-[var(--color-on-surface)]">Site :</strong> daloamarket.shop</span>
+                      <span><strong className="text-[var(--color-on-surface)]">Site :</strong> daloamarket.com</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="w-5 h-5 rounded bg-[var(--color-primary-50)] flex items-center justify-center flex-shrink-0">

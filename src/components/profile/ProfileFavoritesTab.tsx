@@ -58,6 +58,7 @@ export const ProfileFavoritesTab: React.FC<{ userId: string }> = ({ userId }) =>
         stock: l.stock ?? 1,
         listing_user_id: l.user_id,
         original_price: l.original_price || null,
+        variants: l.variants || [],
       }));
 
       setFavorites(formatted);

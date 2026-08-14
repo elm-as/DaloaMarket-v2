@@ -58,8 +58,8 @@ export function useSystemSettings() {
     fetchSettings();
 
     // Écouter les changements en temps réel via Supabase Realtime
-    const channelName = `sys_settings_${Date.now()}`;
-    const channel = supabase.channel(channelName);
+    const channelId = `sys_settings_${Math.random().toString(36).substring(2, 9)}`;
+    const channel = supabase.channel(channelId);
 
     channel
       .on(

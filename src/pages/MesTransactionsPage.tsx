@@ -143,24 +143,26 @@ const MesTransactionsPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto pb-12">
+    <div className="w-full max-w-4xl mx-auto pb-20 bg-gray-50/70 min-h-screen">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div className="relative overflow-hidden flex items-center gap-3 px-4 pt-5 pb-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-b-[32px] shadow-lg">
+        <div className="absolute -top-12 -right-10 w-36 h-36 rounded-full bg-white/10" />
         <Button
           variant="text"
           color="secondary"
+          className="relative z-10 !text-white bg-white/15 rounded-2xl"
           size="sm"
           icon={<ArrowLeft className="w-5 h-5" />}
           onClick={() => navigate(-1)}
         >
           Retour
         </Button>
-        <h1 className="text-lg font-bold text-[var(--color-on-surface)]">
+        <h1 className="relative z-10 text-xl font-extrabold tracking-tight text-white">
           Mes paiements
         </h1>
       </div>
 
-      <div className="px-4">
+      <div className="relative z-10 px-4 -mt-6">
         {loading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -170,7 +172,7 @@ const MesTransactionsPage: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25, delay: i * 0.06 }}
               >
-                <Card elevation={1} padding="md" className="rounded-2xl">
+                <Card elevation={2} padding="md" className="rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50">
                   <div className="flex items-center gap-3">
                     <Skeleton width="48px" height="48px" rounded="lg" />
                     <div className="flex-1 space-y-2">
@@ -211,7 +213,7 @@ const MesTransactionsPage: React.FC = () => {
                     ease: [0.2, 0, 0, 1],
                   }}
                 >
-                  <Card elevation={1} padding="md" className="rounded-2xl">
+                  <Card elevation={2} padding="md" className="rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50">
                     <div className="flex items-center gap-3">
                       {/* Icon */}
                       <div
@@ -225,7 +227,7 @@ const MesTransactionsPage: React.FC = () => {
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900">
+                        <p className="text-sm font-extrabold text-gray-900">
                           {typeConfig.label}
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5">
@@ -240,7 +242,7 @@ const MesTransactionsPage: React.FC = () => {
 
                       {/* Amount + Status */}
                       <div className="text-right flex-shrink-0">
-                        <p className="text-sm font-bold text-gray-900">
+                        <p className="text-sm font-extrabold text-orange-600">
                           {formatPrice(tx.amount)}
                         </p>
                         <div className="mt-1">

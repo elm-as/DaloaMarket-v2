@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { UserPlus, PlusCircle, MessageSquare, CheckCircle, HelpCircle, FileText, Info, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { usePageTitle } from '../hooks/usePageTitle';
+import { useSEO } from '../hooks/useSEO';
 import { Card } from '../components/ui/Card';
 
 const STEPS = [
@@ -41,18 +41,36 @@ const STEPS = [
 ];
 
 export default function HowItWorksPage() {
-  usePageTitle('Comment ça marche');
+  const howToSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'Comment acheter et vendre sur DaloaMarket',
+    description: 'Guide étape par étape pour publier des annonces et acheter à Daloa sur DaloaMarket.',
+    step: STEPS.map((step) => ({
+      '@type': 'HowToStep',
+      position: step.number,
+      name: step.title,
+      text: step.description,
+    })),
+  };
+
+  useSEO('Comment ça marche — Vendre et Acheter à Daloa', {
+    description: 'Découvrez comment acheter et vendre facilement sur DaloaMarket. Publication d\'annonces gratuites, livraison sécurisée et astuces pour réussir.',
+    keywords: 'comment vendre Daloa, publier annonce Daloa, achat occasion Daloa, marketplace Côte d\'Ivoire',
+    canonical: 'https://daloamarket.com/how-it-works',
+    jsonLd: howToSchema,
+  });
 
   return (
-    <div className="max-w-4xl lg:max-w-none mx-auto px-4 py-8 pb-20 lg:px-6">
-      <div className="text-center mb-10">
-        <div className="w-16 h-16 flex items-center justify-center mx-auto mb-4 bg-white shadow-sm border border-gray-100 rounded-2xl p-2">
+    <div className="min-h-screen bg-gray-50/70 px-4 py-5 pb-28 lg:px-6">
+      <div className="mx-auto mb-8 max-w-4xl rounded-3xl bg-gradient-to-br from-orange-500 to-amber-600 px-5 py-7 text-center text-white shadow-lg shadow-orange-200/50">
+        <div className="w-14 h-14 flex items-center justify-center mx-auto mb-3 bg-white shadow-lg rounded-2xl p-2">
           <img src="/logo.png" alt="DaloaMarket" className="w-full h-full object-contain" />
         </div>
-        <h1 className="text-2xl font-bold text-[var(--color-on-surface)] mb-2">
+        <h1 className="text-2xl font-extrabold tracking-tight mb-2">
           Comment ça marche
         </h1>
-        <p className="text-[var(--color-on-surface-variant)]">
+        <p className="text-sm text-orange-100">
           Vendre sur DaloaMarket en 4 étapes simples
         </p>
       </div>

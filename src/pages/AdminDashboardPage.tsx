@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Flag, Bell, FileText, Users, Truck } from 'lucide-react';
+import { BarChart3, Flag, Bell, FileText, Users, Truck, MessageSquare, Lightbulb, Sliders } from 'lucide-react';
 import { useSupabase } from '../hooks/useSupabase';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -13,10 +13,13 @@ import { AdminListingsTab } from '../components/admin/AdminListingsTab';
 import { AdminUsersTab } from '../components/admin/AdminUsersTab';
 import { AdminDeliveriesTab } from '../components/admin/AdminDeliveriesTab';
 import { AdminSettingsTab } from '../components/admin/AdminSettingsTab';
-import { Sliders } from 'lucide-react';
+import { AdminFeedbacksTab } from '../components/admin/AdminFeedbacksTab';
+import { AdminFeaturesTab } from '../components/admin/AdminFeaturesTab';
 
 const TABS = [
   { key: 'kpis', label: 'KPIs', icon: BarChart3, paths: ['/admin', '/admin/kpis'] },
+  { key: 'feedbacks', label: 'Feedbacks & Avis', icon: MessageSquare, paths: ['/admin/feedbacks'] },
+  { key: 'features', label: 'Idées Features', icon: Lightbulb, paths: ['/admin/features'] },
   { key: 'reports', label: 'Signalements', icon: Flag, paths: ['/admin/reports'] },
   { key: 'livraisons', label: 'Livraisons & Litiges', icon: Truck, paths: ['/admin/livraisons', '/admin/litiges'] },
   { key: 'settings', label: 'Configuration & Urgences', icon: Sliders, paths: ['/admin/settings'] },
@@ -43,6 +46,8 @@ export default function AdminDashboardPage() {
 
   const switchTab = (tabKey: string) => {
     if (tabKey === 'kpis') navigate('/admin/kpis');
+    else if (tabKey === 'feedbacks') navigate('/admin/feedbacks');
+    else if (tabKey === 'features') navigate('/admin/features');
     else if (tabKey === 'reports') navigate('/admin/reports');
     else if (tabKey === 'livraisons') navigate('/admin/livraisons');
     else if (tabKey === 'settings') navigate('/admin/settings');
@@ -65,16 +70,42 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="pb-20">
-      <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-        <div className="w-8 h-8 flex items-center justify-center bg-white shadow-sm border border-gray-100 rounded-lg p-0.5">
+    <div className="pb-20 min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-amber-600 px-4 py-5 text-white">
+        <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/10" />
+        <div className="relative flex items-center gap-3">
+        <div className="w-10 h-10 flex items-center justify-center bg-white shadow-sm rounded-2xl p-1.5">
           <img src="/logo.png" alt="DaloaMarket" className="w-full h-full object-contain" />
         </div>
-        <h1 className="text-base font-bold text-gray-900">Administration DaloaMarket</h1>
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-orange-100">Espace sécurisé</p>
+          <h1 className="text-lg font-extrabold tracking-tight leading-tight">Administration</h1>
+          <p className="text-xs text-orange-100">Modération, paiements et opérations.</p>
+        </div>
+        </div>
       </div>
 
-      <div className="sticky top-0 z-10 bg-[var(--color-surface)] border-b border-[var(--color-outline)] overflow-x-auto">
-        <div className="flex gap-1 px-2 py-2 min-w-max">
+      {/* Mobile Tab Bar */}
+      <div className="lg:hidden sticky top-0 z-20 bg-gray-50/95 px-4 py-3 backdrop-blur-md">
+        <div className="rounded-2xl border border-gray-100 bg-white p-1.5 shadow-sm">
+          <label className="sr-only" htmlFor="admin-module">Module d'administration</label>
+          <select
+            id="admin-module"
+            value={currentTab}
+            onChange={(event) => switchTab(event.target.value)}
+            className="h-11 w-full appearance-none rounded-xl bg-gray-50 px-3 text-sm font-extrabold text-gray-900 outline-none"
+          >
+            {visibleTabs.map((tab) => <option key={tab.key} value={tab.key}>{tab.label}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Desktop Admin Layout: Sidebar + Main Area */}
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 mt-6 lg:flex lg:gap-8 lg:items-start">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:flex lg:flex-col lg:w-64 lg:flex-shrink-0 bg-white rounded-2xl p-3 border border-gray-100 shadow-sm sticky top-20 gap-1">
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-3 py-2">Module Admin</p>
           {visibleTabs.map((tab) => {
             const isActive = currentTab === tab.key;
             const Icon = tab.icon;
@@ -83,28 +114,31 @@ export default function AdminDashboardPage() {
                 key={tab.key}
                 onClick={() => switchTab(tab.key)}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-[0.97] flex-shrink-0',
+                  'flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors text-left',
                   isActive
-                    ? 'bg-[var(--color-primary-container)] text-[var(--color-on-primary-container)]'
-                    : 'text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-variant)]'
+                    ? 'bg-[var(--color-primary-50)] text-[var(--color-primary)] font-bold'
+                    : 'text-gray-600 hover:bg-gray-50'
                 )}
               >
-                <Icon size={16} />
+                <Icon size={18} className={isActive ? 'text-[var(--color-primary)]' : 'text-gray-400'} />
                 <span>{tab.label}</span>
               </button>
             );
           })}
         </div>
-      </div>
 
-      <div className="max-w-6xl mx-auto px-4 mt-6">
-        {currentTab === 'kpis' && <AdminKpisTab />}
-        {currentTab === 'reports' && <AdminReportsTab />}
-        {currentTab === 'livraisons' && <AdminDeliveriesTab />}
-        {currentTab === 'settings' && <AdminSettingsTab />}
-        {currentTab === 'notifications' && <AdminNotificationsTab />}
-        {currentTab === 'annonces' && <AdminListingsTab />}
-        {currentTab === 'utilisateurs' && <AdminUsersTab />}
+        {/* Content Area */}
+        <div className="flex-1 min-w-0">
+          {currentTab === 'kpis' && <AdminKpisTab />}
+          {currentTab === 'feedbacks' && <AdminFeedbacksTab />}
+          {currentTab === 'features' && <AdminFeaturesTab />}
+          {currentTab === 'reports' && <AdminReportsTab />}
+          {currentTab === 'livraisons' && <AdminDeliveriesTab />}
+          {currentTab === 'settings' && <AdminSettingsTab />}
+          {currentTab === 'notifications' && <AdminNotificationsTab />}
+          {currentTab === 'annonces' && <AdminListingsTab />}
+          {currentTab === 'utilisateurs' && <AdminUsersTab />}
+        </div>
       </div>
     </div>
   );

@@ -258,138 +258,150 @@ const OrderTrackingPage: React.FC = () => {
   const userRole: UserRole = isSeller ? 'seller' : isBuyer ? 'buyer' : isDeliveryPerson ? 'delivery' : 'other';
 
   return (
-    <div className="w-full max-w-2xl mx-auto pb-12">
+    <div className="w-full max-w-2xl lg:max-w-none mx-auto pb-12 lg:px-6">
       {/* ── IMMERSIVE HEADER ── */}
       <OrderTrackingHeader order={order} />
 
-      {/* ── CONTENT ── */}
-      <div className={cn('px-4 space-y-4', hasMap ? 'pt-4' : '-mt-4 relative z-10')}>
+      {/* ── CONTENT (Desktop 2-column layout) ── */}
+      <div className={cn('px-4 lg:px-0 space-y-4 lg:grid lg:grid-cols-[1fr_380px] lg:gap-8 lg:space-y-0 lg:items-start', hasMap ? 'pt-4' : '-mt-4 relative z-10')}>
+        {/* LEFT COLUMN: Timeline & Actions */}
+        <div className="space-y-4">
+          {/* ── CANCELLED / DISPUTED BANNER ── */}
+          <CancelledBanner order={order} onBack={() => navigate('/mes-commandes')} />
 
-        {/* ── CANCELLED / DISPUTED BANNER ── */}
-        <CancelledBanner order={order} onBack={() => navigate('/mes-commandes')} />
-
-        {/* ── PRODUCT SUMMARY ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className={cn(
-            'bg-white rounded-2xl p-4 shadow-sm border border-gray-100',
-            isCancelledOrDisputed && 'opacity-60',
-          )}>
-            <div className="flex items-start gap-3.5">
-              {/* Product photo */}
-              {productPhoto ? (
-                <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-100">
-                  <img
-                    src={productPhoto}
-                    alt={order.listing_title || 'Produit'}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ) : (
-                <div className="w-16 h-16 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0">
-                  <PackageIcon className="w-7 h-7 text-gray-300" />
-                </div>
+          {/* ── ROLE SECTIONS ── */}
+          {!isCancelledOrDisputed && (
+            <>
+              {isSeller && <SellerSection order={order} onChanged={fetchOrder} />}
+              {isBuyer && <BuyerSection order={order} onChanged={fetchOrder} />}
+              {(isDeliveryPerson || (isSeller && order.delivery_mode === 'pickup')) && order.delivery_assignment?.[0] && (
+                <DeliveryOtpInputSection order={order} onSuccess={fetchOrder} />
               )}
-              <div className="flex-1 min-w-0">
-                <h2 className="text-[16px] font-bold text-gray-900 leading-snug truncate">
-                  {order.listing_title || 'Commande'}
-                </h2>
-                <p className="text-[12px] text-gray-400 mt-0.5 font-medium">
-                  N° {order.id.slice(0, 8).toUpperCase()} · {formatDate(order.created_at)}
-                </p>
-              </div>
-            </div>
+            </>
+          )}
 
-            {/* Price breakdown */}
-            <div className="mt-4 pt-3.5 border-t border-gray-100 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] text-gray-500">Produit</span>
-                <span className="text-[13px] font-medium text-gray-700">{formatPrice(order.product_amount)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] text-gray-500">Livraison</span>
-                <span className="text-[13px] font-medium text-gray-700">{formatPrice(order.delivery_fee)}</span>
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t border-dashed border-gray-200">
-                <span className="text-[14px] font-bold text-gray-900">Total</span>
-                <span className="text-[18px] font-black text-gray-900">{formatPrice(order.total_amount)}</span>
-              </div>
-            </div>
-          </div>
-        </motion.div>
+          {/* ── TIMELINE ── */}
+          {!isCancelledOrDisputed && (
+            <OrderStatusTimeline order={order} role={userRole} />
+          )}
+        </div>
 
-        {/* ── ROLE SECTIONS ── */}
-        {!isCancelledOrDisputed && (
-          <>
-            {isSeller && <SellerSection order={order} onChanged={fetchOrder} />}
-            {isBuyer && <BuyerSection order={order} onChanged={fetchOrder} />}
-            {(isDeliveryPerson || (isSeller && order.delivery_mode === 'pickup')) && order.delivery_assignment?.[0] && (
-              <DeliveryOtpInputSection order={order} onSuccess={fetchOrder} />
-            )}
-          </>
-        )}
-
-        {/* ── TIMELINE ── */}
-        {!isCancelledOrDisputed && (
-          <OrderStatusTimeline order={order} role={userRole} />
-        )}
-
-        {/* ── DELIVERY INFO ── */}
-        {!isCancelledOrDisputed && (order.delivery_person?.name || order.delivery_person?.phone || (order.delivery_address && (isBuyer || isDeliveryPerson))) && (
+        {/* RIGHT COLUMN: Product Summary & Delivery Info */}
+        <div className="space-y-4 lg:sticky lg:top-20">
+          {/* ── PRODUCT SUMMARY ── */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
+            transition={{ duration: 0.3 }}
           >
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-              <h3 className="text-[15px] font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[var(--color-primary)]" />
-                Infos de livraison
-              </h3>
-              <div className="space-y-3">
-                {order.delivery_person?.name && (
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                    <div className="w-10 h-10 rounded-full bg-[var(--color-primary-50)] flex items-center justify-center flex-shrink-0">
-                      <Truck className="w-5 h-5 text-[var(--color-primary)]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] uppercase font-bold text-gray-400 tracking-wider">Livreur</p>
-                      <p className="text-[14px] font-semibold text-gray-900">{order.delivery_person.name}</p>
-                    </div>
-                    {order.delivery_person.phone && (
-                      <a
-                        href={`tel:${order.delivery_person.phone}`}
-                        className="w-10 h-10 rounded-full bg-[var(--color-primary)] flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform shadow-md shadow-[var(--color-primary)]/25"
-                      >
-                        <Phone className="w-4 h-4 text-white" />
-                      </a>
-                    )}
+            <div className={cn(
+              'bg-white rounded-2xl p-4 shadow-sm border border-gray-100',
+              isCancelledOrDisputed && 'opacity-60',
+            )}>
+              <div className="flex items-start gap-3.5">
+                {/* Product photo */}
+                {productPhoto ? (
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-100">
+                    <img
+                      src={productPhoto}
+                      alt={order.listing_title || 'Produit'}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0">
+                    <PackageIcon className="w-7 h-7 text-gray-300" />
                   </div>
                 )}
-                {(isBuyer || isDeliveryPerson) && order.delivery_address && (
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                      <MapPin className="w-5 h-5 text-blue-500" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] uppercase font-bold text-gray-400 tracking-wider">Adresse de livraison</p>
-                      <p className="text-[14px] font-medium text-gray-900">{order.delivery_address}</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
-                  </div>
-                )}
-                {isSeller && (
-                  <p className="text-[11px] text-gray-400 italic px-1">
-                    L'adresse de livraison n'est visible que par le livreur et l'acheteur.
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-[16px] font-bold text-gray-900 leading-snug truncate">
+                    {order.listing_title || 'Commande'}
+                  </h2>
+                  <p className="text-[12px] text-gray-400 mt-0.5 font-medium">
+                    N° {order.id.slice(0, 8).toUpperCase()} · {formatDate(order.created_at)}
                   </p>
-                )}
+                  {order.variant_label && (
+                    <p className="text-[12px] font-extrabold text-orange-600 mt-1">
+                      Taille : {order.variant_label}{order.quantity && order.quantity > 1 ? ` · Quantité : ${order.quantity}` : ''}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Price breakdown */}
+              <div className="mt-4 pt-3.5 border-t border-gray-100 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[13px] text-gray-500">Produit</span>
+                  <span className="text-[13px] font-medium text-gray-700">
+                    {order.quantity && order.unit_price ? `${order.quantity} × ${formatPrice(order.unit_price)}` : formatPrice(order.product_amount)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[13px] text-gray-500">Livraison</span>
+                  <span className="text-[13px] font-medium text-gray-700">{formatPrice(order.delivery_fee)}</span>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-dashed border-gray-200">
+                  <span className="text-[14px] font-bold text-gray-900">Total</span>
+                  <span className="text-[18px] font-black text-gray-900">{formatPrice(order.total_amount)}</span>
+                </div>
               </div>
             </div>
           </motion.div>
-        )}
+
+          {/* ── DELIVERY INFO ── */}
+          {!isCancelledOrDisputed && (order.delivery_person?.name || order.delivery_person?.phone || (order.delivery_address && (isBuyer || isDeliveryPerson))) && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+            >
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <h3 className="text-[15px] font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-[var(--color-primary)]" />
+                  Infos de livraison
+                </h3>
+                <div className="space-y-3">
+                  {order.delivery_person?.name && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                      <div className="w-10 h-10 rounded-full bg-[var(--color-primary-50)] flex items-center justify-center flex-shrink-0">
+                        <Truck className="w-5 h-5 text-[var(--color-primary)]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] uppercase font-bold text-gray-400 tracking-wider">Livreur</p>
+                        <p className="text-[14px] font-semibold text-gray-900">{order.delivery_person.name}</p>
+                      </div>
+                      {order.delivery_person.phone && (
+                        <a
+                          href={`tel:${order.delivery_person.phone}`}
+                          className="w-10 h-10 rounded-full bg-[var(--color-primary)] flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform shadow-md shadow-[var(--color-primary)]/25"
+                        >
+                          <Phone className="w-4 h-4 text-white" />
+                        </a>
+                      )}
+                    </div>
+                  )}
+                  {(isBuyer || isDeliveryPerson) && order.delivery_address && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                      <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                        <MapPin className="w-5 h-5 text-blue-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] uppercase font-bold text-gray-400 tracking-wider">Adresse de livraison</p>
+                        <p className="text-[14px] font-medium text-gray-900">{order.delivery_address}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                    </div>
+                  )}
+                  {isSeller && (
+                    <p className="text-[11px] text-gray-400 italic px-1">
+                      L'adresse de livraison n'est visible que par le livreur et l'acheteur.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,28 +1,31 @@
 import React from 'react';
 import { Shield, UserCheck, Database, Share2, Lock, FileKey, Cookie, RefreshCw, Globe, Eye, Trash2, Server, Mail, ShieldAlert } from 'lucide-react';
-import { usePageTitle } from '../hooks/usePageTitle';
+import { useSEO } from '../hooks/useSEO';
 import { Card } from '../components/ui/Card';
 
 export default function PrivacyPage() {
-  usePageTitle('Confidentialité');
+  useSEO('Politique de Confidentialité — Protección de Vos Données', {
+    description: 'Découvrez comment DaloaMarket protège vos données personnelles et votre vie privée.',
+    canonical: 'https://daloamarket.com/privacy'
+  });
 
   return (
-    <div className="max-w-2xl lg:max-w-none mx-auto px-4 py-8 pb-20 lg:px-6">
-      <Card className="p-6 lg:p-10 rounded-2xl shadow-elevation-1">
+    <div className="min-h-screen bg-gray-50/70 px-4 py-5 pb-28 sm:px-6 sm:py-8 lg:px-6">
+      <Card className="mx-auto max-w-3xl p-5 sm:p-7 lg:p-10 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50">
         {/* Header */}
-        <div className="text-center mb-8 pb-8 border-b border-gray-100">
-          <div className="w-16 h-16 flex items-center justify-center mx-auto mb-4 bg-white shadow-sm border border-gray-100 rounded-2xl p-2">
+        <div className="rounded-3xl bg-gradient-to-br from-orange-500 to-amber-600 px-5 py-6 text-center text-white mb-6">
+          <div className="w-12 h-12 flex items-center justify-center mx-auto mb-3 bg-white rounded-2xl p-2 shadow-lg">
             <img src="/logo.png" alt="DaloaMarket" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-[var(--color-on-surface)] mb-2">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight mb-2">
             Politique de Confidentialité
           </h1>
-          <p className="text-sm text-[var(--color-on-surface-variant)] max-w-lg mx-auto">
+          <p className="text-xs sm:text-sm text-orange-100 max-w-lg mx-auto">
             Dernière mise à jour : 2 juillet 2026 — DaloaMarket s'engage à protéger vos données personnelles.
           </p>
         </div>
 
-        <div className="space-y-8 lg:space-y-10 text-[var(--color-on-surface)]">
+        <div className="space-y-6 sm:space-y-8 text-[var(--color-on-surface)]">
           {/* Section 1 */}
           <section>
             <div className="flex items-start gap-4">
@@ -33,7 +36,7 @@ export default function PrivacyPage() {
                 <h2 className="text-lg font-bold mb-3">1. Introduction et principes généraux</h2>
                 <div className="space-y-2 text-sm text-[var(--color-on-surface-variant)] leading-relaxed">
                   <p>La protection de vos données personnelles est une priorité pour DaloaMarket. La présente Politique de Confidentialité explique quelles données nous collectons, comment nous les utilisons, avec qui nous les partageons, et quels sont vos droits.</p>
-                  <p>Cette politique s'applique à tous les services fournis par DaloaMarket via notre site web <strong>daloamarket.shop</strong> et notre application mobile.</p>
+                  <p>Cette politique s'applique à tous les services fournis par DaloaMarket via notre site web <strong>daloamarket.com</strong> et notre application mobile.</p>
                   <p>Nous traitons vos données conformément à la loi ivoirienne relative à la protection des données à caractère personnel et aux principes de minimisation, transparence et sécurité.</p>
                   <p>En utilisant DaloaMarket, vous acceptez les pratiques décrites dans la présente politique. Si vous n'êtes pas d'accord, veuillez ne pas utiliser nos services.</p>
                 </div>
@@ -272,7 +275,7 @@ export default function PrivacyPage() {
                     </div>
                   </div>
 
-                  <p className="mt-3">Pour exercer ces droits, contactez-nous à <strong>support@daloamarket.shop</strong>. Nous répondrons à votre demande dans un délai de 30 jours maximum. Une preuve d'identité pourra vous être demandée.</p>
+                  <p className="mt-3">Pour exercer ces droits, contactez-nous à <strong>support@daloamarket.com</strong>. Nous répondrons à votre demande dans un délai de 30 jours maximum. Une preuve d'identité pourra vous être demandée.</p>
                 </div>
               </div>
             </div>
@@ -288,7 +291,7 @@ export default function PrivacyPage() {
                 <h2 className="text-lg font-bold mb-3">9. Mineurs</h2>
                 <div className="space-y-2 text-sm text-[var(--color-on-surface-variant)] leading-relaxed">
                   <p>La Plateforme DaloaMarket n'est pas destinée aux personnes de moins de 16 ans. Nous ne collectons pas sciemment des données personnelles auprès de mineurs de moins de 16 ans.</p>
-                  <p>Si vous êtes parent ou tuteur et que vous apprenez que votre enfant nous a fourni des données personnelles sans votre consentement, contactez-nous à <strong>support@daloamarket.shop</strong>. Nous prendrons les mesures nécessaires pour supprimer ces informations.</p>
+                  <p>Si vous êtes parent ou tuteur et que vous apprenez que votre enfant nous a fourni des données personnelles sans votre consentement, contactez-nous à <strong>support@daloamarket.com</strong>. Nous prendrons les mesures nécessaires pour supprimer ces informations.</p>
                 </div>
               </div>
             </div>
@@ -326,13 +329,13 @@ export default function PrivacyPage() {
                       <span className="w-5 h-5 rounded bg-[var(--color-primary-50)] flex items-center justify-center flex-shrink-0">
                         <Mail className="w-3 h-3 text-[var(--color-primary)]" />
                       </span>
-                      <span><strong className="text-[var(--color-on-surface)]">Email :</strong> support@daloamarket.shop</span>
+                      <span><strong className="text-[var(--color-on-surface)]">Email :</strong> support@daloamarket.com</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="w-5 h-5 rounded bg-[var(--color-primary-50)] flex items-center justify-center flex-shrink-0">
                         <Globe className="w-3 h-3 text-[var(--color-primary)]" />
                       </span>
-                      <span><strong className="text-[var(--color-on-surface)]">Site :</strong> daloamarket.shop</span>
+                      <span><strong className="text-[var(--color-on-surface)]">Site :</strong> daloamarket.com</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="w-5 h-5 rounded bg-[var(--color-primary-50)] flex items-center justify-center flex-shrink-0">

@@ -15,8 +15,18 @@ export default defineConfig({
     },
   },
   build: {
-    chunkSizeWarningLimit: 500,
+    chunkSizeWarningLimit: 600,
     target: 'es2020',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-core': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-icons': ['lucide-react'],
+          'vendor-motion': ['framer-motion'],
+        },
+      },
+    },
   },
   esbuild: {
     logOverride: { 'this-is-undefined-in-esm': 'silent' },

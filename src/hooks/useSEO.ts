@@ -66,35 +66,46 @@ export function useSEO(title: string, options: SEOOptions = {}) {
     updateMetaTag('keywords', keywords);
 
     // 3. Update Open Graph Meta Tags
+    const currentPath = window.location.pathname;
+    const defaultCanonical = `https://daloamarket.com${currentPath === '/' ? '' : currentPath}`;
+
     updateMetaTag('og:title', ogTitle || title, true);
     updateMetaTag('og:description', ogDescription || description, true);
-    updateMetaTag('og:image', ogImage, true);
-    updateMetaTag('og:url', ogUrl || window.location.href, true);
+    updateMetaTag('og:image', ogImage || 'https://daloamarket.com/og-image.png', true);
+    updateMetaTag('og:url', ogUrl || defaultCanonical, true);
+    updateMetaTag('og:site_name', 'DaloaMarket', true);
+    updateMetaTag('og:locale', 'fr_CI', true);
 
     // 4. Update Twitter Card Tags
     updateMetaTag('twitter:card', ogImage ? 'summary_large_image' : 'summary');
     updateMetaTag('twitter:title', ogTitle || title);
     updateMetaTag('twitter:description', ogDescription || description);
-    updateMetaTag('twitter:image', ogImage);
+    updateMetaTag('twitter:image', ogImage || 'https://daloamarket.com/og-image.png');
 
     // 5. Update Canonical Link
-    updateCanonical(canonical);
+    updateCanonical(canonical || defaultCanonical);
 
     // 6. Inject Schema.org JSON-LD
-    let jsonLdScript: HTMLScriptElement | null = null;
+    let jsonLdScripts: HTMLScriptElement[] = [];
     if (jsonLd) {
-      jsonLdScript = document.createElement('script');
-      jsonLdScript.type = 'application/ld+json';
-      jsonLdScript.setAttribute('data-seo-jsonld', 'true');
-      jsonLdScript.text = JSON.stringify(jsonLd);
-      document.head.appendChild(jsonLdScript);
+      const ldItems = Array.isArray(jsonLd) ? jsonLd : [jsonLd];
+      ldItems.forEach((item) => {
+        const script = document.createElement('script');
+        script.type = 'application/ld+json';
+        script.setAttribute('data-seo-jsonld', 'true');
+        script.text = JSON.stringify(item);
+        document.head.appendChild(script);
+        jsonLdScripts.push(script);
+      });
     }
 
     return () => {
       document.title = prevTitle;
-      if (jsonLdScript && document.head.contains(jsonLdScript)) {
-        document.head.removeChild(jsonLdScript);
-      }
+      jsonLdScripts.forEach((script) => {
+        if (document.head.contains(script)) {
+          document.head.removeChild(script);
+        }
+      });
     };
   }, [title, description, keywords, ogTitle, ogDescription, ogImage, ogUrl, canonical, jsonLd]);
 }

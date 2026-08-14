@@ -80,53 +80,65 @@ const PayoutSetupPage: React.FC = () => {
   ];
 
   return (
-    <div className="w-full max-w-xl mx-auto pb-32">
-      {/* Header */}
-      <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 active:scale-95 transition-all"
-          aria-label="Retour"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-700" />
-        </button>
-        <div>
-          <h1 className="text-base font-bold text-gray-900 leading-tight">Moyens de paiement</h1>
-          <p className="text-xs text-gray-400">Coordonnées de retrait</p>
+    <div className="min-h-screen bg-gray-50/70 pb-32">
+      {/* ── HERO BANNER ── */}
+      <header className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-amber-600 px-5 pt-6 pb-14 rounded-b-[36px] shadow-lg">
+        <div className="absolute -top-12 -right-10 w-36 h-36 rounded-full bg-white/10" />
+        <div className="absolute -bottom-14 -left-8 w-32 h-32 rounded-full bg-white/10" />
+        <div className="relative max-w-xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="w-10 h-10 inline-flex items-center justify-center rounded-2xl bg-white/15 text-white hover:bg-white/25 active:scale-95 transition-all"
+              aria-label="Retour"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-orange-100">
+                Paiements & Retraits
+              </p>
+              <h1 className="text-2xl font-extrabold tracking-tight text-white">
+                Coordonnées de retrait
+              </h1>
+            </div>
+          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="px-4 pt-6">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4">
-            <div className="flex gap-3 items-start pb-4 border-b border-gray-50">
-              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
-                <ShieldCheck className="w-5 h-5 text-[var(--color-primary)]" />
+      {/* ── FORM CONTENT (OVERLAPPING HERO) ── */}
+      <div className="relative z-10 -mt-7 max-w-xl mx-auto px-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50 p-6 space-y-5">
+            <div className="flex gap-3.5 items-start pb-4 border-b border-gray-100">
+              <div className="w-10 h-10 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center flex-shrink-0">
+                <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-gray-900">Coordonnées de paiement (Retraits)</h3>
-                <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                  Si vous vendez sur DaloaMarket, c'est ici que vous recevrez vos paiements. Ces informations sont strictement confidentielles.
+                <h3 className="text-sm font-extrabold text-gray-900">Compte Mobile Money (Vendeur)</h3>
+                <p className="text-xs text-gray-500 mt-1 leading-relaxed font-medium">
+                  Lorsque vos ventes sont finalisées avec succès sur DaloaMarket, vos gains sont automatiquement transférés sur ce compte.
                 </p>
               </div>
             </div>
 
             {/* Réseau de réception */}
             <div className="space-y-3">
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest pl-1">
-                Réseau de réception
+              <label className="block text-xs font-bold text-gray-800 uppercase tracking-wider pl-1">
+                Opérateur Mobile Money
               </label>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 {networks.map(net => {
                   const isChecked = selectedNetwork === net.id;
                   return (
                     <label
                       key={net.id}
                       className={cn(
-                        'cursor-pointer relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all hover:scale-[1.01] active:scale-[0.99]',
+                        'cursor-pointer relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all active:scale-95',
                         isChecked
-                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 shadow-sm shadow-[var(--color-primary)]/10 scale-[1.01]'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
+                          ? 'border-orange-500 bg-orange-50/50 shadow-sm ring-2 ring-orange-500/20'
+                          : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50/50'
                       )}
                     >
                       <input
@@ -146,8 +158,8 @@ const PayoutSetupPage: React.FC = () => {
                       </div>
                       
                       <span className={cn(
-                        'text-xs font-bold transition-colors',
-                        isChecked ? 'text-[var(--color-primary)]' : 'text-gray-600'
+                        'text-xs font-extrabold transition-colors',
+                        isChecked ? 'text-orange-600' : 'text-gray-700'
                       )}>
                         {net.label}
                       </span>
@@ -159,23 +171,23 @@ const PayoutSetupPage: React.FC = () => {
 
             {/* Numéro de réception */}
             <div className="space-y-2 pt-2">
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest pl-1">
-                Numéro de réception
+              <label className="block text-xs font-bold text-gray-800 uppercase tracking-wider pl-1">
+                Numéro de téléphone (10 chiffres)
               </label>
               <input
                 type="tel"
                 {...register('payout_number', { validate: validatePayoutNumber })}
                 className={cn(
-                  'w-full h-12 px-4 text-sm font-medium rounded-2xl border bg-white text-gray-900 placeholder-gray-400 outline-none transition-all focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent',
-                  errors.payout_number ? 'border-red-400' : 'border-gray-200'
+                  'w-full h-12 px-4 text-sm font-semibold rounded-2xl border bg-gray-50/70 text-gray-900 placeholder:text-gray-400 placeholder:font-normal outline-none transition-all focus:bg-white focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500',
+                  errors.payout_number ? 'border-red-400 focus:ring-red-500/10' : 'border-gray-200'
                 )}
-                placeholder="Ex: 0701020304"
+                placeholder="Ex: 07 01 02 03 04"
               />
               {errors.payout_number && (
                 <p className="text-xs text-red-500 mt-1 pl-1 font-semibold">{errors.payout_number.message}</p>
               )}
-              <p className="text-[10px] text-gray-400 leading-normal pl-1">
-                Veuillez saisir votre numéro Mobile Money ivoirien actif de 10 chiffres.
+              <p className="text-[11px] text-gray-400 leading-normal pl-1">
+                Saisissez votre numéro ivoirien actif associé à votre compte Wave ou Mobile Money.
               </p>
             </div>
           </div>
@@ -183,13 +195,14 @@ const PayoutSetupPage: React.FC = () => {
           <Button
             type="submit"
             color="primary"
+            size="lg"
             fullWidth
             loading={saving}
             disabled={saving}
-            className="py-4 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white font-bold rounded-2xl active:scale-[0.98] transition-all shadow-md flex items-center justify-center gap-2"
+            className="rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-extrabold shadow-lg shadow-orange-500/25 active:scale-[0.98]"
+            icon={<Save size={18} />}
           >
-            <Save size={18} />
-            Enregistrer les coordonnées
+            Enregistrer mes coordonnées
           </Button>
         </form>
       </div>

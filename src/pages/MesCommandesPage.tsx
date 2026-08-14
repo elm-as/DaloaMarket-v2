@@ -22,6 +22,10 @@ interface Order {
   product_amount: number;
   status: string;
   created_at: string;
+  variant_id?: string | null;
+  variant_label?: string | null;
+  unit_price?: number | null;
+  quantity?: number;
   listing?: {
     title: string;
     photos: string[];
@@ -109,33 +113,36 @@ const MesCommandesPage: React.FC = () => {
   });
 
   const renderHeader = () => (
-    <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-[var(--color-outline)]">
-      <div className="px-4 py-3">
+    <div className="relative z-20 bg-gradient-to-br from-orange-500 to-amber-600 rounded-b-[32px] shadow-lg overflow-hidden">
+      <div className="absolute -top-12 -right-10 w-36 h-36 rounded-full bg-white/10" />
+      <div className="absolute -bottom-14 -left-10 w-32 h-32 rounded-full bg-white/10" />
+      <div className="relative px-4 pt-5 pb-12">
         <div className="flex items-center gap-3 max-w-2xl mx-auto">
           <Link
             to="/"
-            className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-full hover:bg-gray-100 active:scale-[0.97] transition-all"
+            className="min-w-[42px] min-h-[42px] inline-flex items-center justify-center rounded-2xl bg-white/15 hover:bg-white/25 active:scale-[0.97] transition-all"
             aria-label="Retour"
           >
-            <ArrowLeft className="h-5 w-5 text-[var(--color-on-surface)]" />
+            <ArrowLeft className="h-5 w-5 text-white" />
           </Link>
-          <h1 className="text-[17px] font-semibold text-[var(--color-on-surface)]">
-            Mes commandes
-          </h1>
+          <div>
+            <h1 className="text-xl font-extrabold tracking-tight text-white">Mes commandes</h1>
+            <p className="text-xs font-medium text-orange-100">Suivez vos achats et vos ventes</p>
+          </div>
         </div>
       </div>
       {!loading && !error && (
-        <div className="px-4 pb-3 max-w-2xl mx-auto">
-          <div className="flex bg-[var(--color-surface-variant)] rounded-[var(--radius-lg)] p-1 gap-1">
+        <div className="relative px-4 -mt-7 pb-4 max-w-2xl mx-auto">
+          <div className="flex bg-white rounded-3xl p-1.5 gap-1 shadow-lg border border-gray-100">
             {TAB_FILTERS.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-2 h-10 rounded-[var(--radius-md)] text-[14px] font-semibold transition-all duration-[var(--motion-fast)]',
+                  'flex-1 flex items-center justify-center gap-2 h-11 rounded-2xl text-[14px] font-bold transition-all duration-[var(--motion-fast)]',
                   activeTab === tab.key
-                    ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-[var(--elevation-1)]'
-                    : 'text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)]'
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-md'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                 )}
               >
                 {tab.icon}
@@ -172,34 +179,21 @@ const MesCommandesPage: React.FC = () => {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-[var(--color-outline)] px-4 py-3">
-          <div className="flex items-center gap-3 max-w-2xl mx-auto">
-            <Link
-              to="/"
-              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-full hover:bg-gray-100 active:scale-[0.97] transition-all"
-              aria-label="Retour"
-            >
-              <ArrowLeft className="h-5 w-5 text-[var(--color-on-surface)]" />
-            </Link>
-            <h1 className="text-[17px] font-semibold text-[var(--color-on-surface)]">
-              Mes commandes
-            </h1>
-          </div>
-        </div>
+        {renderHeader()}
         <ErrorState message={error} onRetry={fetchOrders} />
       </motion.div>
     );
   }
   return (
     <motion.div
-      className="min-h-screen bg-[var(--color-background)] pb-safe pb-28"
+      className="min-h-screen bg-gray-50/70 pb-safe pb-28"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
       {renderHeader()}
 
-      <div className="px-4 py-4 max-w-2xl mx-auto">
+      <div className="px-4 py-5 max-w-2xl lg:max-w-5xl mx-auto">
         {filteredOrders.length === 0 ? (
           <EmptyState
             icon={activeTab === 'achats' ? <ShoppingBag className="w-16 h-16 opacity-40" /> : <Package className="w-16 h-16 opacity-40" />}
@@ -211,32 +205,113 @@ const MesCommandesPage: React.FC = () => {
             }
           />
         ) : (
-          <div className="space-y-3">
-            {filteredOrders.map((order) => {
-              const statusConfig = getStatusConfig(order.status);
-              return (
-                <Card
-                  key={order.id}
-                  elevation={1}
-                  padding="md"
-                  onClick={() => navigate(`/suivi/${order.id}`)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      {order.listing?.photos?.[0] ? (
-                        <img
-                          src={order.listing.photos[0]}
-                          alt={order.listing.title}
-                          className="w-14 h-14 object-cover rounded-xl bg-gray-100 flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-14 h-14 rounded-xl bg-[var(--color-surface-variant)] flex items-center justify-center flex-shrink-0 text-[var(--color-on-surface-variant)]">
-                          <ShoppingBag className="w-6 h-6" />
+          <>
+            {/* MOBILE LIST VIEW */}
+            <div className="space-y-3 lg:hidden">
+              {filteredOrders.map((order) => {
+                const statusConfig = getStatusConfig(order.status);
+                return (
+                  <Card
+                    key={order.id}
+                    elevation={2}
+                    padding="md"
+                    className="rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50 active:scale-[0.99] transition-transform"
+                    onClick={() => navigate(`/suivi/${order.id}`)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {order.listing?.photos?.[0] ? (
+                          <img
+                            src={order.listing.photos[0]}
+                            alt={order.listing.title}
+                            className="w-16 h-16 object-cover rounded-2xl bg-gray-100 flex-shrink-0 shadow-sm"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-2xl bg-orange-50 flex items-center justify-center flex-shrink-0 text-orange-500">
+                            <ShoppingBag className="w-6 h-6" />
+                          </div>
+                        )}
+                        
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <Chip
+                              color={statusConfig.color}
+                              size="sm"
+                              icon={statusConfig.icon}
+                            >
+                              {statusConfig.label}
+                            </Chip>
+                          </div>
+                          <h3 className="text-[15px] font-extrabold text-gray-900 truncate mb-0.5">
+                            {order.listing?.title || order.listing_title || 'Commande'}
+                          </h3>
+                          {order.variant_label && (
+                            <p className="text-[11px] font-extrabold text-orange-600 mb-0.5">Taille : {order.variant_label}{order.quantity && order.quantity > 1 ? ` · x${order.quantity}` : ''}</p>
+                          )}
+                          <p className="text-[12px] text-[var(--color-on-surface-variant)]">
+                            {formatDate(order.created_at)}
+                          </p>
                         </div>
-                      )}
+                      </div>
                       
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1.5">
+                      <div className="flex items-center gap-1 flex-shrink-0 ml-2 font-extrabold text-orange-600">
+                        <span className="tabular-nums text-sm">{formatPrice(order.total_amount)}</span>
+                        <ChevronRight className="w-4 h-4 text-[var(--color-on-surface-variant)]" />
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* DESKTOP DATA TABLE VIEW */}
+            <div className="hidden lg:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    <th className="px-5 py-3.5">N° Commande</th>
+                    <th className="px-5 py-3.5">Article</th>
+                    <th className="px-5 py-3.5">Date</th>
+                    <th className="px-5 py-3.5">Statut</th>
+                    <th className="px-5 py-3.5 text-right">Montant</th>
+                    <th className="px-5 py-3.5 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-sm">
+                  {filteredOrders.map((order) => {
+                    const statusConfig = getStatusConfig(order.status);
+                    return (
+                      <tr key={order.id} className="hover:bg-gray-50/80 transition-colors">
+                        <td className="px-5 py-4 font-mono text-xs font-bold text-gray-500">
+                          #{order.id.slice(0, 8).toUpperCase()}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {order.listing?.photos?.[0] ? (
+                              <img
+                                src={order.listing.photos[0]}
+                                alt=""
+                                className="w-10 h-10 object-cover rounded-lg bg-gray-100 flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 text-gray-400">
+                                <ShoppingBag className="w-5 h-5" />
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <span className="font-semibold text-gray-900 truncate max-w-xs block">
+                                {order.listing?.title || order.listing_title || 'Commande'}
+                              </span>
+                              {order.variant_label && (
+                                <span className="text-[11px] font-bold text-orange-600">Taille : {order.variant_label}{order.quantity && order.quantity > 1 ? ` · x${order.quantity}` : ''}</span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-gray-600 text-xs">
+                          {formatDate(order.created_at)}
+                        </td>
+                        <td className="px-5 py-4">
                           <Chip
                             color={statusConfig.color}
                             size="sm"
@@ -244,25 +319,25 @@ const MesCommandesPage: React.FC = () => {
                           >
                             {statusConfig.label}
                           </Chip>
-                        </div>
-                        <h3 className="text-[15px] font-semibold text-[var(--color-on-surface)] truncate mb-0.5">
-                          {order.listing?.title || order.listing_title || 'Commande'}
-                        </h3>
-                        <p className="text-[12px] text-[var(--color-on-surface-variant)]">
-                          {formatDate(order.created_at)}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-1.5 flex-shrink-0 ml-3 font-semibold text-[var(--color-on-surface)]">
-                      <span>{formatPrice(order.total_amount)}</span>
-                      <ChevronRight className="w-4 h-4 text-[var(--color-on-surface-variant)]" />
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+                        </td>
+                        <td className="px-5 py-4 text-right font-bold text-gray-900 tabular-nums">
+                          {formatPrice(order.total_amount)}
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <button
+                            onClick={() => navigate(`/suivi/${order.id}`)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-50 text-[var(--color-primary)] font-bold text-xs rounded-lg hover:bg-orange-100 transition-colors"
+                          >
+                            Suivre <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </motion.div>

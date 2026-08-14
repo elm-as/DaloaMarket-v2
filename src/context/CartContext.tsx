@@ -9,6 +9,8 @@ export interface CartItem {
   listing_photo: string;
   quantity: number;
   cart_id: string;
+  variant_id?: string;
+  variant_label?: string;
 }
 
 interface CartContextType {
@@ -19,7 +21,8 @@ interface CartContextType {
     listingPrice: number,
     listingPhoto: string,
     maxQty: number,
-    qty?: number
+    qty?: number,
+    variant?: { id: string; label: string }
   ) => Promise<void>;
   removeFromCart: (cartItemId: string) => Promise<void>;
   updateQuantity: (cartItemId: string, qty: number, maxQty?: number) => Promise<void>;
@@ -68,13 +71,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       listingPrice: number,
       listingPhoto: string,
       maxQty: number,
-      qty: number = 1
+      qty: number = 1,
+      variant?: { id: string; label: string }
     ) => {
       if (!userRef.current) {
         throw new Error("Veuillez vous connecter pour ajouter des articles au panier");
       }
       setItems((prev) => {
-        const existingIndex = prev.findIndex((item) => item.listing_id === listingId);
+        const existingIndex = prev.findIndex(
+          (item) => item.listing_id === listingId && (item.variant_id || null) === (variant?.id || null)
+        );
         const safeQty = Math.max(1, Math.min(qty, MAX_QUANTITY));
         const effectiveMax = Math.min(Math.max(0, maxQty ?? 0), MAX_QUANTITY);
 
@@ -90,13 +96,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         const newItem: CartItem = {
-          id: `local_${Date.now()}_${listingId}`,
+          id: `local_${Date.now()}_${listingId}_${variant?.id || 'base'}`,
           listing_id: listingId,
           listing_title: listingTitle,
           listing_price: listingPrice,
           listing_photo: listingPhoto,
           quantity: Math.min(safeQty, effectiveMax),
           cart_id: "local",
+          ...(variant ? { variant_id: variant.id, variant_label: variant.label } : {}),
         };
         return [...prev, newItem];
       });

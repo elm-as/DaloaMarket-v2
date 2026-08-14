@@ -87,7 +87,7 @@ export default function CategoryPage() {
 
   const categoryName = config?.label || 'Toutes les catégories';
   const categoryDesc = config?.description || 'Découvrez les meilleures annonces à Daloa par catégorie sur DaloaMarket.';
-  const canonicalUrl = `https://daloamarket.shop/${slug || 'search'}`;
+  const canonicalUrl = `https://daloamarket.com/${slug || 'search'}`;
 
   const collectionSchema = {
     '@context': 'https://schema.org',
@@ -98,7 +98,7 @@ export default function CategoryPage() {
     isPartOf: {
       '@type': 'WebSite',
       name: 'DaloaMarket',
-      url: 'https://daloamarket.shop',
+      url: 'https://daloamarket.com',
     },
   };
 
@@ -110,7 +110,7 @@ export default function CategoryPage() {
         '@type': 'ListItem',
         position: 1,
         name: 'Accueil',
-        item: 'https://daloamarket.shop',
+        item: 'https://daloamarket.com',
       },
       {
         '@type': 'ListItem',

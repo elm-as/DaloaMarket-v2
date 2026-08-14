@@ -11,9 +11,11 @@ import {
   CheckCircle2,
   Clock,
   ShieldCheck,
-  AlertCircle,
   Info,
   Star,
+  Banknote,
+  Sparkles,
+  ChevronRight,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -22,16 +24,12 @@ import { useSupabase } from '../hooks/useSupabase';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useSEO } from '../hooks/useSEO';
 import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { SectionHeader } from '../components/ui/SectionHeader';
 import { cn, validateIvorianPhone } from '../lib/utils';
 import {
   affiliatedDeliverersService,
-} from '../services/affiliatedDeliverersService';
-import type {
-  AffiliatedDeliverer,
-  SellerDeliverySettings,
+  type AffiliatedDeliverer,
+  type SellerDeliverySettings,
 } from '../services/affiliatedDeliverersService';
 
 export default function AffiliatedDeliverersPage() {
@@ -86,75 +84,97 @@ export default function AffiliatedDeliverersPage() {
 
   if (authLoading || (isPro && loading)) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50/70">
         <LoadingSpinner size="lg" />
       </div>
     );
   }
 
-  // Si l'utilisateur n'est pas un Vendeur Pro, afficher la carte d'incitation Pro
+  // Non-Pro User: Upgrade CTA
   if (!isPro) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)] mb-6 transition-colors"
-        >
-          <ArrowLeft size={20} />
-          <span className="text-sm font-medium">Retour</span>
-        </button>
-
-        <Card elevation={2} padding="lg" className="rounded-3xl text-center p-8 bg-gradient-to-b from-amber-500/10 via-background to-background border border-amber-500/20">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-500/20">
-            <Users size={40} className="text-white" />
-          </div>
-
-          <h1 className="text-2xl font-bold text-[var(--color-on-surface)] mb-3">
-            Espace Livreurs Affiliés (Vendeurs Pro)
-          </h1>
-
-          <p className="text-sm text-[var(--color-on-surface-variant)] max-w-md mx-auto mb-6 leading-relaxed">
-            Travaillez avec vos propres livreurs de confiance tout en profitant des outils de gestion DaloaDelivery. Activez également le paiement à la livraison (COD) pour vos clients.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left max-w-lg mx-auto mb-8">
-            <div className="p-4 rounded-2xl bg-surface border border-outline flex items-start gap-3">
-              <ShieldCheck className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+      <div className="min-h-screen bg-gray-50/70 pb-20">
+        {/* Header */}
+        <header className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-orange-500 to-amber-600 px-5 pt-6 pb-14 rounded-b-[36px] shadow-lg shadow-orange-500/15">
+          <div className="absolute -top-12 -right-10 w-36 h-36 rounded-full bg-white/10 pointer-events-none" />
+          <div className="relative max-w-3xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="w-10 h-10 inline-flex items-center justify-center rounded-2xl bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white active:scale-95 transition-all shadow-xs"
+                aria-label="Retour"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
               <div>
-                <h4 className="text-xs font-bold text-[var(--color-on-surface)]">Livreurs de confiance</h4>
-                <p className="text-[11px] text-[var(--color-on-surface-variant)] mt-0.5">Invitez vos propres livreurs et confiez-leur vos courses en priorité.</p>
-              </div>
-            </div>
-            <div className="p-4 rounded-2xl bg-surface border border-outline flex items-start gap-3">
-              <Truck className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs font-bold text-[var(--color-on-surface)]">Paiement à la livraison</h4>
-                <p className="text-[11px] text-[var(--color-on-surface-variant)] mt-0.5">Proposez le paiement Cash on Delivery réservé à vos livreurs affiliés.</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-100">
+                  Espace Vendeur · Logistique
+                </p>
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                  Livreurs Affiliés
+                </h1>
               </div>
             </div>
           </div>
+        </header>
 
-          <Button
-            color="primary"
-            size="lg"
-            onClick={() => navigate('/devenir-pro')}
-            className="shadow-lg shadow-amber-500/20"
-          >
-            Devenir Vendeur Pro
-          </Button>
-        </Card>
+        <div className="relative z-10 -mt-7 max-w-xl mx-auto px-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-100 shadow-xl shadow-gray-200/50 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-orange-500/25 text-white">
+              <Sparkles className="w-8 h-8" />
+            </div>
+
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 text-amber-800 text-[11px] font-black border border-amber-200 mb-3">
+              <Star className="w-3 h-3 fill-amber-500 text-amber-500" /> Fonctionnalité Réservée aux Vendeurs Pro
+            </span>
+
+            <h2 className="text-xl font-black text-gray-900 mb-2">
+              Affiliez vos propres livreurs de confiance
+            </h2>
+
+            <p className="text-xs sm:text-sm text-gray-500 max-w-md mx-auto mb-6 leading-relaxed">
+              Passez au Pass Vendeur Pro pour confier vos colis en priorité à vos livreurs habituels et activer le paiement à la livraison (Cash on Delivery) à Daloa.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left mb-6">
+              <div className="p-3.5 rounded-2xl bg-orange-50/60 border border-orange-100 flex items-start gap-3">
+                <ShieldCheck className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-xs font-black text-gray-900">Vos livreurs dédiés</h4>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Courses attribuées en direct à votre flotte de livreurs.</p>
+                </div>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-100 flex items-start gap-3">
+                <Banknote className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-xs font-black text-gray-900">Paiement Cash (COD)</h4>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Encaissez en liquide ou Mobile Money à la réception du colis.</p>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              color="primary"
+              size="lg"
+              onClick={() => navigate('/devenir-pro')}
+              className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-black shadow-lg shadow-orange-500/25 active:scale-[0.98]"
+            >
+              Devenir Vendeur Pro ➔
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // Mettre à jour les toggles de livraison
+  // Toggle delivery settings
   const handleToggleSetting = async (key: 'home_delivery_enabled' | 'cash_on_delivery_enabled') => {
     const newSettings = {
       ...settings,
       [key]: !settings[key],
     };
 
-    // Si on désactive la livraison à domicile, désactiver aussi le COD
     if (key === 'home_delivery_enabled' && !newSettings.home_delivery_enabled) {
       newSettings.cash_on_delivery_enabled = false;
     }
@@ -170,15 +190,14 @@ export default function AffiliatedDeliverersPage() {
     setSavingSettings(false);
 
     if (res.success) {
-      toast.success(res.message || 'Paramètres mis à jour');
+      toast.success(res.message || 'Paramètres enregistrés');
     } else {
       toast.error(res.message || 'Erreur lors de la mise à jour');
-      // revert local state
       setSettings(settings);
     }
   };
 
-  // Inviter un livreur
+  // Invite driver
   const handleInviteDriver = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!invitePhone.trim()) {
@@ -196,9 +215,8 @@ export default function AffiliatedDeliverersPage() {
     setInviting(false);
 
     if (res.success) {
-      toast.success(res.message || 'Invitation envoyée !');
+      toast.success(res.message || 'Invitation envoyée avec succès !');
       setInvitePhone('');
-      // Recharger la liste
       const list = await affiliatedDeliverersService.getAffiliatedDeliverers();
       setDeliverers(list);
     } else {
@@ -206,9 +224,10 @@ export default function AffiliatedDeliverersPage() {
     }
   };
 
-  // Retirer un livreur
+  // Remove driver
   const handleRemoveDeliverer = async (affiliation: AffiliatedDeliverer) => {
-    if (!window.confirm(`Voulez-vous vraiment retirer l'affiliation de ${affiliation.delivery_person?.name || 'ce livreur'} ?`)) {
+    const driverName = affiliation.delivery_person?.name || 'ce livreur';
+    if (!window.confirm(`Voulez-vous vraiment retirer l'affiliation de ${driverName} ?`)) {
       return;
     }
 
@@ -225,263 +244,347 @@ export default function AffiliatedDeliverersPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 pt-16 md:pt-20 pb-24">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div>
-          <h1 className="text-xl font-bold text-[var(--color-on-surface)]">
-            Mes livreurs affiliés & Logistique
-          </h1>
-          <p className="text-xs text-[var(--color-on-surface-variant)]">
-            Gérez vos livreurs personnels et vos règles d'expédition
-          </p>
+    <div className="min-h-screen bg-gray-50/70 pb-28">
+      {/* ── HERO BANNER ── */}
+      <header className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-orange-500 to-amber-600 px-4 sm:px-6 pt-6 pb-14 rounded-b-[36px] shadow-lg shadow-orange-500/15">
+        <div className="absolute -top-12 -right-10 w-36 h-36 rounded-full bg-white/10 pointer-events-none" />
+        <div className="absolute -bottom-14 -left-8 w-32 h-32 rounded-full bg-white/10 pointer-events-none" />
+        <div className="relative max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="w-10 h-10 inline-flex items-center justify-center rounded-2xl bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white active:scale-95 transition-all shadow-xs"
+              aria-label="Retour"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-100">
+                Logistique & Expédition
+              </p>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                Mes Livreurs Affiliés
+              </h1>
+            </div>
+          </div>
+
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-black border border-white/25 shadow-2xs">
+            <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" /> Vendeur Pro
+          </span>
         </div>
-      </div>
+      </header>
 
-      <div className="space-y-6">
-        {/* Card 1: Paramètres de livraison du vendeur */}
-        <Card padding="md" className="rounded-2xl shadow-elevation-1">
-          <SectionHeader title="Paramètres de livraison de ma boutique" />
+      <div className="relative z-10 -mt-7 max-w-4xl mx-auto px-4 space-y-5">
+        {/* ── CARD 1: MODES DE LIVRAISON & OPTIONS COD ── */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 p-5 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center shadow-xs">
+                <Truck className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-gray-900">Paramètres d'Expédition</h2>
+                <p className="text-xs text-gray-400 font-medium">Contrôlez les options proposées aux acheteurs</p>
+              </div>
+            </div>
+          </div>
 
-          <div className="mt-4 space-y-4">
-            {/* Toggle 1: Livraison à domicile */}
-            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-surface border border-outline shadow-sm">
-              <div className="pr-4">
-                <p className="text-sm font-semibold text-[var(--color-on-surface)]">
-                  Livraison à domicile
-                </p>
-                <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">
-                  Proposer l'expédition à domicile pour vos produits (si désactivé, seul le retrait en boutique est possible).
+          <div className="space-y-3 pt-1">
+            {/* Toggle 1: Livraison à Domicile */}
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50/80 border border-gray-100 hover:border-gray-200 transition-all gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-black text-gray-900">Livraison à domicile</p>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                    Daloa
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                  Permet aux acheteurs de se faire livrer directement à domicile ou au bureau.
                 </p>
               </div>
 
-              <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                <input
-                  type="checkbox"
-                  checked={settings.home_delivery_enabled}
-                  onChange={() => handleToggleSetting('home_delivery_enabled')}
-                  disabled={savingSettings}
-                  className="sr-only peer"
+              {/* Bouton Switch Interactif */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={settings.home_delivery_enabled}
+                onClick={() => handleToggleSetting('home_delivery_enabled')}
+                disabled={savingSettings}
+                className={cn(
+                  "relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none shadow-inner",
+                  settings.home_delivery_enabled ? "bg-orange-500" : "bg-gray-300"
+                )}
+              >
+                <span
+                  className={cn(
+                    "pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out",
+                    settings.home_delivery_enabled ? "translate-x-5" : "translate-x-0"
+                  )}
                 />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
+              </button>
             </div>
 
             {/* Toggle 2: Paiement à la livraison (COD) */}
             <div className={cn(
-              "flex items-center justify-between p-3.5 rounded-2xl border transition-all",
+              "flex items-center justify-between p-4 rounded-2xl border transition-all gap-4",
               !settings.home_delivery_enabled
-                ? "opacity-60 bg-gray-50/80 border-gray-200 pointer-events-none"
-                : "bg-surface border-outline shadow-sm"
+                ? "opacity-50 bg-gray-50 border-gray-200 pointer-events-none"
+                : "bg-emerald-50/50 border-emerald-100/80 hover:border-emerald-200"
             )}>
-              <div className="pr-4">
+              <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                  <p className="text-sm font-semibold text-[var(--color-on-surface)]">
+                  <p className="text-sm font-black text-gray-900">
                     Paiement à la livraison (Cash on Delivery)
                   </p>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                    Livreurs Affiliés uniquement
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    👑 Exclusif Affiliés
                   </span>
                 </div>
-                <p className="text-xs text-[var(--color-on-surface-variant)] leading-relaxed">
-                  Autoriser les clients à payer en espèces à la livraison. Ces commandes privées sont diffusées uniquement à vos livreurs affiliés.
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Les acheteurs peuvent payer en espèces ou Mobile Money lors de la réception de leur colis par vos livreurs affiliés.
                 </p>
               </div>
 
-              <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                <input
-                  type="checkbox"
-                  checked={settings.cash_on_delivery_enabled}
-                  onChange={() => handleToggleSetting('cash_on_delivery_enabled')}
-                  disabled={savingSettings || !settings.home_delivery_enabled}
-                  className="sr-only peer"
+              {/* Bouton Switch Interactif COD */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={settings.cash_on_delivery_enabled}
+                onClick={() => handleToggleSetting('cash_on_delivery_enabled')}
+                disabled={savingSettings || !settings.home_delivery_enabled}
+                className={cn(
+                  "relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none shadow-inner",
+                  settings.cash_on_delivery_enabled ? "bg-emerald-600" : "bg-gray-300"
+                )}
+              >
+                <span
+                  className={cn(
+                    "pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out",
+                    settings.cash_on_delivery_enabled ? "translate-x-5" : "translate-x-0"
+                  )}
                 />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
+              </button>
             </div>
 
-            {/* Helper Info Box */}
-            <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 text-blue-900 text-xs flex items-start gap-2.5 leading-relaxed">
-              <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <strong>Règles de diffusion des commandes :</strong>
-                <ul className="list-disc list-inside mt-1 space-y-1 text-blue-800">
-                  <li><strong>Paiement en ligne :</strong> Commande publique accessible à tous les livreurs DaloaDelivery (y compris vos affiliés).</li>
-                  <li><strong>Paiement à la livraison (COD) :</strong> Commande privée diffusée EXCLUSIVEMENT à vos livreurs affiliés.</li>
-                </ul>
+            {/* Explication règles de diffusion */}
+            <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-100 text-blue-900 text-xs space-y-1.5 leading-relaxed">
+              <div className="flex items-center gap-2 font-black text-blue-950">
+                <Info className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>Fonctionnement de la diffusion des courses :</span>
               </div>
+              <ul className="space-y-1 pl-6 list-disc text-blue-800/90 font-medium">
+                <li><span className="font-bold">Commandes Payées en Ligne (Escrow) :</span> Ouvertes à l'ensemble des livreurs DaloaDelivery (y compris vos affiliés).</li>
+                <li><span className="font-bold">Commandes Cash on Delivery (COD) :</span> Diffusées <u>exclusivement</u> à vos livreurs affiliés pour une sécurité financière totale.</li>
+              </ul>
             </div>
           </div>
-        </Card>
+        </div>
 
-        {/* Card 2: Inviter un livreur */}
-        <Card padding="md" className="rounded-2xl shadow-elevation-1">
-          <SectionHeader title="Inviter un livreur affilié" />
+        {/* ── CARD 2: INVITER UN NOUVEAU LIVREUR ── */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 p-5 sm:p-6 space-y-3.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white flex items-center justify-center shadow-md shadow-orange-500/20">
+                <Plus className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-gray-900">Inviter un Livreur</h2>
+                <p className="text-xs text-gray-400 font-medium">Ajoutez un livreur pour lui confier vos courses en direct</p>
+              </div>
+            </div>
+            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100">
+              📱 DaloaDelivery
+            </span>
+          </div>
 
-          <p className="text-xs text-[var(--color-on-surface-variant)] mt-1 mb-4">
-            Entrez le numéro de téléphone de votre livreur (enregistré sur l'application DaloaDelivery). Il recevra une demande d'affiliation dans son application.
-          </p>
+          <form onSubmit={handleInviteDriver} className="pt-1">
+            <div className="flex flex-col sm:flex-row items-stretch gap-2.5">
+              <div className="relative flex-1 flex items-center bg-gray-50/80 focus-within:bg-white focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-400 border border-gray-200 rounded-2xl transition-all overflow-hidden px-3.5 py-1">
+                <span className="text-xs font-black text-gray-500 select-none pr-2 border-r border-gray-200">
+                  🇨🇮 +225
+                </span>
+                <input
+                  type="tel"
+                  value={invitePhone}
+                  onChange={(e) => setInvitePhone(e.target.value)}
+                  placeholder="07 08 09 10 11"
+                  className="flex-1 bg-transparent px-2.5 py-2 text-sm font-bold text-gray-900 placeholder:text-gray-400 placeholder:font-normal focus:outline-none border-none"
+                />
+              </div>
 
-          <form onSubmit={handleInviteDriver} className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="tel"
-              value={invitePhone}
-              onChange={(e) => setInvitePhone(e.target.value)}
-              placeholder="Ex: 0708091011"
-              className="flex-1 px-4 py-2.5 rounded-xl border border-[var(--color-outline)] bg-[var(--color-surface)] text-sm text-[var(--color-on-surface)] focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-            />
-            <Button
-              type="submit"
-              loading={inviting}
-              disabled={inviting}
-              icon={<Plus size={18} />}
-              className="whitespace-nowrap"
-            >
-              Envoyer l'invitation
-            </Button>
+              <Button
+                type="submit"
+                color="primary"
+                size="md"
+                loading={inviting}
+                disabled={inviting}
+                icon={<Plus size={16} />}
+                className="rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-black shadow-md shadow-orange-500/25 active:scale-[0.98] whitespace-nowrap px-6 py-3"
+              >
+                Inviter
+              </Button>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-2 font-medium">
+              💡 Le livreur recevra une invitation à valider directement dans son application DaloaDelivery.
+            </p>
           </form>
-        </Card>
+        </div>
 
-        {/* Card 3: Liste des livreurs affiliés */}
-        <Card padding="md" className="rounded-2xl shadow-elevation-1">
-          <div className="flex items-center justify-between mb-4">
-            <SectionHeader title={`Mes livreurs affiliés (${deliverers.length})`} />
+        {/* ── CARD 3: LISTE DES LIVREURS AFFILIÉS ── */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 p-5 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between pb-1 border-b border-gray-100/80">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-xs">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-gray-900">
+                  Mes Livreurs Actifs
+                </h2>
+                <p className="text-xs text-gray-400 font-medium">Flotte affiliée à votre boutique</p>
+              </div>
+            </div>
+            <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+              {deliverers.length} {deliverers.length > 1 ? 'livreurs' : 'livreur'}
+            </span>
           </div>
 
           {deliverers.length === 0 ? (
-            <div className="text-center py-10 px-4 border border-dashed border-gray-200 rounded-2xl">
-              <Users className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm font-semibold text-gray-700">Aucun livreur affilié pour le moment</p>
-              <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
-                Invitez votre livreur habituel en saisissant son numéro de téléphone ci-dessus.
+            <div className="text-center py-10 px-4 border border-dashed border-gray-200 rounded-3xl bg-gray-50/50">
+              <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-400 flex items-center justify-center mx-auto mb-3">
+                <Users className="w-6 h-6" />
+              </div>
+              <p className="text-sm font-black text-gray-800">Aucun livreur affilié pour le moment</p>
+              <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto font-medium leading-relaxed">
+                Invitez vos livreurs de confiance via leur numéro de téléphone ci-dessus pour leur confier vos commandes privées.
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {deliverers.map((item) => {
-                const driver = item.delivery_person;
-                if (!driver) return null;
+            <div className="grid grid-cols-1 gap-2.5">
+              <AnimatePresence>
+                {deliverers.map((item) => {
+                  const driver = item.delivery_person;
+                  if (!driver) return null;
 
-                const isAvailable = driver.is_available;
-                const isPending = item.status === 'pending';
+                  const isAvailable = driver.is_available;
+                  const isPending = item.status === 'pending';
 
-                return (
-                  <motion.div
-                    key={item.id}
-                    layout
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="p-4 rounded-2xl border border-outline bg-surface flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        {driver.photo_url ? (
-                          <img
-                            src={driver.photo_url}
-                            alt={driver.name}
-                            className="w-12 h-12 rounded-full object-cover border border-gray-200"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-lg">
-                            {driver.name.charAt(0).toUpperCase()}
+                  return (
+                    <motion.div
+                      key={item.id}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="p-3 sm:p-3.5 rounded-2xl border border-gray-100 bg-gray-50/60 hover:bg-white hover:border-orange-200 transition-all shadow-2xs hover:shadow-sm"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        {/* Left: Avatar + Driver Info */}
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="relative shrink-0">
+                            {driver.photo_url ? (
+                              <img
+                                src={driver.photo_url}
+                                alt={driver.name}
+                                className="w-10 h-10 rounded-xl object-cover border border-gray-200"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white font-black flex items-center justify-center text-sm shadow-xs">
+                                {driver.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <span
+                              className={cn(
+                                "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white",
+                                isAvailable ? "bg-emerald-500" : "bg-gray-400"
+                              )}
+                              title={isAvailable ? "En ligne" : "Hors ligne"}
+                            />
                           </div>
-                        )}
-                        {/* Bulle statut disponible */}
-                        <span
-                          className={cn(
-                            "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white",
-                            isAvailable ? "bg-green-500" : "bg-gray-400"
-                          )}
-                          title={isAvailable ? "Disponible" : "Indisponible"}
-                        />
-                      </div>
 
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-semibold text-sm text-[var(--color-on-surface)]">
-                            {driver.name}
-                          </h4>
-                          {isPending ? (
-                            <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1">
-                              <Clock size={10} /> En attente
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-green-100 text-green-800 border border-green-200 flex items-center gap-1">
-                              <CheckCircle2 size={10} /> Affilié
-                            </span>
-                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="font-black text-sm text-gray-900 truncate">
+                                {driver.name}
+                              </h4>
+                              {isPending ? (
+                                <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1 shrink-0">
+                                  <Clock size={10} className="text-amber-600" /> En attente
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 shrink-0">
+                                  <CheckCircle2 size={10} className="text-emerald-600" /> Affilié
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500 flex-wrap">
+                              <span className="font-semibold text-gray-700">{driver.phone}</span>
+                              <span className="text-gray-300">•</span>
+                              <span className="text-amber-700 font-bold flex items-center gap-0.5 text-[11px]">
+                                <Star size={10} className="fill-amber-400 text-amber-400" />
+                                {driver.rating ? driver.rating.toFixed(1) : '5.0'}
+                              </span>
+                              <span className="text-gray-300">•</span>
+                              <span className="capitalize text-[11px] text-gray-600">{driver.vehicle_type || 'Moto'}</span>
+                              <span className="text-gray-300">•</span>
+                              <span className={cn("text-[11px] font-bold", isAvailable ? "text-emerald-600" : "text-gray-400")}>
+                                {isAvailable ? "En ligne" : "Hors ligne"}
+                              </span>
+                            </div>
+                          </div>
                         </div>
 
-                        <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">
-                          {driver.phone}
+                        {/* Right: Compact Actions */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <a
+                            href={`tel:${driver.phone}`}
+                            className="w-8.5 h-8.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 active:scale-95 transition-all flex items-center justify-center shadow-2xs"
+                            title="Appeler"
+                          >
+                            <Phone size={14} className="text-blue-600" />
+                          </a>
+
+                          <a
+                            href={`https://wa.me/225${driver.phone.replace(/\D/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-8.5 h-8.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/60 active:scale-95 transition-all flex items-center justify-center shadow-2xs"
+                            title="WhatsApp"
+                          >
+                            <MessageCircle size={14} className="text-emerald-600" />
+                          </a>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDeliverer(item)}
+                            disabled={removingId === item.id}
+                            className="w-8.5 h-8.5 rounded-xl hover:bg-red-50 text-gray-400 hover:text-red-600 active:scale-90 transition-all flex items-center justify-center"
+                            title="Retirer l'affiliation"
+                          >
+                            {removingId === item.id ? (
+                              <LoadingSpinner size="sm" />
+                            ) : (
+                              <Trash2 size={14} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {isPending && (
+                        <p className="text-[10.5px] text-amber-700 bg-amber-50/70 px-2.5 py-1 rounded-lg border border-amber-100/80 mt-2 font-medium">
+                          ⏳ Invitation transmise · En attente de validation dans l'app DaloaDelivery
                         </p>
-
-                        <div className="flex items-center gap-3 mt-1 text-[11px] text-gray-500">
-                          <span className="flex items-center gap-1 text-amber-600 font-medium">
-                            <Star size={12} className="fill-amber-400 text-amber-400" />
-                            {driver.rating ? driver.rating.toFixed(1) : '5.0'}
-                          </span>
-                          <span>•</span>
-                          <span className="capitalize">{driver.vehicle_type || 'Moto'}</span>
-                          <span>•</span>
-                          <span className={isAvailable ? "text-green-600 font-medium" : "text-gray-400"}>
-                            {isAvailable ? "Disponible" : "Hors ligne"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 pt-2 sm:pt-0">
-                      {/* Bouton Appel */}
-                      <a
-                        href={`tel:${driver.phone}`}
-                        className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors flex items-center gap-1.5 text-xs font-medium px-3"
-                        title="Appeler le livreur"
-                      >
-                        <Phone size={14} className="text-blue-600" />
-                        <span className="hidden sm:inline">Appeler</span>
-                      </a>
-
-                      {/* Bouton WhatsApp */}
-                      <a
-                        href={`https://wa.me/225${driver.phone.replace(/\D/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 rounded-xl bg-green-50 hover:bg-green-100 text-green-700 transition-colors flex items-center gap-1.5 text-xs font-medium px-3"
-                        title="Envoyer un message WhatsApp"
-                      >
-                        <MessageCircle size={14} className="text-green-600" />
-                        <span className="hidden sm:inline">WhatsApp</span>
-                      </a>
-
-                      {/* Bouton Supprimer */}
-                      <button
-                        onClick={() => handleRemoveDeliverer(item)}
-                        disabled={removingId === item.id}
-                        className="p-2 rounded-xl hover:bg-red-50 text-red-500 hover:text-red-700 transition-colors"
-                        title="Retirer l'affiliation"
-                      >
-                        {removingId === item.id ? (
-                          <LoadingSpinner size="sm" />
-                        ) : (
-                          <Trash2 size={16} />
-                        )}
-                      </button>
-                    </div>
-                  </motion.div>
-                );
-              })}
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             </div>
           )}
-        </Card>
+        </div>
       </div>
     </div>
   );

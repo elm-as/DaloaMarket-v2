@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Star, Sparkles, ArrowLeft, CheckCircle } from 'lucide-react';
-import { usePageTitle } from '../hooks/usePageTitle';
+import { useSEO } from '../hooks/useSEO';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { useSupabase } from '../hooks/useSupabase';
@@ -46,9 +46,40 @@ const plans = [
 ];
 
 export default function PricingPage() {
-  usePageTitle('Abonnement Vendeur Pro');
   const navigate = useNavigate();
   const { user } = useSupabase();
+
+  const pricingSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: 'Abonnement Vendeur PRO DaloaMarket',
+    description: 'Devenez vendeur certifié sur DaloaMarket à Daloa. Profitez de commissions réduites, d\'annonces illimitées et d\'une boutique personnalisée.',
+    offers: [
+      {
+        '@type': 'Offer',
+        name: 'Pass PRO Mensuel',
+        price: SELLER_BADGE_PRICE,
+        priceCurrency: 'XOF',
+        availability: 'https://schema.org/InStock',
+        url: 'https://daloamarket.com/become-pro',
+      },
+      {
+        '@type': 'Offer',
+        name: 'Pass PRO Annuel',
+        price: SELLER_BADGE_YEARLY_PRICE,
+        priceCurrency: 'XOF',
+        availability: 'https://schema.org/InStock',
+        url: 'https://daloamarket.com/become-pro',
+      },
+    ],
+  };
+
+  useSEO('Abonnement Vendeur Pro — Tarifs et Avantages', {
+    description: 'Découvrez les offres Pass Vendeur PRO DaloaMarket à Daloa. Vendez plus vite avec un badge de confiance, des boosts d\'annonce et une boutique personnalisée.',
+    keywords: 'vendeur pro Daloa, passe vendeur DaloaMarket, boutique certifiée Daloa, e-commerce Côte d\'Ivoire',
+    canonical: 'https://daloamarket.com/become-pro',
+    jsonLd: pricingSchema,
+  });
 
   const handleBuy = (planId: string) => {
     if (!user) {

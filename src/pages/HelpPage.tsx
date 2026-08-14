@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { usePageTitle } from '../hooks/usePageTitle';
+import { useSEO } from '../hooks/useSEO';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { SectionHeader } from '../components/ui/SectionHeader';
@@ -19,7 +19,10 @@ interface HelpFormData {
 }
 
 export default function HelpPage() {
-  usePageTitle('Aide & Support');
+  useSEO('Aide & Support — Contacter l\'équipe DaloaMarket', {
+    description: 'Besoin d\'aide sur DaloaMarket ? Contactez notre support client, posez vos questions ou consultez nos guides d\'utilisation.',
+    canonical: 'https://daloamarket.com/help'
+  });
   const [loading, setLoading] = useState(false);
 
   const {
@@ -38,22 +41,22 @@ export default function HelpPage() {
   };
 
   return (
-    <div className="max-w-2xl lg:max-w-none mx-auto px-4 py-8 pb-20 lg:px-6">
-      <div className="text-center mb-8">
-        <div className="w-16 h-16 flex items-center justify-center mx-auto mb-4 bg-white shadow-sm border border-gray-100 rounded-2xl p-2">
+    <div className="min-h-screen bg-gray-50/70 px-4 py-5 pb-28 sm:px-6 sm:py-8 lg:px-6">
+      <div className="mx-auto mb-5 max-w-3xl rounded-3xl bg-gradient-to-br from-orange-500 to-amber-600 px-5 py-6 text-center text-white shadow-lg shadow-orange-200/50">
+        <div className="w-12 h-12 flex items-center justify-center mx-auto mb-3 bg-white rounded-2xl p-2 shadow-lg">
           <img src="/logo.png" alt="DaloaMarket" className="w-full h-full object-contain" />
         </div>
-        <h1 className="text-2xl font-bold text-[var(--color-on-surface)]">Aide & Support</h1>
-        <p className="text-[var(--color-on-surface-variant)] mt-1">
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">Aide & Support</h1>
+        <p className="mt-1 text-sm text-orange-100">
           Une question ? Notre équipe est là pour vous aider.
         </p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <Card className="p-4 rounded-2xl shadow-elevation-1 text-center">
+      <div className="mx-auto grid max-w-3xl grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3 mb-5">
+        <Card className="p-3 sm:p-4 rounded-xl border border-[var(--color-primary-100)] shadow-none text-center">
           <Mail size={24} className="text-[var(--color-primary)] mx-auto mb-2" />
           <p className="text-xs text-[var(--color-on-surface-variant)] mb-1">Email support</p>
-          <p className="text-xs font-medium text-[var(--color-on-surface)] truncate">support@daloamarket.shop</p>
+          <p className="text-xs font-medium text-[var(--color-on-surface)] truncate">support@daloamarket.com</p>
         </Card>
         <Link to="/faq" className="block">
           <Card className="p-4 rounded-2xl shadow-elevation-1 text-center hover:shadow-elevation-2 transition-shadow active:scale-[0.98]">
@@ -69,16 +72,16 @@ export default function HelpPage() {
             <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">Guide étape par étape</p>
           </Card>
         </Link>
-        <Link to="/guide-vendeur" className="block">
+        <a href="https://tuto.daloamarket.com" target="_blank" rel="noopener noreferrer" className="block">
           <Card className="p-4 rounded-2xl shadow-elevation-1 text-center hover:shadow-elevation-2 transition-shadow active:scale-[0.98] border border-amber-200/60 bg-amber-50/40">
             <Sparkles size={24} className="text-amber-600 mx-auto mb-2" />
             <p className="text-sm font-medium text-gray-900">Guide Vendeur</p>
-            <p className="text-xs text-amber-700 mt-0.5">Conseils & Règles d'or</p>
+            <p className="text-xs text-amber-700 mt-0.5">Tutoriels vidéo & Conseils</p>
           </Card>
-        </Link>
+        </a>
       </div>
 
-      <Card className="p-6 rounded-2xl shadow-elevation-1">
+      <Card className="mx-auto max-w-3xl p-5 sm:p-6 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50">
         <SectionHeader title="Envoyez-nous un message" className="mb-4" />
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>

@@ -11,6 +11,26 @@ export interface UserData {
   shop_logo_url?: string | null;
 }
 
+export interface ListingVariant {
+  id: string;
+  label: string;
+  color?: string | null;
+  color_code?: string | null;
+  size?: string | null;
+  price: number | null;
+  stock: number;
+  active?: boolean;
+}
+
+export function getListingStartingPrice(listingPrice: number, variants: ListingVariant[] = []): number {
+  const availablePrices = variants
+    .filter((variant) => variant.active !== false && variant.stock > 0)
+    .map((variant) => variant.price ?? listingPrice)
+    .filter((price) => Number.isFinite(price) && price > 0);
+
+  return availablePrices.length > 0 ? Math.min(listingPrice, ...availablePrices) : listingPrice;
+}
+
 export interface ListingFull {
   id: string;
   title: string;
@@ -29,6 +49,7 @@ export interface ListingFull {
   delivery_fee_override?: number | null;
   stock: number;
   original_price?: number | null;
+  variants?: ListingVariant[];
 }
 
 export interface ReviewData {
@@ -57,4 +78,5 @@ export interface SimilarListing {
   stock: number;
   listing_user_id: string;
   original_price: number | null;
+  variants?: ListingVariant[];
 }

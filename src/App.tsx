@@ -21,8 +21,18 @@ import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import HelpPage from './pages/HelpPage';
 import HowItWorksPage from './pages/HowItWorksPage';
-import SellerGuidePage from './pages/SellerGuidePage';
 import NotFoundPage from './pages/NotFoundPage';
+
+const ExternalRedirect: React.FC<{ to: string }> = ({ to }) => {
+  React.useEffect(() => {
+    window.location.href = to;
+  }, [to]);
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <LoadingSpinner size="lg" />
+    </div>
+  );
+};
 
 // Lazy loaded pages
 const SearchPage = React.lazy(() => import('./pages/SearchPage'));
@@ -154,6 +164,7 @@ function AppContent() {
             </PrivateRoute>
           } />
           <Route path="/b/:sellerId" element={<AppLayout><SellerProfilePage /></AppLayout>} />
+          <Route path="/seller/:sellerId" element={<AppLayout><SellerProfilePage /></AppLayout>} />
           <Route path="/profile/seller/:sellerId" element={<AppLayout><SellerProfilePage /></AppLayout>} />
           <Route path="/boutique/:sellerId" element={<AppLayout><SellerProfilePage /></AppLayout>} />
           <Route path="/vendeur/:sellerId" element={<AppLayout><SellerProfilePage /></AppLayout>} />
@@ -246,6 +257,8 @@ function AppContent() {
           {/* Admin routes */}
           <Route path="/admin" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
           <Route path="/admin/kpis" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
+          <Route path="/admin/feedbacks" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
+          <Route path="/admin/features" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
           <Route path="/admin/reports" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
           <Route path="/admin/settings" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
           <Route path="/admin/notifications" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
@@ -268,8 +281,8 @@ function AppContent() {
           <Route path="/privacy" element={<AppLayout><PrivacyPage /></AppLayout>} />
           <Route path="/help" element={<AppLayout><HelpPage /></AppLayout>} />
           <Route path="/how-it-works" element={<AppLayout><HowItWorksPage /></AppLayout>} />
-          <Route path="/guide-vendeur" element={<AppLayout><SellerGuidePage /></AppLayout>} />
-          <Route path="/conseils-vendeur" element={<Navigate to="/guide-vendeur" replace />} />
+          <Route path="/guide-vendeur" element={<ExternalRedirect to="https://tuto.daloamarket.com" />} />
+          <Route path="/conseils-vendeur" element={<ExternalRedirect to="https://tuto.daloamarket.com" />} />
 
           {/* 404 */}
           <Route path="*" element={<AppLayout><NotFoundPage /></AppLayout>} />

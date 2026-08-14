@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useSystemSettings } from '../../hooks/useSystemSettings';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { AdminIpBanSection } from './AdminIpBanSection';
 
 export function AdminSettingsTab() {
   const { maintenance, paymentConfig, loading, refreshSettings } = useSystemSettings();
@@ -314,6 +315,9 @@ export function AdminSettingsTab() {
           </Button>
         </div>
       </Card>
+
+      {/* SECTION 4 : GESTION DES BANNISSEMENTS IP */}
+      <AdminIpBanSection />
 
     </div>
   );

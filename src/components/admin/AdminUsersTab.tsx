@@ -23,7 +23,7 @@ export const AdminUsersTab: React.FC = () => {
   const [userTotal, setUserTotal] = useState(0);
 
   // Modal state for banning
-  const [userToBan, setUserToBan] = useState<{ id: string; email: string; name?: string | null } | null>(null);
+  const [userToBan, setUserToBan] = useState<{ id: string; email: string; name?: string | null; ip?: string | null } | null>(null);
 
   const fetchUsers = useCallback(async (page = 0) => {
     setLoading(true);
@@ -58,10 +58,11 @@ export const AdminUsersTab: React.FC = () => {
       id: u.id,
       email: u.email || 'N/A',
       name: u.full_name,
+      ip: u.last_ip || u.registration_ip || null,
     });
   };
 
-  const handleConfirmBan = async (reason: string) => {
+  const handleConfirmBan = async (reason: string, banIpAlso: boolean) => {
     if (!userToBan) return;
     const { error: err } = await supabase
       .from('users')
@@ -75,6 +76,18 @@ export const AdminUsersTab: React.FC = () => {
       toast.error('Erreur lors du bannissement');
       return;
     }
+
+    if (banIpAlso && userToBan.ip) {
+      try {
+        await (supabase.rpc as any)('ban_ip', {
+          p_ip: userToBan.ip,
+          p_reason: `Compte ${userToBan.email} banni (${reason})`,
+        });
+      } catch (ipErr) {
+        console.warn('Could not ban IP:', ipErr);
+      }
+    }
+
     toast.success('Utilisateur banni avec succès');
     fetchUsers(userPage);
   };
@@ -248,15 +261,27 @@ export const AdminUsersTab: React.FC = () => {
                     const hasAppeal = u.ban_appeal_status === 'pending';
 
                     return (
-                      <tr key={u.id} className="border-b border-[var(--color-outline)]">
-                        <td className="p-3 font-medium">{u.full_name || 'N/A'}</td>
-                        <td className="p-3">{u.email || 'N/A'}</td>
+                      <tr key={u.id} className="border-b border-[var(--color-outline)] hover:bg-gray-50/50 transition-colors">
+                        {/* Nom */}
+                        <td className="p-3">
+                          <div className="font-bold text-gray-900">{u.full_name || 'Sans nom'}</div>
+                          {(u.last_ip || u.registration_ip) && (
+                            <div className="text-[11px] font-mono text-red-600 bg-red-50 inline-block px-1.5 py-0.5 rounded mt-0.5 border border-red-100">
+                              IP: {u.last_ip || u.registration_ip}
+                            </div>
+                          )}
+                        </td>
+                        {/* Email */}
+                        <td className="p-3">
+                          <div className="text-gray-700 text-xs font-medium">{u.email || 'N/A'}</div>
+                        </td>
+                        {/* Rôle */}
                         <td className="p-3">
                           <select
                             value={u.role || 'user'}
                             disabled={isLocked || isSelf}
                             onChange={(e) => changeRole(u.id, e.target.value)}
-                            className="px-2 py-1 rounded-lg border border-[var(--color-outline)] bg-[var(--color-surface)] text-sm disabled:opacity-50"
+                            className="px-2.5 py-1 rounded-lg border border-[var(--color-outline)] bg-[var(--color-surface)] text-xs font-semibold text-gray-800 disabled:opacity-50"
                           >
                             <option value="user">User</option>
                             <option value="pro">Pro</option>
@@ -270,10 +295,11 @@ export const AdminUsersTab: React.FC = () => {
                             )}
                           </select>
                         </td>
+                        {/* Statut & Raison */}
                         <td className="p-3">
                           <div className="flex flex-col gap-1">
                             <span className={cn(
-                              'px-2 py-0.5 rounded-full text-xs font-semibold w-max',
+                              'px-2.5 py-0.5 rounded-full text-xs font-semibold w-max',
                               u.banned ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
                             )}>
                               {u.banned ? 'Banni' : 'Actif'}
@@ -285,6 +311,7 @@ export const AdminUsersTab: React.FC = () => {
                             )}
                           </div>
                         </td>
+                        {/* Contestation */}
                         <td className="p-3">
                           {hasAppeal ? (
                             <span
@@ -298,7 +325,9 @@ export const AdminUsersTab: React.FC = () => {
                             <span className="text-xs text-[var(--color-on-surface-variant)] opacity-60">Aucune</span>
                           )}
                         </td>
-                        <td className="p-3 whitespace-nowrap text-xs">{formatDate(u.created_at)}</td>
+                        {/* Date */}
+                        <td className="p-3 whitespace-nowrap text-xs text-gray-600 font-medium">{formatDate(u.created_at)}</td>
+                        {/* Actions */}
                         <td className="p-3">
                           <Button
                             size="sm"
@@ -349,6 +378,7 @@ export const AdminUsersTab: React.FC = () => {
         isOpen={!!userToBan}
         userEmail={userToBan?.email || ''}
         userName={userToBan?.name}
+        userIp={userToBan?.ip}
         onClose={() => setUserToBan(null)}
         onConfirm={handleConfirmBan}
       />

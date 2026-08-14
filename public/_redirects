@@ -6,6 +6,6 @@
 /src/*            /src/:splat            200
 /assets/*         /assets/:splat         200
 /llms.txt         /llms.txt              200
-/sitemap.xml      /.netlify/functions/sitemap  200
+/sitemap.xml      /sitemap.xml           200
 /api/*            /.netlify/functions/:splat  200
 /*                /index.html            200

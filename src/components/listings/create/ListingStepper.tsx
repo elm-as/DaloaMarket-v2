@@ -1,18 +1,16 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Check, Camera, Tag, Eye } from 'lucide-react';
+import { Camera, Tag, MapPin, Check } from 'lucide-react';
 
-interface Step {
+interface StepInfo {
   id: number;
   label: string;
-  shortLabel: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const steps: Step[] = [
-  { id: 1, label: 'Photos & Info', shortLabel: 'Media', icon: Camera },
-  { id: 2, label: 'Prix & Stock', shortLabel: 'Prix', icon: Tag },
-  { id: 3, label: 'Aperçu & Publier', shortLabel: 'Aperçu', icon: Eye },
+const steps: StepInfo[] = [
+  { id: 1, label: 'Photos & Type', icon: Camera },
+  { id: 2, label: 'Prix & Stock', icon: Tag },
+  { id: 3, label: 'Contact', icon: MapPin },
 ];
 
 interface ListingStepperProps {
@@ -22,66 +20,49 @@ interface ListingStepperProps {
 
 export const ListingStepper: React.FC<ListingStepperProps> = ({ currentStep, onStepClick }) => {
   return (
-    <div className="w-full max-w-lg mx-auto px-4 py-3 mb-2">
-      <div className="relative flex items-center justify-between">
-        {/* Background Track Line */}
-        <div className="absolute top-1/2 left-6 right-6 h-1 bg-gray-100 -translate-y-1/2 z-0 rounded-full" />
-        
-        {/* Animated Progress Line */}
-        <motion.div
-          className="absolute top-1/2 left-6 h-1 bg-gradient-to-r from-orange-500 to-amber-500 -translate-y-1/2 z-0 rounded-full origin-left"
-          animate={{
-            width: currentStep === 1 ? '0%' : currentStep === 2 ? '50%' : '100%',
-          }}
-          transition={{ duration: 0.3, ease: 'easeInOut' }}
-          style={{ maxWidth: 'calc(100% - 3rem)' }}
-        />
-
-        {steps.map((step) => {
-          const isCompleted = currentStep > step.id;
-          const isActive = currentStep === step.id;
-          const Icon = step.icon;
+    <div className="w-full select-none">
+      {/* 3 Step Pills Row */}
+      <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+        {steps.map((step, idx) => {
+          const isDone = step.id < currentStep;
+          const isCurrent = step.id === currentStep;
 
           return (
-            <div
-              key={step.id}
-              onClick={() => {
-                if (step.id < currentStep) onStepClick(step.id);
-              }}
-              className={`relative z-10 flex flex-col items-center group ${
-                step.id < currentStep ? 'cursor-pointer' : 'cursor-default'
-              }`}
-            >
-              <motion.button
+            <React.Fragment key={step.id}>
+              <button
                 type="button"
-                whileTap={{ scale: 0.95 }}
-                className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-xs transition-all shadow-sm ${
-                  isCompleted
-                    ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-green-500/20'
-                    : isActive
-                    ? 'bg-gradient-to-br from-[#FF7F00] to-orange-600 text-white shadow-orange-500/30 ring-4 ring-orange-500/15'
-                    : 'bg-white text-gray-400 border border-gray-200'
+                onClick={() => isDone && onStepClick(step.id)}
+                disabled={!isDone}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-2xl transition-all min-w-0 ${
+                  isCurrent
+                    ? 'bg-gradient-to-r from-orange-50 to-amber-50/80 text-orange-600 border border-orange-200 shadow-sm ring-2 ring-orange-500/10 font-black'
+                    : isDone
+                    ? 'bg-emerald-50/80 text-emerald-700 border border-emerald-200/80 hover:bg-emerald-100/80 cursor-pointer font-bold shadow-2xs'
+                    : 'bg-gray-50/80 text-gray-400 border border-gray-100 font-semibold cursor-default'
                 }`}
               >
-                {isCompleted ? (
-                  <Check className="w-5 h-5 stroke-[3]" />
-                ) : (
-                  <Icon className="w-4 h-4" />
-                )}
-              </motion.button>
+                <div
+                  className={`w-6 h-6 rounded-xl flex items-center justify-center text-xs font-black shrink-0 transition-transform ${
+                    isCurrent
+                      ? 'bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-md shadow-orange-500/30 scale-105'
+                      : isDone
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-gray-200/80 text-gray-500'
+                  }`}
+                >
+                  {isDone ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : step.id}
+                </div>
+                <span className="text-[11px] sm:text-xs truncate tracking-tight">{step.label}</span>
+              </button>
 
-              <span
-                className={`text-[11px] font-semibold mt-1.5 transition-colors ${
-                  isActive
-                    ? 'text-[#FF7F00]'
-                    : isCompleted
-                    ? 'text-gray-700'
-                    : 'text-gray-400'
-                }`}
-              >
-                {step.label}
-              </span>
-            </div>
+              {idx < steps.length - 1 && (
+                <div
+                  className={`w-2 sm:w-3 h-0.5 rounded-full shrink-0 transition-colors ${
+                    currentStep > idx + 1 ? 'bg-emerald-400' : 'bg-gray-200'
+                  }`}
+                />
+              )}
+            </React.Fragment>
           );
         })}
       </div>

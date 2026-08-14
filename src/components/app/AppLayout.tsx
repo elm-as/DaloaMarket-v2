@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSupabase } from '../../hooks/useSupabase';
@@ -12,38 +12,37 @@ import {
 import AppBar from './AppBar';
 import BottomNavBar from './BottomNavBar';
 import InstallPrompt from '../ui/InstallPrompt';
+import Footer from './Footer';
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
+const PUSH_PROMPTED_KEY = 'dm_push_prompted';
+
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const location = useLocation();
   const { user, isProfileComplete } = useSupabase();
-  const pushPrompted = useRef(false);
 
   // Activate global PWA notification listeners (Realtime for Chat, Orders, Admin alerts)
   usePwaNotifications();
 
   useEffect(() => {
-    if (!user || !isProfileComplete || pushPrompted.current) return;
+    if (!user || !isProfileComplete) return;
     if (!isPushSupported()) return;
 
     const permission = getPermissionState();
 
+    // If already granted, silently ensure subscription exists
     if (permission === 'granted') {
-      pushPrompted.current = true;
       getExistingSubscription().then((existing) => {
         if (!existing) subscribeToPush(user.id);
       });
       return;
     }
 
-    if (permission === 'default') {
-      pushPrompted.current = true;
-      const timer = setTimeout(() => subscribeToPush(user.id), 5000);
-      return () => clearTimeout(timer);
-    }
+    // Never auto-prompt if already prompted or denied
+    // The user can manually enable from Settings
   }, [user, isProfileComplete]);
 
   useEffect(() => {
@@ -51,6 +50,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }, [location.pathname]);
 
   const isChatPage = /^\/messages\/[^/]+\/[^/]+/.test(location.pathname);
+  const isListingDetailPage = /^\/(listings|l)\/[^/]+/.test(location.pathname);
 
   const hideBottomNav =
     location.pathname === '/login' ||
@@ -65,7 +65,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     location.pathname.startsWith('/auth/') ||
     location.pathname.startsWith('/payment/') ||
     location.pathname.startsWith('/checkout') ||
-    isChatPage;
+    isChatPage ||
+    isListingDetailPage;
 
   return (
     <div
@@ -74,27 +75,39 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         flexDirection: 'column',
         minHeight: '100vh',
         background: 'var(--color-background)',
+        overflowX: 'hidden',
+        maxWidth: '100vw',
+        width: '100%',
       }}
     >
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowX: 'hidden', width: '100%', maxWidth: '100vw' }}>
         <AppBar />
 
         <main
-          style={{ flex: 1 }}
-          className={`${hideBottomNav ? '' : 'pb-[calc(88px+env(safe-area-inset-bottom,0px))]'} md:pb-4`}
+          style={{ flex: 1, width: '100%', maxWidth: '100vw', overflowX: 'hidden' }}
+          className={`${hideBottomNav || isChatPage ? 'pb-0' : 'pb-[calc(58px+env(safe-area-inset-bottom,0px))]'} ${isChatPage ? 'md:pb-0' : 'md:pb-4'}`}
         >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+          <div
+            style={{ maxWidth: isChatPage ? '100%' : 'var(--container-max-width)', marginLeft: 'auto', marginRight: 'auto', width: '100%', overflowX: 'hidden' }}
+            className={isChatPage ? 'h-[100dvh] flex flex-col' : ''}
+          >
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.15, ease: [0.2, 0, 0, 1] }}
+                style={{ width: '100%', overflowX: 'hidden' }}
+                className={isChatPage ? 'h-full flex flex-col flex-1' : ''}
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </main>
+
+        {!isChatPage && <Footer />}
       </div>
 
       {!hideBottomNav && <BottomNavBar />}

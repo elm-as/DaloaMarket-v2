@@ -5,148 +5,120 @@
 
   <!-- Page d'accueil -->
   <url>
-    <loc>https://daloamarket.shop/</loc>
+    <loc>https://daloamarket.com/</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>always</changefreq>
     <priority>1.0</priority>
   </url>
 
   <!-- Exploration & Recherche -->
   <url>
-    <loc>https://daloamarket.shop/explore</loc>
+    <loc>https://daloamarket.com/explore</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
-    <loc>https://daloamarket.shop/search</loc>
+    <loc>https://daloamarket.com/search</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <!-- Offre Pro & Guide Vendeur -->
   <url>
-    <loc>https://daloamarket.shop/become-pro</loc>
+    <loc>https://daloamarket.com/become-pro</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
-    <loc>https://daloamarket.shop/seller-guide</loc>
+    <loc>https://daloamarket.com/seller-guide</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <!-- Pages Catégories Indexables -->
   <url>
-    <loc>https://daloamarket.shop/electronique</loc>
+    <loc>https://daloamarket.com/electronique</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://daloamarket.shop/c/electronique</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://daloamarket.shop/vehicules</loc>
+    <loc>https://daloamarket.com/vehicules</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://daloamarket.shop/c/vehicules</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://daloamarket.shop/mode</loc>
+    <loc>https://daloamarket.com/mode</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://daloamarket.shop/c/mode</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://daloamarket.shop/maison-deco</loc>
+    <loc>https://daloamarket.com/maison-deco</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://daloamarket.shop/c/maison-deco</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://daloamarket.shop/sports-loisirs</loc>
+    <loc>https://daloamarket.com/sports-loisirs</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://daloamarket.shop/c/sports-loisirs</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <url>
-    <loc>https://daloamarket.shop/livres</loc>
+    <loc>https://daloamarket.com/livres</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://daloamarket.shop/c/livres</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <url>
-    <loc>https://daloamarket.shop/alimentaire</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://daloamarket.shop/c/alimentaire</loc>
+    <loc>https://daloamarket.com/alimentaire</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
 
   <!-- Pages d'Information & Guide -->
   <url>
-    <loc>https://daloamarket.shop/about</loc>
+    <loc>https://daloamarket.com/about</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
-
   <url>
-    <loc>https://daloamarket.shop/how-it-works</loc>
+    <loc>https://daloamarket.com/how-it-works</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
-
   <url>
-    <loc>https://daloamarket.shop/faq</loc>
+    <loc>https://daloamarket.com/faq</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
-
   <url>
-    <loc>https://daloamarket.shop/help</loc>
+    <loc>https://daloamarket.com/help</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
-
   <url>
-    <loc>https://daloamarket.shop/terms</loc>
+    <loc>https://daloamarket.com/terms</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
-
   <url>
-    <loc>https://daloamarket.shop/privacy</loc>
+    <loc>https://daloamarket.com/privacy</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>

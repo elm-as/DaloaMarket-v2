@@ -1,21 +1,23 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
-  Shield,
-  MapPin,
-  CreditCard,
-  Lock,
-  Shirt,
-  Monitor,
-  Home,
-  Car,
-  Dumbbell,
-  BookOpen,
-  UtensilsCrossed,
-  ChevronRight,
   AlertTriangle,
+  ArrowRight,
+  BookOpen,
+  Car,
+  ChevronRight,
+  Dumbbell,
+  Home,
+  Lock,
+  MapPin,
+  Monitor,
+  Plus,
+  Search,
+  Shield,
+  Shirt,
+  Sparkles,
+  UtensilsCrossed,
 } from 'lucide-react';
 
 import { useSupabase } from '../hooks/useSupabase';
@@ -29,6 +31,16 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { SectionHeader } from '../components/ui/SectionHeader';
 import ListingCard from '../components/listings/ListingCard';
 import ListingCardSkeleton from '../components/listings/ListingCardSkeleton';
+
+const CATEGORY_STYLE: Record<string, { icon: React.ReactNode; bg: string; border: string }> = {
+  fashion: { icon: <Shirt className="h-5 w-5" />, bg: 'bg-pink-50 text-pink-600', border: 'border-pink-200' },
+  electronics: { icon: <Monitor className="h-5 w-5" />, bg: 'bg-blue-50 text-blue-600', border: 'border-blue-200' },
+  home: { icon: <Home className="h-5 w-5" />, bg: 'bg-amber-50 text-amber-600', border: 'border-amber-200' },
+  vehicles: { icon: <Car className="h-5 w-5" />, bg: 'bg-red-50 text-red-600', border: 'border-red-200' },
+  sports: { icon: <Dumbbell className="h-5 w-5" />, bg: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-200' },
+  books: { icon: <BookOpen className="h-5 w-5" />, bg: 'bg-cyan-50 text-cyan-600', border: 'border-cyan-200' },
+  food: { icon: <UtensilsCrossed className="h-5 w-5" />, bg: 'bg-orange-50 text-orange-600', border: 'border-orange-200' },
+};
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   fashion: <Shirt className="h-5 w-5" />,
@@ -54,6 +66,7 @@ interface ListingData {
   user_id: string;
   original_price: number | null;
   users?: { full_name: string; avatar_url: string | null } | null;
+  variants?: { id: string; label: string; price: number | null; stock: number; active?: boolean }[];
 }
 
 interface ListingCardMapped {
@@ -72,13 +85,14 @@ interface ListingCardMapped {
   is_favorite: boolean;
   cart_qty?: number;
   original_price: number | null;
+  variants?: { id: string; label: string; price: number | null; stock: number; active?: boolean }[];
 }
 
 const HomePage: React.FC = () => {
   useSEO('Accueil', {
     description: "Achetez et vendez à Daloa (Côte d'Ivoire) en toute simplicité sur DaloaMarket. Publiez des annonces gratuitement et trouvez des bonnes affaires locales près de chez vous.",
     keywords: "DaloaMarket, acheter Daloa, vendre Daloa, Côte d'Ivoire, petites annonces, marketplace locale, e-commerce Daloa, Côte d'Ivoire marketplace",
-    canonical: 'https://daloamarket.shop'
+    canonical: 'https://daloamarket.com'
   });
   const navigate = useNavigate();
   const { user, userProfile } = useSupabase();
@@ -156,7 +170,7 @@ const HomePage: React.FC = () => {
 
       if (fetchError) throw fetchError;
 
-      const rawListings = (data || []) as ListingData[];
+      const rawListings = (data || []) as unknown as ListingData[];
       const filteredRaw = rawListings.filter(l => !boostedIds.has(l.id));
 
       // Diversification pour éviter qu'un seul vendeur n'accapare le fil d'actualité
@@ -190,6 +204,7 @@ const HomePage: React.FC = () => {
     stock: l.stock || 1,
     listing_user_id: l.user_id,
     original_price: l.original_price || null,
+    variants: l.variants || [],
     seller: {
       name: l.users?.full_name || 'Anonyme',
       avatar: l.users?.avatar_url || null,
@@ -200,19 +215,19 @@ const HomePage: React.FC = () => {
 
   return (
     <motion.div
-      className="min-h-screen"
+      className="min-h-screen bg-gray-50/70"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4, ease: [0.2, 0, 0, 1] }}
     >
       {showLocationWarning && (
-        <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex gap-3 items-center justify-between shadow-sm">
-          <div className="flex gap-3 items-start">
-            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <h4 className="text-sm font-bold text-amber-800 text-left">Emplacement boutique manquant</h4>
-              <p className="text-xs text-amber-700 mt-0.5 text-left">
-                Vous avez des annonces actives, mais la localisation GPS de votre boutique n'est pas configurée. Elle est requise pour le calcul des distances et des frais de livraison.
+        <div className="mx-4 mt-4 flex items-center justify-between gap-3 rounded-2xl border border-orange-100 bg-white px-4 py-3 shadow-sm shadow-orange-100/60">
+          <div className="flex min-w-0 items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-500" />
+            <div className="min-w-0">
+              <h4 className="text-left text-sm font-bold text-gray-900">Emplacement boutique manquant</h4>
+              <p className="mt-0.5 text-left text-xs text-gray-600">
+                Configurez votre localisation pour calculer les distances et les frais de livraison.
               </p>
             </div>
           </div>
@@ -221,210 +236,195 @@ const HomePage: React.FC = () => {
             color="primary"
             variant="filled"
             onClick={() => navigate('/settings?tab=boutique')}
-            className="flex-shrink-0 text-xs font-semibold"
+            className="flex-shrink-0 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 text-xs font-extrabold"
           >
             Configurer
           </Button>
         </div>
       )}
 
-      {/* HERO */}
-      <section
-        className="relative overflow-hidden px-4 pt-10 pb-12 md:pt-16 md:pb-20 lg:px-12 lg:pt-24 lg:pb-28"
-        style={{ background: 'var(--gradient-hero)' }}
-      >
-        <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute top-6 -right-12 w-56 h-56 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute -bottom-16 left-1/3 w-64 h-64 rounded-full bg-white/5 blur-3xl" />
+      {/* HERO — NOUVEAU DESIGN MODERNE THEME DM */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-orange-500 to-amber-600 px-4 pt-6 pb-12 rounded-b-[36px] shadow-lg shadow-orange-500/20 sm:px-6 md:pb-16 md:pt-12 lg:px-12 lg:pt-16">
+        {/* Ambient background glows */}
+        <div className="pointer-events-none absolute -top-12 -right-10 w-44 h-44 rounded-full bg-white/15 blur-xl" />
+        <div className="pointer-events-none absolute -bottom-14 -left-8 w-36 h-36 rounded-full bg-white/10 blur-xl" />
+        <div className="pointer-events-none absolute top-1/3 left-1/2 w-48 h-48 -translate-x-1/2 rounded-full bg-amber-300/10 blur-2xl" />
 
-        <div className="max-w-2xl lg:max-w-none mx-auto lg:px-8 relative z-10">
-          <div className="lg:flex lg:items-center lg:gap-12">
-            {/* LEFT COLUMN */}
-            <div className="flex-1 text-center lg:text-left">
+        <div className="relative z-10 mx-auto max-w-2xl lg:max-w-5xl">
+          <div className="lg:flex lg:items-center lg:justify-between lg:gap-12">
+            <div className="flex-1 text-left">
+              {/* Brand Pill Badge */}
               <motion.div
-                className="mx-auto mb-5 w-20 h-20 md:w-24 md:h-24 lg:mx-0 bg-white/95 backdrop-blur-md rounded-2xl p-2.5 shadow-md border border-white/20 flex items-center justify-center"
-                initial={{ opacity: 0, y: -24 }}
+                className="mb-2.5 inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-md px-3.5 py-1 text-[11px] font-black text-white border border-white/25 shadow-xs"
+                initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1, duration: 0.5 }}
+                transition={{ delay: 0.1, duration: 0.3 }}
               >
-                <img
-                  src="/logo.png"
-                  alt="DaloaMarket"
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                  }}
-                />
+                <Sparkles className="w-3.5 h-3.5 text-amber-200 fill-amber-200" />
+                <span>Le marché local de Daloa</span>
               </motion.div>
 
+              {/* Headline */}
               <motion.h1
-                className="text-white text-3xl md:text-5xl font-bold mb-2 tracking-tight"
-                initial={{ opacity: 0, y: 16 }}
+                className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-[1.12]"
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
               >
-                DaloaMarket
+                Tout Daloa,{' '}
+                <span className="bg-gradient-to-r from-amber-200 via-amber-100 to-yellow-200 bg-clip-text text-transparent block sm:inline">
+                  au même endroit.
+                </span>
               </motion.h1>
 
+              {/* Subtitle */}
               <motion.p
-                className="text-white/80 text-base md:text-lg mb-7"
-                initial={{ opacity: 0, y: 16 }}
+                className="mt-2.5 max-w-md text-xs sm:text-sm font-medium text-orange-100/90 leading-relaxed"
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.5 }}
+                transition={{ delay: 0.3, duration: 0.4 }}
               >
-                Achetez et vendez près de chez vous, à Daloa
+                Achetez et vendez facilement entre voisins. Paiement 100% protégé et livraison partout dans la ville.
               </motion.p>
 
+              {/* Search Bar & Action Buttons */}
               <motion.div
-                initial={{ opacity: 0, y: 16 }}
+                className="mt-4 max-w-xl space-y-2.5"
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.5 }}
+                transition={{ delay: 0.4, duration: 0.4 }}
               >
+                {/* Search Trigger */}
                 <Link
-                  to="/create-listing"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm active:scale-[0.97] transition-all mb-5 no-underline"
-                  style={{
-                    background: '#fff',
-                    color: 'var(--color-primary)',
-                    boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
-                  }}
+                  to="/search"
+                  className="flex h-12 w-full items-center gap-3 rounded-2xl bg-white px-3.5 text-left shadow-xl shadow-orange-950/15 transition-all active:scale-[0.99] border border-orange-100/60 group"
+                  aria-label="Rechercher une annonce"
                 >
-                  <Plus className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
-                  Vendre un article
+                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-orange-50 text-orange-600 flex-shrink-0 group-hover:scale-105 transition-transform">
+                    <Search className="h-4 w-4" />
+                  </div>
+                  <span className="flex-1 text-xs sm:text-sm font-semibold text-gray-400">
+                    Rechercher un produit, un quartier...
+                  </span>
+                  <span className="flex items-center gap-1 text-[11px] font-extrabold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-xl">
+                    Explorer <ArrowRight className="h-3 w-3" />
+                  </span>
                 </Link>
+
+                {/* Quick Actions */}
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/create-listing"
+                    className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-white px-4 text-xs font-black text-orange-600 shadow-md shadow-orange-950/10 hover:bg-orange-50 active:scale-95 transition-all"
+                  >
+                    <Plus className="h-4 w-4 stroke-[3]" />
+                    <span>Vendre un article</span>
+                  </Link>
+                  <Link
+                    to="/search"
+                    className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 px-4 text-xs font-extrabold text-white hover:bg-white/30 active:scale-95 transition-all"
+                  >
+                    <span>Voir les annonces</span>
+                  </Link>
+                </div>
               </motion.div>
             </div>
 
-            {/* RIGHT COLUMN - stats, only on lg+ */}
+            {/* Desktop Side Feature Cards */}
             <motion.div
-              className="hidden lg:grid lg:grid-cols-1 lg:gap-4 lg:w-64"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.4 }}
+              className="hidden w-64 grid-cols-1 gap-3 lg:grid"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5, duration: 0.4 }}
             >
-              <div
-                className="bg-white/80 backdrop-blur-md rounded-2xl p-4 text-center shadow-lg border border-white/50"
-                style={{ boxShadow: 'var(--elevation-2)' }}
-              >
-                <div className="flex items-center justify-center mb-2">
-                  <Shield className="h-7 w-7 text-[var(--color-primary)]" />
+              <div className="rounded-3xl border border-white/30 bg-white/20 backdrop-blur-md p-4 text-white shadow-lg">
+                <div className="flex items-center gap-2.5 mb-1">
+                  <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
+                    <Shield className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-xs font-black">Escrow Sécurisé</span>
                 </div>
-                <p className="text-sm font-bold text-[var(--color-on-surface)]">Gratuit</p>
-                <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">
-                  Publication sans frais
-                </p>
+                <p className="text-[11px] text-orange-100 font-medium">Paiement protégé jusqu'à réception</p>
               </div>
 
-              <div
-                className="bg-white/80 backdrop-blur-md rounded-2xl p-4 text-center shadow-lg border border-white/50"
-                style={{ boxShadow: 'var(--elevation-2)' }}
-              >
-                <div className="flex items-center justify-center mb-2">
-                  <MapPin className="h-7 w-7 text-[var(--color-primary)]" />
+              <div className="rounded-3xl border border-white/30 bg-white/20 backdrop-blur-md p-4 text-white shadow-lg">
+                <div className="flex items-center gap-2.5 mb-1">
+                  <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
+                    <MapPin className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-xs font-black">100% Local</span>
                 </div>
-                <p className="text-sm font-bold text-[var(--color-on-surface)]">Local</p>
-                <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">
-                  Vendeurs autour de vous
-                </p>
-              </div>
-
-              <div
-                className="bg-white/80 backdrop-blur-md rounded-2xl p-4 text-center shadow-lg border border-white/50"
-                style={{ boxShadow: 'var(--elevation-2)' }}
-              >
-                <div className="flex items-center justify-center mb-2">
-                  <Lock className="h-7 w-7 text-[var(--color-primary)]" />
-                </div>
-                <p className="text-sm font-bold text-[var(--color-on-surface)]">Protégé</p>
-                <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">
-                  Paiement garanti & Protection acheteur
-                </p>
+                <p className="text-[11px] text-orange-100 font-medium">Vendeurs et livreurs à Daloa</p>
               </div>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* STATS - only show on mobile/tablet (below hero) */}
-      <section className="px-4 -mt-6 relative z-20 lg:hidden">
-        <div className="max-w-2xl lg:max-w-6xl mx-auto grid grid-cols-3 gap-3">
-          <motion.div
-            className="bg-white/80 backdrop-blur-md rounded-2xl p-4 text-center shadow-lg border border-white/50"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.4 }}
-            style={{ boxShadow: 'var(--elevation-2)' }}
-          >
-            <div className="flex items-center justify-center mb-2">
-              <Shield className="h-7 w-7 text-[var(--color-primary)]" />
+      {/* ── FLOATING TRUST BAR (OVERLAPPING HERO) ── */}
+      <section className="relative z-20 -mt-6 px-4">
+        <motion.div
+          className="mx-auto max-w-2xl bg-white rounded-3xl p-3 border border-gray-100 shadow-lg shadow-gray-200/50 flex items-center justify-around gap-2"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45, duration: 0.35 }}
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+              <Shield className="h-4 w-4" />
             </div>
-            <p className="text-sm font-bold text-[var(--color-on-surface)]">Gratuit</p>
-            <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">
-              Publication sans frais
-            </p>
-          </motion.div>
+            <div className="text-left">
+              <span className="text-xs font-extrabold text-gray-900 block leading-tight">Escrow</span>
+              <span className="text-[10px] text-gray-400 font-semibold hidden sm:inline">Paiement garanti</span>
+            </div>
+          </div>
 
-          <motion.div
-            className="bg-white/80 backdrop-blur-md rounded-2xl p-4 text-center shadow-lg border border-white/50"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.4 }}
-            style={{ boxShadow: 'var(--elevation-2)' }}
-          >
-            <div className="flex items-center justify-center mb-2">
-              <MapPin className="h-7 w-7 text-[var(--color-primary)]" />
-            </div>
-            <p className="text-sm font-bold text-[var(--color-on-surface)]">Local</p>
-            <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">
-              Vendeurs autour de vous
-            </p>
-          </motion.div>
+          <div className="h-5 w-px bg-gray-100" />
 
-          <motion.div
-            className="bg-white/80 backdrop-blur-md rounded-2xl p-4 text-center shadow-lg border border-white/50"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8, duration: 0.4 }}
-            style={{ boxShadow: 'var(--elevation-2)' }}
-          >
-            <div className="flex items-center justify-center mb-2">
-              <Lock className="h-7 w-7 text-[var(--color-primary)]" />
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center flex-shrink-0">
+              <MapPin className="h-4 w-4" />
             </div>
-            <p className="text-sm font-bold text-[var(--color-on-surface)]">Protégé</p>
-            <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">
-              Paiement garanti & Protection acheteur
-            </p>
-          </motion.div>
-        </div>
+            <div className="text-left">
+              <span className="text-xs font-extrabold text-gray-900 block leading-tight">Local</span>
+              <span className="text-[10px] text-gray-400 font-semibold hidden sm:inline">Vendeurs Daloa</span>
+            </div>
+          </div>
+
+          <div className="h-5 w-px bg-gray-100" />
+
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <div className="text-left">
+              <span className="text-xs font-extrabold text-gray-900 block leading-tight">Gratuit</span>
+              <span className="text-[10px] text-gray-400 font-semibold hidden sm:inline">Sans commission</span>
+            </div>
+          </div>
+        </motion.div>
       </section>
 
       {/* DALOADELIVERY BANNER */}
-      <section className="px-4 py-3">
+      <section className="px-4 pt-4 pb-1">
         <a
-          href="https://daloa-delivery.shop"
+          href="https://delivery.daloamarket.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="block max-w-2xl lg:max-w-6xl mx-auto px-5 py-4 bg-gradient-to-r from-[var(--color-primary-50)] to-orange-50 rounded-2xl border border-[var(--color-primary)]/10 no-underline hover:shadow-md transition-shadow"
+          className="flex items-center justify-between gap-3 max-w-2xl lg:max-w-5xl mx-auto px-4 py-2.5 bg-white rounded-2xl shadow-sm border border-orange-100/80 no-underline active:scale-[0.99] hover:bg-orange-50/50 transition-all group"
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">🏍️</span>
-              <div>
-                <p className="text-[14px] font-semibold text-[var(--color-on-surface)]">
-                  Besoin d'un livreur ?
-                </p>
-                <p className="text-[12px] text-[var(--color-on-surface-variant)]">
-                  Trouvez un livreur de confiance sur DaloaDelivery
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="h-5 w-5 text-[var(--color-primary)]" />
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="text-base flex-shrink-0">🏍️</span>
+            <p className="text-xs font-medium text-gray-700 truncate">
+              Besoin d'une course ou d'un livreur ? <span className="text-orange-600 font-extrabold">DaloaDelivery</span>
+            </p>
           </div>
+          <ChevronRight className="h-4 w-4 text-orange-500 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
         </a>
       </section>
 
-      {/* CATEGORIES */}
-      <section className="pt-8 pb-4">
+      {/* CATEGORIES — grille de découverte, desktop uniquement (sur mobile la rangée de pills ci-dessous suffit) */}
+      <section className="hidden lg:block pt-8 pb-4">
         <SectionHeader
           title="Categories"
           action={{
@@ -468,50 +468,83 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* LATEST LISTINGS WITH CATEGORY TABS */}
-      <section className="py-4">
+      {/* MOBILE CATEGORY STRIP — Pills fluides sans troncature */}
+      <section className="pb-2 pt-5 lg:hidden">
         <SectionHeader
-          title="Dernieres annonces"
+          title="Explorer par catégorie"
           action={{
-            label: 'Voir tout',
+            label: 'Tout voir',
             onClick: () => navigate('/search'),
           }}
         />
-
-        {/* Category filter pills */}
-        <div className="px-4 lg:px-8 mb-4 overflow-x-auto no-scrollbar flex items-center gap-2 pb-1">
+        <div className="no-scrollbar flex items-center gap-2 overflow-x-auto px-4 pb-2 pt-1">
           <button
             type="button"
             onClick={() => setSelectedCategory('all')}
+            aria-pressed={selectedCategory === 'all'}
             className={cn(
-              'px-4 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0 active:scale-95',
+              'flex h-10 shrink-0 items-center gap-2 rounded-2xl px-3.5 text-xs font-extrabold transition-all active:scale-95 whitespace-nowrap shadow-2xs',
               selectedCategory === 'all'
-                ? 'bg-[var(--color-primary)] text-white shadow-md'
-                : 'bg-white text-gray-600 border border-gray-100 hover:bg-gray-50'
+                ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-md shadow-orange-500/25 ring-2 ring-orange-500/20'
+                : 'border border-gray-200/80 bg-white text-gray-700 hover:border-orange-300 hover:text-orange-600'
             )}
           >
-            Tous les articles
+            <div
+              className={cn(
+                'flex h-6 w-6 items-center justify-center rounded-xl transition-colors',
+                selectedCategory === 'all' ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-600'
+              )}
+            >
+              <Search className="h-3.5 w-3.5" />
+            </div>
+            <span>Toutes les annonces</span>
           </button>
+
           {CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat.id;
+            const style = CATEGORY_STYLE[cat.id] || {
+              icon: <Search className="h-3.5 w-3.5" />,
+              bg: 'bg-orange-50 text-orange-600',
+              border: 'border-orange-100',
+            };
+
             return (
               <button
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
+                aria-pressed={isSelected}
                 className={cn(
-                  'px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex-shrink-0 flex items-center gap-1.5 active:scale-95',
+                  'flex h-10 shrink-0 items-center gap-2 rounded-2xl px-3.5 text-xs font-extrabold transition-all active:scale-95 whitespace-nowrap shadow-2xs',
                   isSelected
-                    ? 'bg-[var(--color-primary)] text-white shadow-md'
-                    : 'bg-white text-gray-600 border border-gray-100 hover:bg-gray-50'
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-md shadow-orange-500/25 ring-2 ring-orange-500/20'
+                    : 'border border-gray-200/80 bg-white text-gray-700 hover:border-orange-300 hover:text-orange-600'
                 )}
               >
-                {CATEGORY_ICONS[cat.id]}
+                <div
+                  className={cn(
+                    'flex h-6 w-6 items-center justify-center rounded-xl transition-colors',
+                    isSelected ? 'bg-white/20 text-white' : style.bg
+                  )}
+                >
+                  {style.icon}
+                </div>
                 <span>{cat.label}</span>
               </button>
             );
           })}
         </div>
+      </section>
+
+      {/* LATEST LISTINGS */}
+      <section className="pb-4 pt-6 lg:pt-8">
+        <SectionHeader
+          title={selectedCategory === 'all' ? 'Dernières annonces' : `Annonces · ${CATEGORIES.find((cat) => cat.id === selectedCategory)?.label || 'Sélection'}`}
+          action={{
+            label: 'Voir tout',
+            onClick: () => navigate('/search'),
+          }}
+        />
 
         <div className="px-4 lg:px-8">
           {loading && (
@@ -547,8 +580,8 @@ const HomePage: React.FC = () => {
 
             if (filteredListings.length === 0) {
               return (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center my-2">
-                  <p className="text-sm font-semibold text-gray-900 mb-1">Aucun article dans cette catégorie pour l'instant</p>
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50 p-8 text-center my-2">
+                  <p className="text-sm font-extrabold text-gray-900 mb-1">Aucun article dans cette catégorie pour l'instant</p>
                   <p className="text-xs text-gray-500 mb-4">Soyez le premier à publier dans cette catégorie !</p>
                   <Button color="primary" size="sm" onClick={() => navigate('/create-listing')}>
                     Publier une annonce
@@ -572,34 +605,33 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="px-4 py-8">
+      {/* CTA — rappel visible après le premier lot d'annonces */}
+      <section className="px-4 py-7 lg:py-8">
         <motion.div
-          className="max-w-2xl lg:max-w-none mx-auto lg:px-8 rounded-2xl p-6 md:p-8 text-center bg-[var(--color-primary)]/5 border border-[var(--color-primary)]/10"
+          className="mx-auto max-w-2xl rounded-[28px] bg-gradient-to-br from-orange-500 to-amber-600 p-6 text-center shadow-lg shadow-orange-200/50 md:p-8 lg:max-w-none lg:px-8"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.4 }}
         >
-          <h2 className="text-lg md:text-xl font-bold text-[var(--color-on-surface)] mb-2">
-            Nouveau sur DaloaMarket ?
+          <h2 className="mb-2 text-lg font-extrabold text-white md:text-xl">
+            Une annonce à publier ?
           </h2>
-          <p className="text-sm text-[var(--color-on-surface-variant)] mb-5">
-            Decouvrez le fonctionnement
+          <p className="mb-5 text-sm text-orange-100">
+            Vendez simplement, gratuitement, partout à Daloa.
           </p>
-          <Button
-            variant="filled"
-            color="primary"
-            size="lg"
-            onClick={() => navigate('/how-it-works')}
+          <Link
+            to="/create-listing"
+            className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-extrabold text-orange-600 shadow-md transition-all active:scale-[0.97]"
           >
-            Voir comment ça marche
-          </Button>
+            <Plus className="h-4 w-4" />
+            Publier une annonce
+          </Link>
         </motion.div>
       </section>
 
-      {/* Spacer for bottom nav */}
-      <div className="h-20 lg:hidden" />
+      {/* Petit espace de respiration en fin de fil (le padding bottom de la nav est géré par AppLayout) */}
+      <div className="h-5 lg:hidden" />
     </motion.div>
   );
 };

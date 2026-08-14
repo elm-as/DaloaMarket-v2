@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useSupabase } from '../hooks/useSupabase';
 import { supabase } from '../lib/supabase';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { SectionHeader } from '../components/ui/SectionHeader';
+
 import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -205,18 +205,34 @@ const MessagesPage: React.FC = () => {
     };
   }, [user, fetchConversations]);
 
+  const renderHeader = () => (
+    <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-amber-600 px-5 pt-6 pb-14 rounded-b-[36px] shadow-lg">
+      <div className="absolute -top-12 -right-10 w-36 h-36 rounded-full bg-white/10" />
+      <div className="absolute -bottom-14 -left-8 w-32 h-32 rounded-full bg-white/10" />
+      <div className="relative flex items-center gap-3">
+        <div className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center text-white">
+          <MessageSquare className="w-5 h-5" />
+        </div>
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-orange-100">Vos échanges</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-white">Messages</h1>
+        </div>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="w-full max-w-2xl mx-auto">
-        <SectionHeader title="Messages" />
-        <div className="px-4 space-y-1">
+      <div className="w-full max-w-3xl mx-auto min-h-screen bg-gray-50/70">
+        {renderHeader()}
+        <div className="relative z-10 px-4 -mt-7 space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: i * 0.06 }}
-              className="flex items-center gap-3 px-4 py-3"
+              className="flex items-center gap-3 px-4 py-4 bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50"
             >
               <Skeleton width="48px" height="48px" rounded="full" />
               <div className="flex-1 space-y-2">
@@ -233,42 +249,47 @@ const MessagesPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="w-full max-w-2xl mx-auto">
-        <SectionHeader title="Messages" />
-        <ErrorState message={error} onRetry={fetchConversations} />
+      <div className="w-full max-w-3xl mx-auto min-h-screen bg-gray-50/70">
+        {renderHeader()}
+        <div className="relative z-10 px-4 -mt-7 bg-white rounded-3xl shadow-lg mx-4">
+          <ErrorState message={error} onRetry={fetchConversations} />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto pb-4">
-      <SectionHeader title="Messages" />
+    <div className="w-full max-w-3xl mx-auto pb-4 min-h-screen bg-gray-50/70">
+      {renderHeader()}
 
       {conversations.length === 0 ? (
-        <EmptyState
-          icon={<MessageSquare className="w-16 h-16 opacity-40" />}
-          title="Aucune conversation"
-          description="Lancez une discussion en contactant un vendeur"
-        />
+        <div className="relative z-10 mx-4 -mt-7 bg-white rounded-3xl shadow-lg shadow-gray-200/50 border border-gray-100">
+          <EmptyState
+            icon={<MessageSquare className="w-16 h-16 opacity-40" />}
+            title="Aucune conversation"
+            description="Lancez une discussion en contactant un vendeur"
+          />
+        </div>
       ) : (
-        <AnimatePresence>
-          <div className="rounded-2xl shadow-[var(--elevation-2)] bg-white mx-4 overflow-hidden divide-y divide-gray-100 mb-4">
+        <div className="relative z-10 -mt-7 mx-4 space-y-3 mb-4">
+          <AnimatePresence>
             {conversations.map((conv, index) => (
               <motion.div
-                key={`${conv.listing_id}:${conv.other_user.id}`}
+                key={`${conv.listing_id || 'general'}-${conv.other_user.id}-${index}`}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.25, delay: index * 0.04 }}
               >
                 <ConversationItem conversation={conv} />
               </motion.div>
             ))}
-          </div>
+          </AnimatePresence>
           {/* Pied de liste */}
-          <p className="text-center text-[11px] text-gray-400 pb-2">
+          <p className="text-center text-[11px] font-bold text-gray-400 pb-2">
             {conversations.length} conversation{conversations.length > 1 ? 's' : ''}
           </p>
-        </AnimatePresence>
+        </div>
       )}
     </div>
   );

@@ -1,9 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, Share2, Truck } from 'lucide-react';
+import { Store, Share2, Truck, Sparkles, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatShopShareText, shareWithImage } from '../../lib/utils';
-import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { PHASE0_FREE_MODE } from '../../lib/featureFlags';
 
@@ -16,37 +15,41 @@ export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) 
     const { title, text } = formatShopShareText({
       id: userProfile.id,
       shop_name: userProfile.shop_name,
-      full_name: userProfile.full_name
+      full_name: userProfile.full_name,
     });
     const imageUrl = userProfile.shop_logo_url || userProfile.shop_banner_url || userProfile.avatar_url || null;
     const res = await shareWithImage(title, text, imageUrl);
     if (res.copied) {
-      toast.success('Lien et texte de votre boutique copiés ! (Faites Ctrl+V dans la légende si besoin)', { duration: 5000 });
+      toast.success('Lien et texte de votre boutique copiés !', { duration: 4000 });
     }
   };
 
   return (
     <div className="space-y-4">
       {!isPro && !PHASE0_FREE_MODE ? (
-        <Card elevation={2} padding="md" className="rounded-2xl text-center">
-          <Store className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-sm font-semibold text-gray-900 mb-1">
+        <Card elevation={2} padding="md" className="rounded-3xl text-center border border-gray-100 shadow-lg shadow-gray-200/50 p-6">
+          <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center mx-auto mb-3">
+            <Store className="w-7 h-7" />
+          </div>
+          <h3 className="text-base font-extrabold text-gray-900 mb-1">
             Passez Pro pour personnaliser votre boutique
+          </h3>
+          <p className="text-xs text-gray-500 mb-4 max-w-sm mx-auto">
+            Créez votre vitrine personnalisée, avec bannière, logo et lien dédié pour booster vos ventes.
           </p>
-          <p className="text-xs text-gray-500 mb-4">
-            Créez votre vitrine personnalisee et attirez plus de clients.
-          </p>
-          <Button
-            color="primary"
-            size="sm"
+          <button
+            type="button"
             onClick={() => navigate('/devenir-pro')}
+            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-extrabold text-xs shadow-md shadow-orange-500/25 active:scale-95 transition-all"
           >
-            Devenir Pro
-          </Button>
+            <Sparkles className="w-4 h-4" />
+            <span>Devenir Vendeur Pro</span>
+          </button>
         </Card>
       ) : (
         <>
-          <div className="bg-[var(--color-surface)] rounded-2xl shadow-[var(--elevation-2)] overflow-hidden">
+          {/* Shop preview card */}
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50 overflow-hidden">
             <div className="relative aspect-[3/1] bg-gray-100">
               {userProfile?.shop_banner_url ? (
                 <img
@@ -61,68 +64,73 @@ export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) 
                     background: `linear-gradient(135deg, ${userProfile?.shop_theme_color || '#FF7F00'}22, ${userProfile?.shop_theme_color || '#FF7F00'}44)`,
                   }}
                 >
-                  <Store className="w-10 h-10 text-gray-400" />
+                  <Store className="w-8 h-8 text-gray-400" />
                 </div>
               )}
             </div>
-            <div className="p-4 flex items-start gap-3">
-              {userProfile?.shop_logo_url && (
+
+            <div className="p-4 flex items-start gap-3.5">
+              {userProfile?.shop_logo_url ? (
                 <img
                   src={userProfile.shop_logo_url}
                   alt="Logo boutique"
-                  className="w-14 h-14 rounded-xl object-cover ring-2 ring-white -mt-10 relative z-10 bg-white shadow-sm"
+                  className="w-14 h-14 rounded-2xl object-cover ring-4 ring-white -mt-9 relative z-10 bg-white shadow-md flex-shrink-0"
                 />
+              ) : (
+                <div className="w-14 h-14 rounded-2xl bg-orange-100 text-orange-600 ring-4 ring-white -mt-9 relative z-10 shadow-md flex items-center justify-center flex-shrink-0">
+                  <Store className="w-6 h-6" />
+                </div>
               )}
-              <div className={!userProfile?.shop_logo_url ? 'mt-0' : ''}>
-                <h3 className="font-bold text-gray-900">
+
+              <div className="flex-1 min-w-0">
+                <h3 className="font-black tracking-tight text-gray-900 truncate">
                   {userProfile?.shop_name || userProfile?.full_name || 'Ma boutique'}
                 </h3>
-                {userProfile?.shop_description && (
-                  <p className="text-xs text-gray-500 mt-1">
+                {userProfile?.shop_description ? (
+                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
                     {userProfile.shop_description}
                   </p>
+                ) : (
+                  <p className="text-xs text-gray-400 mt-0.5 italic">Aucune description configurée</p>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                fullWidth
-                onClick={() => navigate('/settings?tab=boutique')}
-                icon={<Store className="w-4 h-4" />}
-              >
-                Personnaliser ma boutique
-              </Button>
-
-              {/* Bouton Partager réservé UNIQUEMENT aux vendeurs Pro */}
-              {isPro && (
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  color="primary"
-                  onClick={handleShareShop}
-                  icon={<Share2 className="w-4 h-4" />}
-                >
-                  Partager ma boutique
-                </Button>
-              )}
-            </div>
-
-            {/* Bouton Mes livreurs affiliés */}
-            <Button
-              fullWidth
-              variant="outlined"
-              color="secondary"
-              onClick={() => navigate('/mes-livreurs')}
-              icon={<Truck className="w-4 h-4" />}
+          {/* Action Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => navigate('/settings?tab=boutique')}
+              className="flex items-center justify-center gap-2 h-11 rounded-2xl bg-white border border-gray-200 text-gray-800 hover:border-orange-300 hover:text-orange-600 text-xs font-bold shadow-2xs active:scale-95 transition-all"
             >
-              Mes livreurs affiliés & Logistique
-            </Button>
+              <Settings className="w-4 h-4 text-orange-500" />
+              <span>Personnaliser ma vitrine</span>
+            </button>
+
+            {isPro && (
+              <button
+                type="button"
+                onClick={handleShareShop}
+                className="flex items-center justify-center gap-2 h-11 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white text-xs font-extrabold shadow-md shadow-orange-500/20 active:scale-95 transition-all"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Partager ma boutique</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => navigate('/mes-livreurs')}
+              className="sm:col-span-2 flex items-center justify-center gap-2 h-11 rounded-2xl bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-bold shadow-2xs active:scale-95 transition-all"
+            >
+              <Truck className="w-4 h-4 text-blue-500" />
+              <span>Mes livreurs affiliés & Logistique</span>
+            </button>
           </div>
         </>
       )}
     </div>
   );
 };
+

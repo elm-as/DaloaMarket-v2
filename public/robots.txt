@@ -1,5 +1,5 @@
 # robots.txt — DaloaMarket
-# https://daloamarket.shop
+# https://daloamarket.com
 # Généré le 2026-07-02
 
 # ── Crawlers autorisés (Google, Bing, Yandex, etc.) ──
@@ -123,7 +123,7 @@ Allow: /profile/seller/
 Allow: /search
 
 # Fichiers de référencement
-Sitemap: https://daloamarket.shop/sitemap.xml
+Sitemap: https://daloamarket.com/sitemap.xml
 
 # LLMs.txt — Documentation pour IA / LLM
-LLMs-Txt: https://daloamarket.shop/llms.txt
+# LLMs-Txt: https://daloamarket.com/llms.txt

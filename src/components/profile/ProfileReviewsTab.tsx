@@ -89,7 +89,7 @@ export const ProfileReviewsTab: React.FC<{ userId: string }> = ({ userId }) => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: index * 0.05 }}
             >
-              <Card elevation={1} padding="sm" className="rounded-2xl">
+              <Card elevation={2} padding="sm" className="rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50">
                 <div className="flex items-start gap-3">
                   <Avatar
                     src={review.reviewer?.avatar_url}
@@ -98,7 +98,7 @@ export const ProfileReviewsTab: React.FC<{ userId: string }> = ({ userId }) => {
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className="text-sm font-extrabold text-gray-900">
                         {review.reviewer?.full_name || 'Utilisateur'}
                       </p>
                       <span className="text-xs text-gray-400">

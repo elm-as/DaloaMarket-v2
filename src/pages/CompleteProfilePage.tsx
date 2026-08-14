@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { UserCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -30,11 +30,20 @@ export default function CompleteProfilePage() {
 
   const from = (location.state as any)?.from || '/';
 
+  // Pre-fill from Google OAuth metadata or existing profile
+  const googleMeta = user?.user_metadata;
+  const prefillName = userProfile?.full_name || googleMeta?.full_name || googleMeta?.name || '';
+  const nameFromGoogle = !userProfile?.full_name && !!(googleMeta?.full_name || googleMeta?.name);
+
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<ProfileFormData>();
+  } = useForm<ProfileFormData>({
+    defaultValues: {
+      full_name: prefillName,
+    },
+  });
 
   if (!user) {
     return (
@@ -69,6 +78,9 @@ export default function CompleteProfilePage() {
         district: data.district,
         payout_network: data.payout_network || null,
         payout_number: data.payout_number || null,
+        avatar_url: (!userProfile?.avatar_url && (googleMeta?.avatar_url || googleMeta?.picture))
+          ? (googleMeta.avatar_url || googleMeta.picture)
+          : undefined,
       });
       trackCompleteRegistration({ content_name: 'CompleteProfile' });
       navigate(from);
@@ -80,52 +92,74 @@ export default function CompleteProfilePage() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full"
-      >
-        <Card className="p-8 rounded-2xl shadow-elevation-2">
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 rounded-full bg-[var(--color-primary-container)] flex items-center justify-center mx-auto mb-4">
-              <UserCheck size={32} className="text-[var(--color-primary)]" />
-            </div>
-            <h1 className="text-2xl font-bold text-[var(--color-on-surface)]">
-              Compléter mon profil
-            </h1>
-            <p className="text-[var(--color-on-surface-variant)] text-sm mt-1">
-              Ces informations sont necessaires pour continuer
-            </p>
-          </div>
-
-          {errorMsg && (
-            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">
-              {errorMsg}
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* App-like Header Background */}
+      <div className="bg-gradient-to-br from-orange-500 to-amber-600 px-4 pt-12 pb-24 rounded-b-[40px] shadow-sm relative overflow-hidden flex-shrink-0">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
+        
+        <div className="relative z-10 flex flex-col items-center text-center">
+          {googleMeta?.avatar_url || googleMeta?.picture ? (
+            <img
+              src={googleMeta.avatar_url || googleMeta.picture}
+              alt="Photo de profil"
+              className="w-20 h-20 rounded-full mb-4 border-4 border-white/30 object-cover shadow-lg"
+            />
+          ) : (
+            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mb-4 shadow-lg -rotate-3">
+              <UserCheck className="w-8 h-8 text-orange-500" />
             </div>
           )}
+          <h1 className="text-2xl font-bold text-white mb-1">
+            {nameFromGoogle ? `Bienvenue ${prefillName.split(' ')[0]} !` : 'Compléter mon profil'}
+          </h1>
+          <p className="text-orange-100 text-sm">
+            {nameFromGoogle
+              ? 'Plus que quelques infos pour finaliser'
+              : 'Ces informations sont nécessaires pour continuer'}
+          </p>
+        </div>
+      </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {/* Form Card (overlapping the header) */}
+      <div className="flex-1 px-5 -mt-10 relative z-20 pb-10">
+        <div className="bg-white rounded-3xl shadow-lg p-6 border border-gray-100">
+          {errorMsg && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-5 p-3.5 bg-red-50 rounded-2xl flex items-start gap-3"
+            >
+              <span className="text-red-500 flex-shrink-0 mt-0.5">⚠️</span>
+              <p className="text-sm text-red-600 font-medium">{errorMsg}</p>
+            </motion.div>
+          )}
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-[var(--color-on-surface)] mb-1">
+              <label className="block text-sm font-bold text-gray-900 mb-2 pl-1">
                 Nom complet
+                {nameFromGoogle && (
+                  <span className="ml-2 text-xs text-green-600 font-normal">✓ via Google</span>
+                )}
               </label>
               <input
                 {...register('full_name', { required: 'Le nom est requis' })}
                 type="text"
+                readOnly={nameFromGoogle}
                 className={cn(
-                  'w-full px-4 py-3 rounded-2xl border bg-[var(--color-surface)] text-[var(--color-on-surface)] placeholder:text-[var(--color-on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all',
-                  errors.full_name ? 'border-red-500' : 'border-[var(--color-outline)]'
+                  'w-full px-4 py-3.5 rounded-2xl focus:ring-2 outline-none transition-colors font-medium text-sm',
+                  errors.full_name ? 'ring-1 ring-red-500 bg-gray-50 border-none' : nameFromGoogle ? 'bg-green-50 border border-green-200 text-green-800 cursor-default' : 'bg-gray-50 border-none focus:ring-[var(--color-primary)]'
                 )}
                 placeholder="Votre nom complet"
               />
               {errors.full_name && (
-                <p className="text-red-500 text-xs mt-1">{errors.full_name.message}</p>
+                <p className="text-red-500 text-xs mt-1.5 pl-1">{errors.full_name.message}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--color-on-surface)] mb-1">
+              <label className="block text-sm font-bold text-gray-900 mb-2 pl-1">
                 Téléphone (format ivoirien)
               </label>
               <input
@@ -135,25 +169,25 @@ export default function CompleteProfilePage() {
                 })}
                 type="tel"
                 className={cn(
-                  'w-full px-4 py-3 rounded-2xl border bg-[var(--color-surface)] text-[var(--color-on-surface)] placeholder:text-[var(--color-on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all',
-                  errors.phone ? 'border-red-500' : 'border-[var(--color-outline)]'
+                  'w-full px-4 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-colors font-medium text-sm',
+                  errors.phone && 'ring-1 ring-red-500'
                 )}
                 placeholder="0102030405"
               />
               {errors.phone && (
-                <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>
+                <p className="text-red-500 text-xs mt-1.5 pl-1">{errors.phone.message}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--color-on-surface)] mb-1">
+              <label className="block text-sm font-bold text-gray-900 mb-2 pl-1">
                 Commune / District
               </label>
               <select
                 {...register('district', { required: 'La commune est requise' })}
                 className={cn(
-                  'w-full px-4 py-3 rounded-2xl border bg-[var(--color-surface)] text-[var(--color-on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all',
-                  errors.district ? 'border-red-500' : 'border-[var(--color-outline)]'
+                  'w-full px-4 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-colors font-medium text-sm',
+                  errors.district && 'ring-1 ring-red-500'
                 )}
               >
                 <option value="">Selectionnez votre commune</option>
@@ -162,24 +196,24 @@ export default function CompleteProfilePage() {
                 ))}
               </select>
               {errors.district && (
-                <p className="text-red-500 text-xs mt-1">{errors.district.message}</p>
+                <p className="text-red-500 text-xs mt-1.5 pl-1">{errors.district.message}</p>
               )}
             </div>
 
-            <div className="pt-4 border-t border-[var(--color-outline)]">
-              <h3 className="text-sm font-bold text-[var(--color-on-surface)] mb-2">Informations de paiement (Optionnel)</h3>
-              <p className="text-xs text-[var(--color-on-surface-variant)] mb-4 leading-relaxed">
-                Configurez ceci si vous comptez vendre des produits. C'est sur ce compte que vos gains seront virés.
+            <div className="pt-4 border-t border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900 mb-1 pl-1">Informations de paiement</h3>
+              <p className="text-xs text-gray-400 mb-4 pl-1 leading-relaxed">
+                Optionnel — pour recevoir vos gains de vente via Mobile Money.
               </p>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[var(--color-on-surface)] mb-1">
+                  <label className="block text-sm font-bold text-gray-900 mb-2 pl-1">
                     Réseau de retrait
                   </label>
                   <select
                     {...register('payout_network')}
-                    className="w-full px-4 py-3 rounded-2xl border border-[var(--color-outline)] bg-[var(--color-surface)] text-[var(--color-on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
+                    className="w-full px-4 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-colors font-medium text-sm"
                   >
                     <option value="">Sélectionnez un réseau</option>
                     <option value="wave-ci">Wave</option>
@@ -190,7 +224,7 @@ export default function CompleteProfilePage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[var(--color-on-surface)] mb-1">
+                  <label className="block text-sm font-bold text-gray-900 mb-2 pl-1">
                     Numéro de retrait
                   </label>
                   <input
@@ -202,31 +236,35 @@ export default function CompleteProfilePage() {
                     })}
                     type="tel"
                     className={cn(
-                      'w-full px-4 py-3 rounded-2xl border bg-[var(--color-surface)] text-[var(--color-on-surface)] placeholder:text-[var(--color-on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all',
-                      errors.payout_number ? 'border-red-500' : 'border-[var(--color-outline)]'
+                      'w-full px-4 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-colors font-medium text-sm',
+                      errors.payout_number && 'ring-1 ring-red-500'
                     )}
                     placeholder="Numéro qui recevra l'argent"
                   />
                   {errors.payout_number && (
-                    <p className="text-red-500 text-xs mt-1">{errors.payout_number.message}</p>
+                    <p className="text-red-500 text-xs mt-1.5 pl-1">{errors.payout_number.message}</p>
                   )}
                 </div>
               </div>
             </div>
 
-            <Button
+            <button
               type="submit"
-              color="primary"
-              fullWidth
-              loading={loading}
               disabled={loading}
-              className="active:scale-[0.97]"
+              className="w-full py-4 bg-[var(--color-primary)] text-white font-bold rounded-2xl shadow-md active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed text-base flex items-center justify-center gap-2"
             >
-              Enregistrer
-            </Button>
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Enregistrement...
+                </>
+              ) : (
+                'Enregistrer'
+              )}
+            </button>
           </form>
-        </Card>
-      </motion.div>
+        </div>
+      </div>
     </div>
   );
 }

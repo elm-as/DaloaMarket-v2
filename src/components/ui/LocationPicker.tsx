@@ -125,10 +125,14 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
 
   return (
     <div className="space-y-2">
-      <div className="relative">
+      <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-lg shadow-gray-200/50">
+        <div className="absolute left-3 top-3 z-[400] flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-extrabold text-gray-800 shadow-sm backdrop-blur pointer-events-none">
+          <MapPin className="h-3.5 w-3.5 text-orange-500" />
+          Votre point de livraison
+        </div>
         <div
           ref={containerRef}
-          className={className || "w-full h-52 rounded-xl border border-[var(--color-outline)] bg-gray-100 overflow-hidden"}
+          className={className || "w-full h-56 bg-gray-100"}
           style={{ zIndex: 0 }}
         />
         {!readOnly && (
@@ -136,19 +140,19 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
             type="button"
             onClick={handleLocateMe}
             disabled={locating}
-            className="absolute bottom-3 right-3 z-[400] flex items-center gap-2 px-3 py-2 bg-white rounded-full shadow-md text-[13px] font-semibold text-gray-800 hover:bg-gray-50 transition-colors border border-gray-100 disabled:opacity-50"
+            className="absolute bottom-3 right-3 z-[400] flex min-h-10 items-center gap-2 rounded-2xl border border-gray-100 bg-white/95 px-3.5 py-2 text-xs font-extrabold text-gray-900 shadow-lg backdrop-blur-md transition-all hover:bg-white active:scale-95 disabled:opacity-50"
           >
-            <Navigation className="w-4 h-4 text-[var(--color-primary)]" />
-            {locating ? "Recherche..." : "Me localiser"}
+            <Navigation className="w-3.5 h-3.5 text-orange-500 fill-orange-500" />
+            {locating ? "Localisation en cours..." : "Ma position GPS"}
           </button>
         )}
       </div>
-      <div className="flex items-center justify-between text-xs text-[var(--color-on-surface-variant)] px-1">
-        <span>
-          <MapPin className="inline h-3 w-3 mr-1" />
-          {lat.toFixed(5)}, {lng.toFixed(5)}
+      <div className="flex items-start justify-between gap-3 px-1 text-[11px] font-medium text-gray-500">
+        <span className="flex shrink-0 items-center gap-1 font-bold text-gray-700">
+          <MapPin className="h-3.5 w-3.5 text-orange-500" />
+          {lat.toFixed(4)}, {lng.toFixed(4)}
         </span>
-        <span className="text-[11px]">{placeholder}</span>
+        <span className="text-[11px] text-gray-400">{placeholder}</span>
       </div>
     </div>
   );

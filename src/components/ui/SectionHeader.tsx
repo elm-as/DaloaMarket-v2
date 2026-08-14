@@ -26,7 +26,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
         className,
       )}
     >
-      <h2 className="text-[20px] font-bold text-[var(--color-on-surface)]">
+      <h2 className="text-[20px] font-extrabold tracking-tight text-[var(--color-on-surface)]">
         {title}
       </h2>
       {action && (

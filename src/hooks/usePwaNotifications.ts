@@ -9,10 +9,18 @@ import {
 } from '../lib/pushNotifications';
 import toast from 'react-hot-toast';
 
+const NOTIF_OPT_OUT_KEY = 'daloamarket_notifs_opted_out';
+
 export function usePwaNotifications() {
   const { user } = useSupabase();
-  const [permission, setPermission] = useState<NotificationPermission>(getPermissionState());
-  const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
+  
+  // Lecture synchrone de l'état initial
+  const initialPermission = getPermissionState();
+  const initialOptedOut = typeof window !== 'undefined' ? window.localStorage.getItem(NOTIF_OPT_OUT_KEY) === 'true' : false;
+  const initialActive = initialPermission === 'granted' && !initialOptedOut;
+
+  const [permission, setPermission] = useState<NotificationPermission>(initialPermission);
+  const [isSubscribed, setIsSubscribed] = useState<boolean>(initialActive);
   const [loading, setLoading] = useState<boolean>(false);
   const realtimeSubscribed = useRef<boolean>(false);
 
@@ -22,13 +30,20 @@ export function usePwaNotifications() {
     const currentPermission = getPermissionState();
     setPermission(currentPermission);
 
-    if (currentPermission === 'granted') {
+    const isOptedOut = window.localStorage.getItem(NOTIF_OPT_OUT_KEY) === 'true';
+
+    if (currentPermission === 'granted' && !isOptedOut) {
+      setIsSubscribed(true);
+      // Synchroniser en arrière-plan avec le Service Worker si disponible
       try {
-        const registration = await navigator.serviceWorker.ready;
-        const sub = await registration.pushManager.getSubscription();
-        setIsSubscribed(!!sub);
+        if ('serviceWorker' in navigator) {
+          const registration = await navigator.serviceWorker.ready;
+          if (registration && registration.pushManager) {
+            await registration.pushManager.getSubscription();
+          }
+        }
       } catch {
-        setIsSubscribed(false);
+        // Fallback silencieux
       }
     } else {
       setIsSubscribed(false);
@@ -39,22 +54,41 @@ export function usePwaNotifications() {
     checkStatus();
   }, [checkStatus]);
 
-  // Trigger SW Notification
+  // Trigger SW Notification (avec fallback navigateur direct)
   const triggerSwNotification = useCallback(async (title: string, options: any) => {
     if (!isPushSupported() || Notification.permission !== 'granted') return;
 
     try {
-      const registration = await navigator.serviceWorker.ready;
-      registration.showNotification(title, {
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        if (registration && registration.showNotification) {
+          await registration.showNotification(title, {
+            icon: '/web-app-manifest-192x192.png',
+            badge: '/favicon-96x96.png',
+            vibrate: [200, 100, 200],
+            tag: `daloamarket-${Date.now()}`,
+            renotify: true,
+            ...options,
+          });
+          return;
+        }
+      }
+
+      // Fallback Direct Notification API
+      new Notification(title, {
         icon: '/web-app-manifest-192x192.png',
-        badge: '/favicon-96x96.png',
-        vibrate: [200, 100, 200],
-        tag: `daloamarket-${Date.now()}`,
-        renotify: true,
         ...options,
       });
     } catch (err) {
       console.warn('[PWA Notification Error]:', err);
+      try {
+        new Notification(title, {
+          icon: '/web-app-manifest-192x192.png',
+          ...options,
+        });
+      } catch (e) {
+        console.error('[Notification Fallback Error]:', e);
+      }
     }
   }, []);
 
@@ -71,21 +105,31 @@ export function usePwaNotifications() {
       setPermission(perm);
 
       if (perm === 'granted') {
-        if (user) {
-          await subscribeToPush(user.id);
-        }
+        window.localStorage.removeItem(NOTIF_OPT_OUT_KEY);
         setIsSubscribed(true);
-        toast.success('Notifications PWA activées avec succès !');
+
+        if (user) {
+          try {
+            await subscribeToPush(user.id);
+          } catch (e) {
+            console.warn('[Push] Background push subscribe skipped or failed:', e);
+          }
+        }
+
+        toast.success('Notifications activées avec succès !');
 
         // Send confirmation test notification
-        await triggerSwNotification('DaloaMarket Notifications Activées', {
-          body: 'Vous recevrez désormais vos alertes de commandes et de messages en temps réel.',
+        await triggerSwNotification('DaloaMarket : Notifications Activées 🔔', {
+          body: 'Vous recevrez vos alertes de commandes et messages en temps réel.',
           data: { url: '/' },
         });
 
         return true;
+      } else if (perm === 'denied') {
+        toast.error('Notifications bloquées dans les paramètres de votre navigateur.');
+        setIsSubscribed(false);
+        return false;
       } else {
-        toast.error('Permission de notification refusée par le navigateur.');
         return false;
       }
     } catch (err) {
@@ -99,12 +143,20 @@ export function usePwaNotifications() {
 
   // Unsubscribe user
   const disableNotifications = async (): Promise<boolean> => {
-    if (!user) return false;
     setLoading(true);
     try {
-      await unsubscribeFromPush(user.id);
+      window.localStorage.setItem(NOTIF_OPT_OUT_KEY, 'true');
       setIsSubscribed(false);
-      toast.success('Notifications PWA désactivées.');
+
+      if (user) {
+        try {
+          await unsubscribeFromPush(user.id);
+        } catch (e) {
+          console.warn('[Push] Unsubscribe DB skipped:', e);
+        }
+      }
+
+      toast.success('Notifications désactivées.');
       return true;
     } catch {
       toast.error('Erreur lors de la désactivation.');
@@ -114,12 +166,25 @@ export function usePwaNotifications() {
     }
   };
 
+  // Test Notification
+  const sendTestNotification = async () => {
+    if (permission !== 'granted') {
+      toast.error("Veuillez d'abord activer les notifications.");
+      return;
+    }
+    toast.success('Notification de test envoyée !');
+    await triggerSwNotification('🔔 Test Notification DaloaMarket', {
+      body: 'Ceci est un test de notification en temps réel. Tout fonctionne à merveille !',
+      data: { url: '/' },
+    });
+  };
+
   // Listen to Supabase Realtime for Messages, Orders, and Admin Notifications
   useEffect(() => {
     if (!user || permission !== 'granted' || realtimeSubscribed.current) return;
 
     realtimeSubscribed.current = true;
-    const channelId = `pwa_notifs_${user.id}_${Date.now()}`;
+    const channelId = `pwa_notifs_${user.id}_${Math.random().toString(36).substring(2, 7)}`;
     const channel = supabase.channel(channelId);
 
     // 1. Listen to new Chat Messages
@@ -227,5 +292,7 @@ export function usePwaNotifications() {
     enableNotifications,
     disableNotifications,
     triggerSwNotification,
+    sendTestNotification,
+    checkStatus,
   };
 }

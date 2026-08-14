@@ -15,6 +15,10 @@ export interface Order {
   delivery_mode: string;
   delivery_address: string | null;
   created_at: string;
+  variant_id?: string | null;
+  variant_label?: string | null;
+  unit_price?: number | null;
+  quantity?: number;
   listing_title?: string;
   listing_photos?: string[];
   buyer_name?: string;

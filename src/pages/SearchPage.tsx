@@ -9,11 +9,12 @@ import {
 
 
 import { supabase } from '../lib/supabase';
-import { usePageTitle } from '../hooks/usePageTitle';
+import { useSEO } from '../hooks/useSEO';
 import {
   getConditionLabel,
   getCategoryLabel,
   interleaveBoosted,
+  cn,
 } from '../lib/utils';
 import { Chip } from '../components/ui/Chip';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -26,6 +27,15 @@ import { SearchBar } from '../components/search/SearchBar';
 import FilterSheet from '../components/search/FilterSheet';
 import type { FilterValues } from '../components/search/FilterSheet';
 import FilterPanel from '../components/search/FilterPanel';
+import type { ListingFull } from '../types/listing';
+
+const DEFAULT_FILTERS: FilterValues = {
+  category: '',
+  condition: '',
+  district: '',
+  priceMin: '',
+  priceMax: '',
+};
 
 interface ListingData {
   id: string;
@@ -41,6 +51,7 @@ interface ListingData {
   stock: number;
   users?: { full_name: string; avatar_url: string | null } | null;
   original_price?: number | null;
+  variants?: { id: string; label: string; price: number | null; stock: number; active?: boolean }[];
 }
 
 interface ListingCardMapped {
@@ -59,15 +70,8 @@ interface ListingCardMapped {
   stock: number;
   listing_user_id: string;
   original_price: number | null;
+  variants?: { id: string; label: string; price: number | null; stock: number; active?: boolean }[];
 }
-
-const DEFAULT_FILTERS: FilterValues = {
-  category: '',
-  condition: '',
-  district: '',
-  priceMin: '',
-  priceMax: '',
-};
 
 type SortOption = 'recent' | 'price_asc' | 'price_desc';
 
@@ -85,12 +89,28 @@ interface SearchPageProps {
 }
 
 const SearchPage: React.FC<SearchPageProps> = ({ defaultCategory, categoryLabel }) => {
-  usePageTitle(categoryLabel ? `${categoryLabel} à Daloa` : 'Recherche');
-
   const [searchParams] = useSearchParams();
 
   const initialQuery = searchParams.get('q') || '';
   const initialCategory = defaultCategory || searchParams.get('category') || '';
+
+  const pageTitleText = categoryLabel 
+    ? `${categoryLabel} à Daloa` 
+    : initialQuery 
+      ? `Recherche "${initialQuery}" à Daloa` 
+      : 'Rechercher des annonces à Daloa';
+
+  const pageDescText = initialQuery
+    ? `Résultats de recherche pour "${initialQuery}" sur DaloaMarket à Daloa (Côte d'Ivoire). Trouve les meilleures annonces locales.`
+    : categoryLabel
+      ? `Consultez les meilleures annonces pour ${categoryLabel} à Daloa.`
+      : 'Recherchez parmi des milliers d\'annonces de produits, véhicules, téléphones et mode à Daloa.';
+
+  useSEO(pageTitleText, {
+    description: pageDescText,
+    keywords: `recherche DaloaMarket, annonces Daloa, ${initialQuery}, ${categoryLabel || 'marketplace Daloa'}`,
+    canonical: 'https://daloamarket.com/search',
+  });
 
   const [query, setQuery] = useState(initialQuery);
   const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
@@ -194,7 +214,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ defaultCategory, categoryLabel 
       
       bq = bq.order('boosted_until', { ascending: false }).limit(20);
       const { data: boostedData } = await bq;
-      const boostedListings = (boostedData || []) as ListingData[];
+      const boostedListings = (boostedData || []) as unknown as ListingData[];
       boostedListings.forEach(l => localFetchedIds.add(l.id));
 
       // 2. Récupérer la première page normale
@@ -203,7 +223,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ defaultCategory, categoryLabel 
 
       if (fetchError) throw fetchError;
 
-      const rawListings = (data || []) as ListingData[];
+      const rawListings = (data || []) as unknown as ListingData[];
       const filteredRaw = rawListings.filter(l => !localFetchedIds.has(l.id));
       filteredRaw.forEach(l => localFetchedIds.add(l.id));
 
@@ -239,7 +259,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ defaultCategory, categoryLabel 
 
       if (fetchError) throw fetchError;
 
-      const rawListings = (data || []) as ListingData[];
+      const rawListings = (data || []) as unknown as ListingData[];
       if (rawListings.length < PAGE_SIZE) {
         setHasMore(false);
       }
@@ -295,6 +315,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ defaultCategory, categoryLabel 
     stock: l.stock || 1,
     listing_user_id: l.user_id,
     original_price: l.original_price || null,
+    variants: l.variants || [],
     seller: {
       name: l.users?.full_name || 'Anonyme',
       avatar: l.users?.avatar_url || null,
@@ -324,14 +345,18 @@ const SearchPage: React.FC<SearchPageProps> = ({ defaultCategory, categoryLabel 
 
   return (
     <motion.div
-      className="min-h-screen"
+      className="min-h-screen bg-gray-50/70"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
       {/* STICKY HEADER */}
-      <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3">
-        <div className="flex items-center gap-3">
+      <div className="sticky top-0 z-30 bg-gradient-to-br from-orange-500 to-amber-600 px-4 pt-4 pb-5 shadow-lg rounded-b-[32px]">
+        <div className="mb-3">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-orange-100">Explorer Daloa</p>
+          <h1 className="text-xl font-extrabold tracking-tight text-white">Que recherchez-vous ?</h1>
+        </div>
+        <div className="flex items-center gap-2.5">
           <div className="flex-1">
             <SearchBar
               value={query}
@@ -341,12 +366,18 @@ const SearchPage: React.FC<SearchPageProps> = ({ defaultCategory, categoryLabel 
           </div>
           <button
             onClick={() => setFilterOpen(true)}
-            className="lg:hidden relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 active:scale-[0.97] transition-all"
+            className={cn(
+              'lg:hidden relative flex items-center gap-1.5 min-h-[48px] px-3.5 rounded-2xl font-extrabold text-[13px] active:scale-[0.96] transition-all',
+              activeFilterChips.length > 0
+                ? 'bg-gray-900 text-white shadow-lg'
+                : 'bg-white text-orange-600 border border-white/70 shadow-lg hover:bg-orange-50'
+            )}
             aria-label="Filtres"
           >
-            <SlidersHorizontal className="h-5 w-5 text-gray-600" />
+            <SlidersHorizontal className="h-4 w-4" />
+            <span>Filtres</span>
             {activeFilterChips.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-[var(--color-primary)] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              <span className="min-w-[18px] h-[18px] px-1 bg-white/25 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                 {activeFilterChips.length}
               </span>
             )}
@@ -355,7 +386,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ defaultCategory, categoryLabel 
 
         {/* Active filter chips */}
         {activeFilterChips.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2">
+          <div className="flex gap-2 mt-3 overflow-x-auto no-scrollbar pb-0.5">
             {activeFilterChips.map((chip) => (
               <Chip
                 key={chip.key}
@@ -388,22 +419,22 @@ const SearchPage: React.FC<SearchPageProps> = ({ defaultCategory, categoryLabel 
         </div>
 
         {/* RESULTS */}
-        <div className="flex-1 min-w-0 p-4">
+        <div className="flex-1 min-w-0 px-4 py-5">
           {/* Sort + count bar */}
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-[var(--color-on-surface-variant)]">
+          <div className="flex items-center justify-between mb-5 bg-white rounded-3xl px-4 py-3 shadow-lg shadow-gray-200/50 border border-gray-100">
+            <p className="text-sm font-extrabold text-gray-900">
               {loading ? (
                 <span className="inline-block w-32 h-4 bg-gray-200 rounded animate-pulse" />
               ) : !error ? (
                 `${totalCount} annonce${totalCount !== 1 ? 's' : ''} trouvee${totalCount !== 1 ? 's' : ''}`
               ) : null}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 rounded-2xl bg-gray-50 px-2.5 py-2">
               <ArrowUpDown className="h-4 w-4 text-[var(--color-on-surface-variant)]" />
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as SortOption)}
-                className="text-sm font-medium bg-transparent border-none text-[var(--color-on-surface)] cursor-pointer focus:outline-none"
+                className="text-xs font-bold bg-transparent border-none text-gray-700 cursor-pointer focus:outline-none max-w-[120px]"
               >
                 {SORT_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -468,8 +499,8 @@ const SearchPage: React.FC<SearchPageProps> = ({ defaultCategory, categoryLabel 
       </div>
       </div>
 
-      {/* Spacer for bottom nav */}
-      <div className="h-20" />
+      {/* Petit espace de respiration (le padding bottom de la nav est géré par AppLayout) */}
+      <div className="h-4 lg:hidden" />
     </motion.div>
   );
 };

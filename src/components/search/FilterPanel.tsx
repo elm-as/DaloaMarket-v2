@@ -17,9 +17,9 @@ const Chip: React.FC<{
     type="button"
     onClick={onClick}
     className={cn(
-      'px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-[0.97] border',
+      'px-3 py-2 rounded-2xl text-xs font-bold transition-all active:scale-[0.97] border',
       selected
-        ? 'bg-primary text-white border-primary shadow-sm'
+        ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white border-transparent shadow-md'
         : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
     )}
   >
@@ -65,12 +65,12 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onApply }) => {
   };
 
   return (
-    <aside className="bg-white rounded-2xl border border-gray-100 p-5 space-y-6">
+    <aside className="bg-white rounded-3xl border border-gray-100 p-5 space-y-6 shadow-lg shadow-gray-200/50 sticky top-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-gray-900">Filtres</h2>
+        <h2 className="text-lg font-extrabold tracking-tight text-gray-900">Filtres</h2>
         <button
           onClick={handleReset}
-          className="text-sm font-medium text-gray-500 hover:text-primary active:scale-[0.97] transition-all"
+          className="text-sm font-bold text-orange-600 hover:text-orange-700 active:scale-[0.97] transition-all"
         >
           Reinitialiser
         </button>
@@ -78,7 +78,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onApply }) => {
 
       {/* Category */}
       <section>
-        <h3 className="text-sm font-semibold text-gray-700 mb-2.5">
+        <h3 className="text-sm font-extrabold text-gray-900 mb-3">
           Categorie
         </h3>
         <div className="flex flex-wrap gap-2">
@@ -95,7 +95,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onApply }) => {
 
       {/* Condition */}
       <section>
-        <h3 className="text-sm font-semibold text-gray-700 mb-2.5">Etat</h3>
+        <h3 className="text-sm font-extrabold text-gray-900 mb-3">Etat</h3>
         <div className="flex flex-wrap gap-2">
           {CONDITIONS.map((cond) => (
             <Chip
@@ -110,7 +110,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onApply }) => {
 
       {/* District */}
       <section>
-        <h3 className="text-sm font-semibold text-gray-700 mb-2.5">
+        <h3 className="text-sm font-extrabold text-gray-900 mb-3">
           Quartier
         </h3>
         <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
@@ -127,7 +127,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onApply }) => {
 
       {/* Price range */}
       <section>
-        <h3 className="text-sm font-semibold text-gray-700 mb-2.5">
+        <h3 className="text-sm font-extrabold text-gray-900 mb-3">
           Prix (FCFA)
         </h3>
         <div className="flex items-center gap-3">
@@ -156,11 +156,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onApply }) => {
       {/* Apply button */}
       <button
         onClick={handleApply}
-        className="w-full py-3 rounded-xl text-white font-bold active:scale-[0.97] transition-all shadow-lg"
-        style={{
-          background: 'var(--gradient-primary)',
-          boxShadow: 'var(--elevation-primary)',
-        }}
+        className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-extrabold active:scale-[0.97] transition-all shadow-lg shadow-orange-200/60"
       >
         Appliquer les filtres
       </button>

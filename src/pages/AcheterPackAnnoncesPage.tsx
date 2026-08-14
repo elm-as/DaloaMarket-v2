@@ -151,67 +151,83 @@ export default function AcheterPackAnnoncesPage() {
   }
 
   return (
-    <div className="pb-20 min-h-screen bg-[var(--color-background)]">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-[var(--color-surface)] border-b border-[var(--color-outline)] px-4 py-3 flex items-center justify-between shadow-sm">
-        <button
-          onClick={() => {
-            if (step > 1) {
-              setStep(step - 1);
-            } else {
-              navigate(-1);
-            }
-          }}
-          className="flex items-center gap-2 text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)] transition-colors active:scale-[0.97]"
-        >
-          <ArrowLeft size={18} />
-          <span className="text-sm font-medium">Retour</span>
-        </button>
-        
-        <div className="flex items-center gap-1.5 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900/50 px-3 py-1.5 rounded-full text-yellow-700 dark:text-yellow-400">
-          <Coins size={14} className="fill-yellow-500 stroke-yellow-700 dark:stroke-yellow-400" />
-          <span className="text-xs font-bold">{currentBalance} crédit{currentBalance > 1 ? 's' : ''}</span>
-        </div>
-      </div>
-
-      <div className="max-w-2xl mx-auto px-4 mt-6">
-        
-        {/* Wizard Steps Indicator */}
-        <div className="mb-8 flex items-center justify-between max-w-md mx-auto relative px-2">
-          {/* Background Line */}
-          <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-[var(--color-outline)] -z-10" />
-          {/* Active Progress Line */}
-          <div 
-            className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-[var(--color-primary)] transition-all duration-300 -z-10"
-            style={{ width: `${((step - 1) / 2) * 100}%` }}
-          />
-
-          {[
-            { label: 'Pack', stepNum: 1 },
-            { label: 'Paiement', stepNum: 2 },
-            { label: 'Validation', stepNum: 3 }
-          ].map((item) => (
-            <div key={item.stepNum} className="flex flex-col items-center gap-1.5">
-              <div 
-                className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-sm border-2",
-                  step === item.stepNum 
-                    ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)] scale-110" 
-                    : step > item.stepNum
-                      ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                      : "bg-[var(--color-surface)] text-[var(--color-on-surface-variant)] border-[var(--color-outline)]"
-                )}
-              >
-                {step > item.stepNum ? <Check size={14} strokeWidth={3} /> : item.stepNum}
-              </div>
-              <span className={cn(
-                "text-[10px] font-semibold transition-colors",
-                step >= item.stepNum ? "text-[var(--color-on-surface)]" : "text-[var(--color-on-surface-variant)]"
-              )}>
-                {item.label}
-              </span>
+    <div className="pb-28 min-h-screen bg-gray-50/70">
+      {/* ── HERO BANNER ── */}
+      <header className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-amber-600 px-5 pt-6 pb-16 rounded-b-[36px] shadow-lg">
+        <div className="absolute -top-12 -right-10 w-36 h-36 rounded-full bg-white/10" />
+        <div className="absolute -bottom-14 -left-8 w-32 h-32 rounded-full bg-white/10" />
+        <div className="relative max-w-5xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (step > 1) {
+                  setStep(step - 1);
+                } else {
+                  navigate(-1);
+                }
+              }}
+              className="w-10 h-10 inline-flex items-center justify-center rounded-2xl bg-white/15 text-white hover:bg-white/25 active:scale-95 transition-all"
+              aria-label="Retour"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-orange-100">
+                Visibilité & Boosts
+              </p>
+              <h1 className="text-2xl font-extrabold tracking-tight text-white">
+                Packs de Crédits
+              </h1>
             </div>
-          ))}
+          </div>
+          
+          <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-3.5 py-1.5 rounded-full text-white text-xs font-extrabold border border-white/20">
+            <Coins size={15} className="fill-amber-300 stroke-amber-400" />
+            <span>{currentBalance} crédit{currentBalance > 1 ? 's' : ''}</span>
+          </div>
+        </div>
+      </header>
+
+      <div className="relative z-10 -mt-8 max-w-2xl lg:max-w-5xl mx-auto px-4">
+        {/* Wizard Steps Indicator */}
+        <div className="bg-white rounded-3xl p-3.5 border border-gray-100 shadow-lg shadow-gray-200/50 mb-6 max-w-md mx-auto">
+          <div className="flex items-center justify-between relative px-3">
+            {/* Background Line */}
+            <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-1 bg-gray-100 -z-0 rounded-full" />
+            {/* Active Progress Line */}
+            <div 
+              className="absolute left-8 top-1/2 -translate-y-1/2 h-1 bg-gradient-to-r from-orange-500 to-amber-600 transition-all duration-300 -z-0 rounded-full"
+              style={{ width: `${((step - 1) / 2) * (100 - 20)}%` }}
+            />
+
+            {[
+              { label: 'Pack', stepNum: 1 },
+              { label: 'Paiement', stepNum: 2 },
+              { label: 'Validation', stepNum: 3 }
+            ].map((item) => (
+              <div key={item.stepNum} className="relative z-10 flex flex-col items-center gap-1">
+                <div 
+                  className={cn(
+                    "w-9 h-9 rounded-2xl flex items-center justify-center text-xs font-bold transition-all shadow-sm",
+                    step === item.stepNum 
+                      ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white ring-4 ring-orange-500/20 shadow-orange-500/30" 
+                      : step > item.stepNum
+                        ? "bg-emerald-500 text-white shadow-emerald-500/20"
+                        : "bg-white text-gray-400 border border-gray-200"
+                  )}
+                >
+                  {step > item.stepNum ? <Check size={14} strokeWidth={3} /> : item.stepNum}
+                </div>
+                <span className={cn(
+                  "text-[10px] font-extrabold transition-colors",
+                  step === item.stepNum ? "text-orange-600" : step > item.stepNum ? "text-gray-800" : "text-gray-400"
+                )}>
+                  {item.label}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Wizard Body with transitions */}
@@ -219,17 +235,17 @@ export default function AcheterPackAnnoncesPage() {
           {step === 1 && (
             <motion.div
               key="step1"
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
               className="space-y-6"
             >
               <div className="text-center">
-                <h2 className="text-xl font-extrabold text-[var(--color-on-surface)]">
-                  Sélectionnez votre pack
+                <h2 className="text-xl font-extrabold text-gray-900">
+                  Sélectionnez votre formule de crédits
                 </h2>
-                <p className="text-xs text-[var(--color-on-surface-variant)] mt-1.5">
-                  Choisissez la formule de crédits qui correspond le mieux à vos besoins de publication.
+                <p className="text-xs text-gray-500 mt-1">
+                  Boostez la position de vos annonces pour maximiser vos ventes à Daloa.
                 </p>
               </div>
 
@@ -241,53 +257,53 @@ export default function AcheterPackAnnoncesPage() {
                       key={pack.id}
                       onClick={() => setSelectedPack(pack)}
                       className={cn(
-                        "relative cursor-pointer rounded-2xl p-5 border-2 transition-all flex flex-col justify-between overflow-hidden",
+                        "relative cursor-pointer rounded-3xl p-6 border-2 transition-all flex flex-col justify-between overflow-hidden active:scale-[0.98]",
                         isSelected
-                          ? "border-[var(--color-primary)] bg-[var(--color-surface)] shadow-md"
-                          : "border-[var(--color-outline)] bg-[var(--color-surface)] hover:border-[var(--color-on-surface-variant)]/60"
+                          ? "border-orange-500 bg-white shadow-xl shadow-orange-500/10 ring-2 ring-orange-500/20"
+                          : "border-gray-100 bg-white shadow-md shadow-gray-200/50 hover:border-gray-200"
                       )}
                     >
                       {pack.popular && (
-                        <div className="absolute top-0 right-0 bg-[var(--color-primary)] text-white text-[9px] font-bold uppercase tracking-wider py-1 px-3 rounded-bl-xl flex items-center gap-1 shadow-sm">
-                          <Sparkles size={8} />
+                        <div className="absolute top-0 right-0 bg-gradient-to-r from-orange-500 to-amber-600 text-white text-[9px] font-black uppercase tracking-wider py-1 px-3.5 rounded-bl-2xl flex items-center gap-1 shadow-sm">
+                          <Sparkles size={10} />
                           Populaire
                         </div>
                       )}
 
                       <div>
-                        <h3 className="text-xs font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">
+                        <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest block">
                           {pack.label}
-                        </h3>
-                        <div className="flex items-baseline gap-1 mt-2">
-                          <span className="text-3xl font-black text-[var(--color-on-surface)]">
+                        </span>
+                        <div className="flex items-baseline gap-1.5 mt-2">
+                          <span className="text-3xl font-black text-gray-900">
                             {pack.credits}
                           </span>
-                          <span className="text-xs text-[var(--color-on-surface-variant)] font-semibold">
+                          <span className="text-xs text-gray-500 font-extrabold">
                             crédits
                           </span>
                         </div>
 
-                        <div className="mt-4 space-y-2 text-xs text-[var(--color-on-surface-variant)]">
-                          <div className="flex items-center gap-1.5">
-                            <Zap size={14} className="text-yellow-500 fill-yellow-500" />
-                            <span>Boosts instantanés</span>
+                        <div className="mt-4 space-y-2.5 text-xs text-gray-600 font-medium">
+                          <div className="flex items-center gap-2">
+                            <Zap size={14} className="text-amber-500 fill-amber-500" />
+                            <span>Boosts d'annonces 24h</span>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <Check size={14} className="text-green-500" />
+                          <div className="flex items-center gap-2">
+                            <Check size={14} className="text-emerald-600" />
                             <span>Validité illimitée</span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="mt-6 pt-4 border-t border-[var(--color-outline)] flex items-center justify-between">
-                        <span className="text-sm font-black text-[var(--color-primary)]">
+                      <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
+                        <span className="text-base font-black text-orange-600">
                           {pack.price.toLocaleString()} FCFA
                         </span>
                         <div className={cn(
-                          "w-4 h-4 rounded-full border flex items-center justify-center transition-all",
-                          isSelected ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white" : "border-[var(--color-outline)]"
+                          "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                          isSelected ? "border-orange-500 bg-orange-500 text-white" : "border-gray-300"
                         )}>
-                          {isSelected && <Check size={10} strokeWidth={3} />}
+                          {isSelected && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
                         </div>
                       </div>
                     </div>
@@ -295,11 +311,12 @@ export default function AcheterPackAnnoncesPage() {
                 })}
               </div>
 
-              <div className="flex justify-end pt-4">
+              <div className="flex justify-end pt-2">
                 <Button
                   onClick={() => setStep(2)}
                   color="primary"
-                  className="py-3 px-6 font-semibold rounded-xl flex items-center gap-1 shadow-sm active:scale-[0.97]"
+                  size="lg"
+                  className="rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-extrabold shadow-lg shadow-orange-500/25 active:scale-[0.98] flex items-center gap-1 px-8"
                 >
                   Continuer
                   <ChevronRight size={16} />
@@ -311,21 +328,21 @@ export default function AcheterPackAnnoncesPage() {
           {step === 2 && (
             <motion.div
               key="step2"
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
               className="space-y-6"
             >
               <div className="text-center">
-                <h2 className="text-xl font-extrabold text-[var(--color-on-surface)]">
-                  Moyen de paiement
+                <h2 className="text-xl font-extrabold text-gray-900">
+                  Choisissez votre opérateur
                 </h2>
-                <p className="text-xs text-[var(--color-on-surface-variant)] mt-1.5">
-                  Sélectionnez le réseau Mobile Money avec lequel vous souhaitez régler.
+                <p className="text-xs text-gray-500 mt-1">
+                  Paiement sécurisé instantané par Mobile Money.
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
                 {PAYMENT_METHODS.map((method) => {
                   const isSelected = selectedMethod === method.id;
                   return (
@@ -333,49 +350,47 @@ export default function AcheterPackAnnoncesPage() {
                       key={method.id}
                       onClick={() => setSelectedMethod(method.id)}
                       className={cn(
-                        "cursor-pointer rounded-2xl p-4 border-2 transition-all flex flex-col items-center text-center justify-center gap-3",
+                        "cursor-pointer rounded-3xl p-5 border-2 transition-all flex flex-col items-center text-center justify-center gap-3 active:scale-95",
                         isSelected
-                          ? "border-[var(--color-primary)] bg-[var(--color-surface)] shadow-md"
-                          : "border-[var(--color-outline)] bg-[var(--color-surface)] hover:border-[var(--color-on-surface-variant)]/60"
+                          ? "border-orange-500 bg-white shadow-xl shadow-orange-500/10 ring-2 ring-orange-500/20"
+                          : "border-gray-100 bg-white shadow-md shadow-gray-200/50 hover:border-gray-200"
                       )}
                     >
-                      <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center border border-gray-100">
+                      <div className="w-14 h-12 flex items-center justify-center">
                         <img 
                           src={method.logo} 
                           alt={method.label} 
-                          className="w-full h-full object-contain"
-                          onError={(e) => {
-                            // Fallback if image fails
-                            e.currentTarget.style.display = 'none';
-                          }}
+                          className="max-h-full max-w-full object-contain rounded-lg"
                         />
                       </div>
-                      <span className="text-xs font-bold text-[var(--color-on-surface)]">
+                      <span className="text-xs font-extrabold text-gray-900">
                         {method.label}
                       </span>
                       <div className={cn(
-                        "w-4 h-4 rounded-full border flex items-center justify-center transition-all",
-                        isSelected ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white" : "border-[var(--color-outline)]"
+                        "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                        isSelected ? "border-orange-500 bg-orange-500 text-white" : "border-gray-300"
                       )}>
-                        {isSelected && <Check size={10} strokeWidth={3} />}
+                        {isSelected && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
                       </div>
                     </div>
                   );
                 })}
               </div>
 
-              <div className="flex justify-between pt-4">
+              <div className="flex justify-between pt-2">
                 <Button
                   onClick={() => setStep(1)}
                   variant="outlined"
-                  className="py-3 px-6 font-semibold rounded-xl border-[var(--color-outline)] text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)]"
+                  size="lg"
+                  className="rounded-2xl font-extrabold"
                 >
-                  Retour
+                  ← Retour
                 </Button>
                 <Button
                   onClick={() => setStep(3)}
                   color="primary"
-                  className="py-3 px-6 font-semibold rounded-xl flex items-center gap-1 shadow-sm active:scale-[0.97]"
+                  size="lg"
+                  className="rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-extrabold shadow-lg shadow-orange-500/25 active:scale-[0.98] flex items-center gap-1 px-8"
                 >
                   Continuer
                   <ChevronRight size={16} />
@@ -387,89 +402,90 @@ export default function AcheterPackAnnoncesPage() {
           {step === 3 && (
             <motion.div
               key="step3"
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
               className="space-y-6"
             >
               <div className="text-center">
-                <h2 className="text-xl font-extrabold text-[var(--color-on-surface)]">
-                  Informations de facturation
+                <h2 className="text-xl font-extrabold text-gray-900">
+                  Coordonnées de facturation
                 </h2>
-                <p className="text-xs text-[var(--color-on-surface-variant)] mt-1.5">
-                  Renseignez vos coordonnées de paiement pour valider l'achat de vos crédits.
+                <p className="text-xs text-gray-500 mt-1">
+                  Validez vos informations pour lancer le prélèvement sécurisé.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
                 {/* Form Side */}
                 <div className="col-span-2 space-y-4">
                   {errorMsg && (
-                    <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs">
+                    <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs font-bold">
                       {errorMsg}
                     </div>
                   )}
 
-                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                  <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-lg shadow-gray-200/50 space-y-4">
                     <div>
-                      <label className="block text-xs font-bold text-[var(--color-on-surface)] mb-1">
+                      <label className="block text-xs font-bold text-gray-800 mb-1.5 pl-1">
                         Nom complet
                       </label>
                       <input
                         {...register('name', { required: 'Le nom est requis' })}
                         type="text"
                         className={cn(
-                          'w-full px-4 py-3 rounded-xl border bg-[var(--color-surface)] text-[var(--color-on-surface)] placeholder:text-[var(--color-on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all text-xs font-medium',
-                          errors.name ? 'border-red-500' : 'border-[var(--color-outline)]'
+                          'w-full px-4 py-3 rounded-2xl border bg-gray-50/70 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all text-sm font-semibold',
+                          errors.name ? 'border-red-500' : 'border-gray-200'
                         )}
                         placeholder="Ex: Kouassi Konan"
                       />
                       {errors.name && (
-                        <p className="text-red-500 text-[10px] mt-1 font-semibold">{errors.name.message}</p>
+                        <p className="text-red-500 text-xs mt-1 pl-1 font-semibold">{errors.name.message}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-[var(--color-on-surface)] mb-1">
-                        Téléphone Mobile Money
+                      <label className="block text-xs font-bold text-gray-800 mb-1.5 pl-1">
+                        Numéro Mobile Money (10 chiffres)
                       </label>
                       <input
                         {...register('phone', {
                           required: 'Le téléphone est requis',
-                          validate: (val) => validateIvorianPhone(val) || 'Format de numéro ivoirien invalide (ex: 0102030405)',
+                          validate: (val) => validateIvorianPhone(val) || 'Format invalide (ex: 0102030405)',
                         })}
                         type="tel"
                         className={cn(
-                          'w-full px-4 py-3 rounded-xl border bg-[var(--color-surface)] text-[var(--color-on-surface)] placeholder:text-[var(--color-on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all text-xs font-medium',
-                          errors.phone ? 'border-red-500' : 'border-[var(--color-outline)]'
+                          'w-full px-4 py-3 rounded-2xl border bg-gray-50/70 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all text-sm font-semibold',
+                          errors.phone ? 'border-red-500' : 'border-gray-200'
                         )}
-                        placeholder="Ex: 0102030405"
+                        placeholder="Ex: 01 02 03 04 05"
                       />
                       {errors.phone && (
-                        <p className="text-red-500 text-[10px] mt-1 font-semibold">{errors.phone.message}</p>
+                        <p className="text-red-500 text-xs mt-1 pl-1 font-semibold">{errors.phone.message}</p>
                       )}
-                      <span className="text-[10px] text-[var(--color-on-surface-variant)] mt-1.5 block leading-normal">
-                        Ce numéro sera utilisé pour initier la demande de prélèvement sur votre portefeuille mobile.
+                      <span className="text-[11px] text-gray-400 mt-1.5 block pl-1">
+                        Ce numéro recevra le push de paiement Mobile Money.
                       </span>
                     </div>
 
-                    <div className="flex justify-between pt-4 gap-4">
+                    <div className="flex justify-between pt-4 gap-3">
                       <Button
                         type="button"
                         onClick={() => setStep(2)}
                         variant="outlined"
-                        className="py-3 px-5 font-semibold rounded-xl border-[var(--color-outline)] text-[var(--color-on-surface-variant)]"
+                        size="lg"
+                        className="rounded-2xl font-extrabold"
                       >
-                        Retour
+                        ← Retour
                       </Button>
                       
                       <Button
                         type="submit"
-                        color="secondary"
+                        color="primary"
+                        size="lg"
                         loading={loading}
                         disabled={loading}
-                        className="flex-1 py-3 font-semibold rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-variant)] text-white shadow-md active:scale-[0.97]"
+                        className="flex-1 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-extrabold text-white shadow-lg shadow-orange-500/25 active:scale-[0.98]"
                       >
                         Payer {selectedPack.price.toLocaleString()} FCFA
                       </Button>
@@ -479,45 +495,44 @@ export default function AcheterPackAnnoncesPage() {
 
                 {/* Summary Card */}
                 <div className="col-span-1">
-                  <div className="bg-[var(--color-surface-variant)]/30 rounded-2xl p-5 border border-[var(--color-outline)]/40 space-y-4">
-                    <h3 className="text-xs font-bold text-[var(--color-on-surface)] uppercase tracking-wider border-b border-[var(--color-outline)] pb-2 flex items-center gap-1.5">
-                      <CreditCard size={14} className="text-[var(--color-primary)]" />
-                      Résumé de l'achat
+                  <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-lg shadow-gray-200/50 space-y-4">
+                    <h3 className="text-xs font-extrabold text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-3 flex items-center gap-2">
+                      <CreditCard size={15} className="text-orange-600" />
+                      Résumé de la commande
                     </h3>
 
                     <div className="space-y-3">
                       <div className="flex justify-between text-xs">
-                        <span className="text-[var(--color-on-surface-variant)]">Pack :</span>
-                        <span className="font-bold text-[var(--color-on-surface)]">{selectedPack.label}</span>
+                        <span className="text-gray-500 font-medium">Pack :</span>
+                        <span className="font-extrabold text-gray-900">{selectedPack.label}</span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-[var(--color-on-surface-variant)]">Crédits :</span>
-                        <span className="font-bold text-[var(--color-on-surface)]">+{selectedPack.credits}</span>
+                        <span className="text-gray-500 font-medium">Crédits :</span>
+                        <span className="font-extrabold text-orange-600">+{selectedPack.credits}</span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-[var(--color-on-surface-variant)]">Opérateur :</span>
-                        <span className="font-bold text-[var(--color-on-surface)]">
+                        <span className="text-gray-500 font-medium">Opérateur :</span>
+                        <span className="font-extrabold text-gray-900">
                           {PAYMENT_METHODS.find(m => m.id === selectedMethod)?.label}
                         </span>
                       </div>
-                      <div className="border-t border-[var(--color-outline)]/40 my-3" />
+                      <div className="border-t border-gray-100 my-3" />
                       <div className="flex justify-between items-baseline">
-                        <span className="text-xs font-bold text-[var(--color-on-surface)]">Total à payer :</span>
-                        <span className="text-base font-black text-[var(--color-primary)]">
+                        <span className="text-xs font-bold text-gray-500 uppercase">Total :</span>
+                        <span className="text-xl font-black text-orange-600 tabular-nums">
                           {selectedPack.price.toLocaleString()} FCFA
                         </span>
                       </div>
                     </div>
 
-                    <div className="bg-white/40 dark:bg-black/20 p-3 rounded-xl border border-[var(--color-outline)]/20 flex items-start gap-2">
-                      <Shield size={14} className="text-green-600 mt-0.5" />
-                      <span className="text-[10px] text-[var(--color-on-surface-variant)] leading-normal">
-                        Paiement sécurisé par Money Fusion. Vos fonds sont protégés.
+                    <div className="bg-orange-50/70 p-3.5 rounded-2xl border border-orange-100 flex items-start gap-2.5">
+                      <Shield size={16} className="text-emerald-600 mt-0.5 flex-shrink-0" />
+                      <span className="text-[11px] text-orange-950 font-medium leading-snug">
+                        Paiement sécurisé par MoneyFusion. Vos crédits sont activés automatiquement.
                       </span>
                     </div>
                   </div>
                 </div>
-
               </div>
             </motion.div>
           )}
@@ -525,21 +540,20 @@ export default function AcheterPackAnnoncesPage() {
 
         {/* FAQs */}
         {step < 3 && (
-          <div className="mt-10 bg-[var(--color-surface-variant)]/30 rounded-2xl p-5 border border-[var(--color-outline)]/40">
-            <h4 className="text-xs font-bold text-[var(--color-on-surface)] mb-3 uppercase tracking-wider">Questions fréquentes</h4>
-            <div className="space-y-3 text-xs text-[var(--color-on-surface-variant)]">
+          <div className="mt-8 bg-white rounded-3xl p-6 border border-gray-100 shadow-md shadow-gray-200/50">
+            <h4 className="text-xs font-extrabold text-gray-900 mb-3 uppercase tracking-wider">Questions fréquentes</h4>
+            <div className="space-y-3 text-xs text-gray-600">
               <div>
-                <h5 className="font-bold text-[var(--color-on-surface)]">À quoi servent les crédits ?</h5>
-                <p className="mt-0.5 leading-relaxed">Les crédits servent à booster vos annonces pour qu'elles restent tout en haut des résultats de recherche. 1 crédit = 24h de boost.</p>
+                <h5 className="font-extrabold text-gray-900">À quoi servent les crédits ?</h5>
+                <p className="mt-0.5 leading-relaxed font-medium">Les crédits servent à booster vos annonces pour qu'elles restent tout en haut des résultats de recherche. 1 crédit = 24h de boost.</p>
               </div>
               <div>
-                <h5 className="font-bold text-[var(--color-on-surface)]">Combien coûte un boost ?</h5>
-                <p className="mt-0.5 leading-relaxed">Le coût dépend de la durée : 24 heures (1 jour) coûte 1 crédit, 48 heures (2 jours) coûte 2 crédits, et 7 jours coûte 5 crédits.</p>
+                <h5 className="font-extrabold text-gray-900">Combien coûte un boost ?</h5>
+                <p className="mt-0.5 leading-relaxed font-medium">Le coût dépend de la durée : 24 heures coûte 1 crédit, 48 heures coûte 2 crédits, et 7 jours coûte 5 crédits.</p>
               </div>
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

@@ -18,7 +18,7 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
   status = 'sent',
 }) => {
   const timeAgo = formatDistanceToNow(new Date(timestamp), {
-    addSuffix: true,
+    addSuffix: false,
     locale: fr,
   });
 
@@ -31,17 +31,17 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
   return (
     <div
       className={cn(
-        'flex mb-3.5 px-0.5',
+        'flex mb-2.5 px-1',
         isSent ? 'justify-end' : 'justify-start'
       )}
     >
       <div
         className={cn(
-          'max-w-[78%] shadow-[0_2px_10px_rgba(0,0,0,0.02)] transition-all duration-200',
-          isImage ? 'p-1' : 'px-4 py-3',
+          'max-w-[85%] sm:max-w-[75%] transition-all duration-200 shadow-sm',
+          isImage ? 'p-1' : 'px-3.5 py-2.5',
           isSent
-            ? 'rounded-2xl rounded-tr-none bg-gradient-to-r from-[#FF7F00] to-orange-600 text-white shadow-orange-500/5'
-            : 'rounded-2xl rounded-tl-none bg-white text-gray-900 border border-gray-100'
+            ? 'rounded-2xl rounded-tr-xs bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-orange-500/15'
+            : 'rounded-2xl rounded-tl-xs bg-white text-gray-900 border border-gray-100/90 shadow-gray-100'
         )}
       >
         {isImage ? (
@@ -53,30 +53,30 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
             loading="lazy"
           />
         ) : (
-          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words font-medium">
+          <p className="text-[13.5px] leading-relaxed whitespace-pre-wrap break-words font-medium">
             {text}
           </p>
         )}
         <div
           className={cn(
-            'flex items-center gap-1.5 mt-1.5 select-none',
-            isImage ? 'px-2 pb-1.5' : '',
-            isSent ? 'justify-end' : 'justify-start'
+            'flex items-center gap-1 mt-1 select-none',
+            isImage ? 'px-2 pb-1' : '',
+            isSent ? 'justify-end text-orange-100/80' : 'justify-start text-gray-400'
           )}
         >
-          <span className={cn('text-[9px] font-bold tracking-tight', isSent ? 'text-white/70' : 'text-gray-400')}>
+          <span className="text-[9.5px] font-semibold tracking-tight">
             {timeAgo}
           </span>
           {isSent && (
-            <span className="text-white/75 shrink-0">
+            <span className="shrink-0 ml-0.5">
               {status === 'sending' && (
-                <Clock className="h-2.5 w-2.5 animate-pulse" />
+                <Clock className="h-2.5 w-2.5 animate-pulse text-white/70" />
               )}
               {status === 'sent' && (
-                <Check className="h-3 w-3" />
+                <Check className="h-3 w-3 text-white/80" />
               )}
               {status === 'read' && (
-                <CheckCheck className="h-3 w-3 text-white" />
+                <CheckCheck className="h-3 w-3 text-white stroke-[2.5]" />
               )}
             </span>
           )}

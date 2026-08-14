@@ -388,97 +388,113 @@ const ChatPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-56px)] bg-gray-50">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-white flex-shrink-0 shadow-sm">
-        <button
-          onClick={() => navigate(-1)}
-          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 active:scale-95 transition-all"
-          aria-label="Retour"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-700" />
-        </button>
+    <div className="flex flex-col h-[100dvh] bg-[#f8f9fa] lg:bg-gray-100 overflow-hidden w-full">
+      <div className="flex flex-col flex-1 min-h-0 lg:max-w-4xl lg:w-full lg:mx-auto lg:bg-[#f8f9fa] shadow-2xl shadow-gray-200/50">
+        {/* Compact Modern Header */}
+        <header className="relative overflow-hidden flex items-center justify-between gap-3 px-3.5 pt-3 pb-3.5 bg-gradient-to-br from-orange-500 via-orange-500 to-amber-600 flex-shrink-0 shadow-md rounded-b-[24px] z-10">
+          <div className="absolute -top-10 -right-8 w-28 h-28 rounded-full bg-white/10 pointer-events-none" />
+          
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/20 hover:bg-white/30 active:scale-95 transition-all shrink-0"
+              aria-label="Retour"
+            >
+              <ArrowLeft className="w-4.5 h-4.5 text-white" />
+            </button>
 
-        {otherUser && (
-          <Link
-            to={getSellerPath(otherUser.id)}
-            className="flex items-center gap-3 flex-1 min-w-0 active:scale-[0.97] transition-all"
-          >
-            <div className="relative">
-              <Avatar
-                src={otherUser.avatar_url}
-                name={otherUser.full_name}
-                size="md"
-              />
-              {/* Online indicator */}
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 border-2 border-white rounded-full" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 truncate">
-                {otherUser.full_name || 'Utilisateur'}
-              </p>
-              {listingTitle && (
-                <p className="text-xs text-primary truncate">Re: {listingTitle}</p>
-              )}
-            </div>
-          </Link>
-        )}
-      </div>
-
-      {/* Messages */}
-      {messages.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center">
-          <EmptyState
-            icon={<MessageSquare className="w-16 h-16 opacity-40" />}
-            title="Aucun message"
-            description="Envoyez le premier message pour démarrer la conversation."
-          />
-        </div>
-      ) : (
-        <div
-          ref={messagesContainerRef}
-          className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
-        >
-          <AnimatePresence initial={false}>
-            {messagesWithDates.map((group) => (
-              <motion.div
-                key={group.date}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
+            {otherUser && (
+              <Link
+                to={getSellerPath(otherUser.id)}
+                className="flex items-center gap-2.5 min-w-0 flex-1 active:scale-[0.98] transition-all"
               >
-                {/* Day separator */}
-                <div className="flex justify-center my-4">
-                  <span className="text-xs bg-gray-200/60 text-gray-500 px-3 py-1 rounded-full font-medium">
-                    {group.date}
-                  </span>
+                <div className="relative shrink-0">
+                  <Avatar
+                    src={otherUser.avatar_url}
+                    name={otherUser.full_name}
+                    size="sm"
+                    className="ring-2 ring-white/80 shadow-xs w-9 h-9 rounded-full object-cover"
+                  />
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 border-2 border-white rounded-full" />
                 </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black text-white truncate leading-tight">
+                    {otherUser.full_name || 'Utilisateur'}
+                  </p>
+                  {listingTitle ? (
+                    <p className="text-[11px] font-semibold text-orange-100/90 truncate flex items-center gap-1">
+                      <span>Re :</span>
+                      <span className="truncate">{listingTitle}</span>
+                    </p>
+                  ) : (
+                    <p className="text-[10px] font-bold text-orange-100/80">En ligne</p>
+                  )}
+                </div>
+              </Link>
+            )}
+          </div>
 
-                {group.messages.map((msg, msgIndex) => (
-                  <motion.div
-                    key={msg.id}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.18, delay: msgIndex * 0.01 }}
-                  >
-                    <ChatBubble
-                      text={msg.content}
-                      timestamp={msg.created_at}
-                      isSent={msg.sender_id === currentUserId}
-                      status={msg._optimistic ? 'sending' : msg.read ? 'read' : 'sent'}
-                    />
-                  </motion.div>
-                ))}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          <div ref={bottomRef} />
+          {listingId && (
+            <Link
+              to={`/listings/${listingId}`}
+              className="shrink-0 text-[11px] font-black text-orange-700 bg-white/90 hover:bg-white px-2.5 py-1.5 rounded-xl shadow-xs border border-white/40 transition-all active:scale-95 flex items-center gap-1"
+            >
+              <span className="hidden sm:inline">Voir l'</span>annonce
+            </Link>
+          )}
+        </header>
+
+        {/* Messages List Area */}
+        {messages.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center p-6">
+            <EmptyState
+              icon={<MessageSquare className="w-14 h-14 opacity-30 text-orange-500" />}
+              title="Aucun message"
+              description="Envoyez le premier message pour démarrer la conversation avec le vendeur."
+            />
+          </div>
+        ) : (
+          <div
+            ref={messagesContainerRef}
+            className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 space-y-1 overscroll-contain"
+          >
+            <AnimatePresence initial={false}>
+              {messagesWithDates.map((group) => (
+                <div key={group.date} className="space-y-1">
+                  {/* Day separator */}
+                  <div className="flex justify-center my-3">
+                    <span className="text-[10.5px] bg-white/90 backdrop-blur-sm text-gray-500 px-3 py-1 rounded-full font-bold shadow-2xs border border-gray-100">
+                      {group.date}
+                    </span>
+                  </div>
+
+                  {group.messages.map((msg) => (
+                    <motion.div
+                      key={msg.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <ChatBubble
+                        text={msg.content}
+                        timestamp={msg.created_at}
+                        isSent={msg.sender_id === currentUserId}
+                        status={msg._optimistic ? 'sending' : msg.read ? 'read' : 'sent'}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+              ))}
+            </AnimatePresence>
+            <div ref={bottomRef} className="h-1" />
+          </div>
+        )}
+
+        {/* Input Bar docked cleanly at bottom */}
+        <div className="flex-shrink-0 w-full">
+          <ChatInput onSend={handleSend} disabled={sending} />
         </div>
-      )}
-
-      {/* Input */}
-      <div className="flex-shrink-0">
-        <ChatInput onSend={handleSend} disabled={sending} />
       </div>
     </div>
   );

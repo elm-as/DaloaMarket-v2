@@ -3,7 +3,7 @@
 > **Marketplace locale de proximité** pour la ville de Daloa, Côte d'Ivoire.  
 > Achetez, vendez et faites-vous livrer — le tout avec un paiement mobile money sécurisé.
 
-🌐 **Production** : [daloamarket.shop](https://daloamarket.shop)
+🌐 **Production** : [daloamarket.com](https://daloamarket.com)
 
 ---
 

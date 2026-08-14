@@ -31,8 +31,8 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation }) => 
   return (
     <Link
       to={`/messages/${listing_id}/${other_user.id}`}
-      className={`flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 active:scale-[0.98] transition-all ${
-        unread_count > 0 ? 'bg-blue-50/60' : ''
+      className={`flex items-center gap-3 px-4 py-4 bg-white rounded-3xl border active:scale-[0.98] transition-all shadow-lg shadow-gray-200/50 ${
+        unread_count > 0 ? 'border-orange-200 bg-orange-50/40' : 'border-gray-100 hover:bg-gray-50'
       }`}
     >
       {/* Avatar avec point vert si non-lu */}
@@ -43,14 +43,14 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation }) => 
           size="md"
         />
         {unread_count > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-primary rounded-full border-2 border-white" />
+          <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-orange-500 rounded-full border-2 border-white" />
         )}
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <h3 className={`text-sm truncate ${unread_count > 0 ? 'font-bold text-gray-900' : 'font-semibold text-gray-800'}`}>
+          <h3 className={`text-sm truncate ${unread_count > 0 ? 'font-extrabold text-gray-900' : 'font-bold text-gray-800'}`}>
             {other_user.full_name}
           </h3>
           <span className="text-[11px] text-gray-400 flex-shrink-0">
@@ -58,7 +58,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation }) => 
           </span>
         </div>
         <p className="text-xs text-gray-500 truncate mt-0.5">
-          <span className="text-primary font-medium">Re: {listing_title}</span>
+          <span className="text-orange-600 font-bold">Re: {listing_title}</span>
           {' · '}
           {last_message}
         </p>
@@ -66,7 +66,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation }) => 
 
       {/* Unread badge */}
       {unread_count > 0 && (
-        <span className="min-w-[22px] h-[22px] bg-primary text-white text-[11px] font-bold rounded-full flex items-center justify-center flex-shrink-0">
+        <span className="min-w-[24px] h-[24px] bg-gradient-to-r from-orange-500 to-amber-600 text-white text-[11px] font-extrabold rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
           {unread_count > 99 ? '99+' : unread_count}
         </span>
       )}

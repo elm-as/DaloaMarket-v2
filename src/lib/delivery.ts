@@ -20,12 +20,13 @@ export function haversineDistance(a: LatLng, b: LatLng): number {
   return R * c;
 }
 
-const DELIVERY_RATE_PER_KM = 85;
-const DELIVERY_MIN = 500;
-const DELIVERY_FREE_KM = 1.5;
-const BUYER_FEE_RATE = 0.03;
-const SELLER_FEE_RATE = 0.035;
-const DRIVER_FEE_RATE = 0.10;
+export const DELIVERY_RATE_PER_KM = 85;
+export const DELIVERY_MIN = 500;
+export const DELIVERY_FREE_KM = 1.5;
+export const BUYER_FEE_RATE = 0.03;
+export const SELLER_FEE_RATE = 0.035;
+export const PRO_SELLER_FEE_RATE = 0.025;
+export const DRIVER_FEE_RATE = 0.10;
 
 export function calculateDeliveryFee(distanceKm: number): number {
   const baseFee = DELIVERY_MIN;
@@ -40,7 +41,7 @@ export function calculateOrder(price: number, distanceKm: number, isProSeller: b
   const delivery = calculateDeliveryFee(distanceKm);
   
   const buyerFee = Math.round(price * BUYER_FEE_RATE);
-  const sellerFeeRate = isProSeller ? 0.025 : SELLER_FEE_RATE;
+  const sellerFeeRate = isProSeller ? PRO_SELLER_FEE_RATE : SELLER_FEE_RATE;
   const sellerFee = Math.round(price * sellerFeeRate);
   const driverFee = Math.round(delivery * DRIVER_FEE_RATE);
 

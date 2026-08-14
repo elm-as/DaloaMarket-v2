@@ -28,11 +28,12 @@ const Chip: React.FC<{
     type="button"
     onClick={onClick}
     className={cn(
-      'px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-[0.97] border',
+      'px-3.5 py-2 rounded-2xl text-xs font-bold transition-all active:scale-[0.97] border',
       selected
-        ? 'bg-primary text-white border-primary shadow-sm'
+        ? 'text-white border-transparent shadow-md'
         : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
     )}
+    style={selected ? { background: 'var(--gradient-primary)' } : undefined}
   >
     {label}
   </button>
@@ -96,7 +97,7 @@ const FilterSheet: React.FC<FilterSheetProps> = ({
 
           {/* Sheet */}
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-[60] bg-white rounded-t-3xl flex flex-col"
+            className="fixed inset-x-0 bottom-0 z-[60] bg-gray-50 rounded-t-[32px] flex flex-col shadow-2xl overflow-hidden"
             style={{ maxHeight: '85vh', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
@@ -104,20 +105,20 @@ const FilterSheet: React.FC<FilterSheetProps> = ({
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
           >
             {/* Handle + Header (sticky top) */}
-            <div className="flex-shrink-0 pt-3 pb-2 border-b border-gray-100 rounded-t-3xl">
-              <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-3" />
+            <div className="flex-shrink-0 pt-3 pb-3 bg-gradient-to-br from-orange-500 to-amber-600 rounded-t-[32px]">
+              <div className="w-10 h-1 bg-white/50 rounded-full mx-auto mb-3" />
               <div className="flex items-center justify-between px-5 pb-2">
-                <h2 className="text-lg font-bold text-gray-900">Filtres</h2>
+                <h2 className="text-xl font-extrabold tracking-tight text-white">Filtres</h2>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleReset}
-                    className="text-sm font-medium text-gray-500 hover:text-primary active:scale-[0.97] transition-all"
+                    className="text-sm font-bold text-orange-100 hover:text-white active:scale-[0.97] transition-all"
                   >
                     Réinitialiser
                   </button>
                   <button
                     onClick={onClose}
-                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 active:scale-[0.97] transition-all"
+                    className="w-9 h-9 rounded-2xl bg-white/15 text-white flex items-center justify-center hover:bg-white/25 active:scale-[0.97] transition-all"
                     aria-label="Fermer"
                   >
                     <X className="h-4 w-4" />
@@ -127,10 +128,10 @@ const FilterSheet: React.FC<FilterSheetProps> = ({
             </div>
 
             {/* Scrollable content */}
-            <div className="overflow-y-auto flex-1 p-5 space-y-6">
+            <div className="overflow-y-auto flex-1 p-4 space-y-3 bg-gray-50">
               {/* Category */}
-              <section>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2.5">
+              <section className="bg-white rounded-3xl p-4 border border-gray-100 shadow-lg shadow-gray-200/40">
+                <h3 className="text-sm font-extrabold text-gray-900 mb-3">
                   Catégorie
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -146,8 +147,8 @@ const FilterSheet: React.FC<FilterSheetProps> = ({
               </section>
 
               {/* Condition */}
-              <section>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2.5">
+              <section className="bg-white rounded-3xl p-4 border border-gray-100 shadow-lg shadow-gray-200/40">
+                <h3 className="text-sm font-extrabold text-gray-900 mb-3">
                   État
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -163,8 +164,8 @@ const FilterSheet: React.FC<FilterSheetProps> = ({
               </section>
 
               {/* District */}
-              <section>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2.5">
+              <section className="bg-white rounded-3xl p-4 border border-gray-100 shadow-lg shadow-gray-200/40">
+                <h3 className="text-sm font-extrabold text-gray-900 mb-3">
                   Quartier
                 </h3>
                 <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
@@ -180,8 +181,8 @@ const FilterSheet: React.FC<FilterSheetProps> = ({
               </section>
 
               {/* Price range */}
-              <section>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2.5">
+              <section className="bg-white rounded-3xl p-4 border border-gray-100 shadow-lg shadow-gray-200/40">
+                <h3 className="text-sm font-extrabold text-gray-900 mb-3">
                   Prix (FCFA)
                 </h3>
                 <div className="flex items-center gap-3">
@@ -192,7 +193,7 @@ const FilterSheet: React.FC<FilterSheetProps> = ({
                     onChange={(e) =>
                       setLocal((p) => ({ ...p, priceMin: e.target.value }))
                     }
-                    className="flex-1 px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    className="flex-1 min-w-0 h-12 px-4 rounded-2xl border-0 bg-gray-50 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
                   />
                   <span className="text-gray-400 font-medium">-</span>
                   <input
@@ -202,21 +203,17 @@ const FilterSheet: React.FC<FilterSheetProps> = ({
                     onChange={(e) =>
                       setLocal((p) => ({ ...p, priceMax: e.target.value }))
                     }
-                    className="flex-1 px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    className="flex-1 min-w-0 h-12 px-4 rounded-2xl border-0 bg-gray-50 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
                   />
                 </div>
               </section>
             </div>
 
             {/* Apply button (sticky bottom) */}
-            <div className="flex-shrink-0 p-5 pt-3 pb-8 border-t border-gray-100 bg-white">
+            <div className="flex-shrink-0 p-4 pb-8 bg-white border-t border-gray-100">
               <button
                 onClick={handleApply}
-                className="w-full py-3 rounded-xl text-white font-bold active:scale-[0.97] transition-all shadow-lg"
-                style={{
-                  background: 'var(--gradient-primary)',
-                  boxShadow: 'var(--elevation-primary)',
-                }}
+                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-extrabold active:scale-[0.97] transition-all shadow-lg shadow-orange-200/60"
               >
                 Appliquer les filtres
               </button>

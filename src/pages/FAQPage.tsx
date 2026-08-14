@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { usePageTitle } from '../hooks/usePageTitle';
+import { useSEO } from '../hooks/useSEO';
 import { Card } from '../components/ui/Card';
-import { SectionHeader } from '../components/ui/SectionHeader';
 
 const FAQ_ITEMS = [
+  {
+    question: "Comment installer l'application sur mon téléphone (iPhone & Android) ?",
+    answer: "Sur Android (Chrome) : Cliquez sur le bouton 'Installer' qui apparaît en bas de l'écran.\n\nSur iPhone (Safari) : Appuyez sur l'icône de Partage 📤 (en bas de votre écran Safari), défilez vers le bas, appuyez sur « Sur l'écran d'accueil » ➕, puis validez avec « Ajouter » en haut à droite. L'application apparaîtra comme une vraie application native !",
+  },
   {
     question: 'Comment publier une annonce ?',
     answer: "Cliquez sur \"Vendre\" dans la barre de navigation, remplissez le formulaire avec les détails de votre article, ajoutez des photos et publiez. C'est simple et rapide !",
@@ -56,7 +59,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Comment supprimer mon compte ?',
-    answer: "Contactez le support à l'adresse support@daloamarket.shop avec votre demande. Nous traiterons votre requête sous 48 heures.",
+    answer: "Contactez le support à l'adresse support@daloamarket.com avec votre demande. Nous traiterons votre requête sous 48 heures.",
   },
 ];
 
@@ -67,17 +70,17 @@ function FaqItem({ question, answer, isOpen, onToggle }: {
   onToggle: () => void;
 }) {
   return (
-    <div className="border-b border-[var(--color-outline)] last:border-b-0">
+    <div className="border-b border-[var(--color-primary-100)] last:border-b-0">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between py-4 text-left active:scale-[0.99] transition-transform"
+        className="w-full min-h-[44px] flex items-center justify-between py-3 text-left active:scale-[0.99] transition-transform"
       >
-        <span className="font-medium text-[var(--color-on-surface)] pr-4">{question}</span>
+        <span className="text-sm font-medium text-[var(--color-on-surface)] pr-4">{question}</span>
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
         >
-          <ChevronDown size={20} className="text-[var(--color-on-surface-variant)] flex-shrink-0" />
+          <ChevronDown size={20} className="text-[var(--color-primary)] flex-shrink-0" />
         </motion.div>
       </button>
       <AnimatePresence initial={false}>
@@ -89,7 +92,7 @@ function FaqItem({ question, answer, isOpen, onToggle }: {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <p className="pb-4 text-sm text-[var(--color-on-surface-variant)] leading-relaxed">
+            <p className="pb-3 text-[13px] sm:text-sm text-[var(--color-on-surface-variant)] leading-7">
               {answer}
             </p>
           </motion.div>
@@ -100,7 +103,25 @@ function FaqItem({ question, answer, isOpen, onToggle }: {
 }
 
 export default function FAQPage() {
-  usePageTitle('FAQ');
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: FAQ_ITEMS.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer,
+      },
+    })),
+  };
+
+  useSEO('Foire Aux Questions (FAQ) — Réponses à vos questions', {
+    description: 'Toutes les réponses à vos questions sur l\'utilisation de DaloaMarket : installation PWA, publication d\'annonces, statut Pro, sécurité et paiements.',
+    keywords: 'FAQ DaloaMarket, aide Daloa, paiement Mobile Money Daloa, livraison DaloaDelivery',
+    canonical: 'https://daloamarket.com/faq',
+    jsonLd: faqSchema,
+  });
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const toggle = (index: number) => {
@@ -108,9 +129,13 @@ export default function FAQPage() {
   };
 
   return (
-    <div className="max-w-2xl lg:max-w-none mx-auto px-4 py-8 pb-20 lg:px-6">
-      <SectionHeader title="Questions fréquentes" className="mb-6" />
-      <Card className="p-5 rounded-2xl shadow-elevation-1">
+    <div className="min-h-screen bg-gray-50/70 px-4 py-5 pb-28 sm:px-6 sm:py-8 lg:px-6">
+      <div className="mx-auto max-w-3xl overflow-hidden rounded-3xl bg-gradient-to-br from-orange-500 to-amber-600 px-5 py-6 text-center text-white shadow-lg shadow-orange-200/50">
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-orange-100">Centre d'aide</p>
+        <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Questions fréquentes</h1>
+        <p className="mt-2 text-sm text-orange-100">Les réponses utiles, en un seul endroit.</p>
+      </div>
+      <Card className="mx-auto mt-4 max-w-3xl p-3 sm:p-5 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50">
         {FAQ_ITEMS.map((item, index) => (
           <FaqItem
             key={index}

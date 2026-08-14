@@ -73,6 +73,8 @@ const POST_JSON = async <T>(url: string, body: unknown): Promise<T> => {
 export interface CreateOrderInput {
   buyer_id: string;
   listing_id: string;
+  variant_id?: string;
+  quantity?: number;
   delivery_address: string;
   delivery_lat?: number;
   delivery_lng?: number;

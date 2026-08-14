@@ -176,7 +176,7 @@ export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({ userId, 
   return (
     <>
       {!listingsLoading && !listingsError && myListings.length > 0 && (
-        <p className="text-sm text-[var(--color-on-surface-variant)] mb-3">
+        <p className="text-sm font-bold text-gray-500 mb-3">
           Vous avez {activeCount} annonce{activeCount > 1 ? 's' : ''} active{activeCount > 1 ? 's' : ''}
         </p>
       )}

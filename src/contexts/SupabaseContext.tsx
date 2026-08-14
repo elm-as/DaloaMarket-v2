@@ -60,6 +60,28 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
       }
 
+      // Auto-fill full_name and avatar_url from Google OAuth user_metadata if missing
+      if (data != null) {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        const meta = currentUser?.user_metadata;
+        if (meta) {
+          const googleName = (meta.full_name || meta.name || null) as string | null;
+          const googleAvatar = (meta.avatar_url || meta.picture || null) as string | null;
+          const needsName = !data.full_name && googleName;
+          const needsAvatar = !data.avatar_url && googleAvatar;
+          if (needsName || needsAvatar) {
+            const patch: Partial<Database['public']['Tables']['users']['Update']> = {};
+            if (needsName) patch.full_name = googleName;
+            if (needsAvatar) patch.avatar_url = googleAvatar;
+            try {
+              const { data: patched, error: patchErr } = await supabase
+                .from('users').update(patch).eq('id', userId).select('*').maybeSingle();
+              if (!patchErr && patched) data = patched;
+            } catch (err) { console.error('Error auto-filling Google profile:', err); }
+          }
+        }
+      }
+
       if (requestSeq === profileFetchSeq.current) {
         setUserProfile((prev) => {
           if (data == null) return (prev && prev.id === userId) ? prev : null;

@@ -1,12 +1,15 @@
 import { calculateOrder, calculateDeliveryFee, haversineDistance, type LatLng } from './delivery';
 
 export const DELIVERY_FEE = 500;
-export const DELIVERY_MIN = 500;
-export const DELIVERY_RATE_PER_KM = 85;
-export const DELIVERY_FREE_KM = 1.5;
-export const BUYER_FEE_RATE = 0.03;
-export const SELLER_FEE_RATE = 0.035;
-export const DRIVER_FEE_RATE = 0.10;
+export {
+  DELIVERY_MIN,
+  DELIVERY_RATE_PER_KM,
+  DELIVERY_FREE_KM,
+  BUYER_FEE_RATE,
+  SELLER_FEE_RATE,
+  PRO_SELLER_FEE_RATE,
+  DRIVER_FEE_RATE,
+} from './delivery';
 
 export const BOOST_PRICE = 500;
 export const BUMP_PRICE = 200;

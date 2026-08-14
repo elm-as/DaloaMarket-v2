@@ -14,6 +14,29 @@ export const formatPrice = (price: number): string => {
   }).format(price);
 };
 
+export function getOptimizedImageUrl(url: string | null | undefined, width = 400, quality = 75): string {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+
+  if (url.includes('.supabase.co/storage/v1/object/public/')) {
+    const transformed = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+    const separator = transformed.includes('?') ? '&' : '?';
+    return `${transformed}${separator}width=${width}&quality=${quality}&resize=contain`;
+  }
+
+  if (url.includes('images.pexels.com')) {
+    const baseUrl = url.split('?')[0];
+    return `${baseUrl}?auto=compress&cs=tinysrgb&w=${width}&q=${quality}`;
+  }
+
+  if (url.includes('images.unsplash.com')) {
+    const baseUrl = url.split('?')[0];
+    return `${baseUrl}?auto=format&fit=crop&w=${width}&q=${quality}`;
+  }
+
+  return url;
+}
+
 export const extractUuid = (input: string): string | null => {
   if (!input) return null;
   const match = input.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
@@ -33,15 +56,15 @@ export const getSellerPath = (sellerId: string): string => {
 };
 
 export const getListingShareUrl = (id: string): string => {
-  if (!id) return typeof window !== 'undefined' ? window.location.origin : 'https://daloamarket.shop';
+  if (!id) return typeof window !== 'undefined' ? window.location.origin : 'https://daloamarket.com';
   const shortId = id.length >= 8 ? id.slice(0, 8) : id;
-  return `${typeof window !== 'undefined' ? window.location.origin : 'https://daloamarket.shop'}/l/${shortId}`;
+  return `${typeof window !== 'undefined' ? window.location.origin : 'https://daloamarket.com'}/l/${shortId}`;
 };
 
 export const getSellerShareUrl = (sellerId: string): string => {
-  if (!sellerId) return typeof window !== 'undefined' ? window.location.origin : 'https://daloamarket.shop';
+  if (!sellerId) return typeof window !== 'undefined' ? window.location.origin : 'https://daloamarket.com';
   const shortId = sellerId.length >= 8 ? sellerId.slice(0, 8) : sellerId;
-  return `${typeof window !== 'undefined' ? window.location.origin : 'https://daloamarket.shop'}/b/${shortId}`;
+  return `${typeof window !== 'undefined' ? window.location.origin : 'https://daloamarket.com'}/b/${shortId}`;
 };
 
 export const formatListingShareText = (listing: { id: string; title: string; price: number; district?: string }) => {

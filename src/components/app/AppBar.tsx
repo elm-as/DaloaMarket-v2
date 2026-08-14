@@ -22,7 +22,7 @@ const AppBar: React.FC = () => {
 
   const isChatPage = /^\/messages\/[^/]+\/[^/]+/.test(location.pathname);
   const isCreateListing = location.pathname === '/create-listing';
-  const isListingDetail = /^\/listings\/[^/]+/.test(location.pathname);
+  const isListingDetail = /^\/(listings|l)\/[^/]+/.test(location.pathname);
   const isSearchPage = location.pathname === '/search';
   const hideOnMobile = isChatPage || isCreateListing || isListingDetail || isSearchPage;
 
@@ -156,7 +156,11 @@ const AppBar: React.FC = () => {
       </div>
 
       {/* DESKTOP BAR - shown on lg: screens */}
-      <div className="hidden lg:flex items-center w-full lg:px-8 px-6 h-16 bg-white border-b border-gray-100 shadow-sm">
+      <div className="hidden lg:block w-full bg-white border-b border-gray-100 shadow-sm">
+        <div
+          className="flex items-center w-full px-8 h-16 mx-auto"
+          style={{ maxWidth: 'var(--container-max-width)' }}
+        >
         {/* Logo + name */}
         <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 mr-6">
           <div
@@ -306,6 +310,7 @@ const AppBar: React.FC = () => {
             </Link>
           )}
         </div>
+      </div>
       </div>
     </header>
   );

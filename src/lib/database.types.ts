@@ -130,6 +130,7 @@ export interface Database {
           view_count: number
           stock: number
           original_price: number | null
+          variants: any
           latitude: number | null
           longitude: number | null
         }
@@ -152,6 +153,7 @@ export interface Database {
           view_count?: number
           stock?: number
           original_price?: number | null
+          variants?: any
           latitude?: number | null
           longitude?: number | null
         }
@@ -174,6 +176,7 @@ export interface Database {
           view_count?: number
           stock?: number
           original_price?: number | null
+          variants?: any
           latitude?: number | null
           longitude?: number | null
         }
@@ -515,6 +518,10 @@ export interface Database {
           seller_lng: number | null
           delivery_lat: number | null
           delivery_lng: number | null
+          variant_id: string | null
+          variant_label: string | null
+          unit_price: number | null
+          quantity: number
         }
         Insert: {
           id?: string
@@ -532,6 +539,10 @@ export interface Database {
           seller_lng?: number | null
           delivery_lat?: number | null
           delivery_lng?: number | null
+          variant_id?: string | null
+          variant_label?: string | null
+          unit_price?: number | null
+          quantity?: number
         }
         Update: {
           id?: string
@@ -548,6 +559,10 @@ export interface Database {
           seller_lng?: number | null
           delivery_lat?: number | null
           delivery_lng?: number | null
+          variant_id?: string | null
+          variant_label?: string | null
+          unit_price?: number | null
+          quantity?: number
         }
         Relationships: [
           {

@@ -65,14 +65,30 @@ const MyStatsPage: React.FC = () => {
         (l) => l.status === 'active'
       ).length;
 
-      // Count completed sales (orders where user is seller and status is delivered/completed)
-      const { count: salesCount, error: salesError } = await supabase
+      // Fetch completed and pending orders for seller
+      const { data: orders, error: ordersError } = await supabase
         .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .eq('seller_id', currentUserId)
-        .in('status', ['delivered', 'completed']);
+        .select('total_amount, product_amount, status')
+        .eq('seller_id', currentUserId);
 
-      if (salesError) throw salesError;
+      if (ordersError) throw ordersError;
+
+      const completedOrders = (orders || []).filter(
+        (o) => o.status === 'delivered' || o.status === 'completed'
+      );
+      const pendingOrders = (orders || []).filter(
+        (o) => ['paid', 'confirmed', 'awaiting_pickup', 'accepted', 'picked_up', 'in_transit'].includes(o.status)
+      );
+
+      const salesCount = completedOrders.length;
+      const orderCompletedEarnings = completedOrders.reduce(
+        (sum, o) => sum + (o.product_amount || o.total_amount || 0),
+        0
+      );
+      const orderPendingEarnings = pendingOrders.reduce(
+        (sum, o) => sum + (o.product_amount || o.total_amount || 0),
+        0
+      );
 
       // Count messages received
       const { count: msgCount, error: msgError } = await supabase
@@ -82,19 +98,17 @@ const MyStatsPage: React.FC = () => {
 
       if (msgError) throw msgError;
 
-      // Fetch payouts
-      const { data: payouts, error: payoutsError } = await (supabase as any)
+      // Fetch direct payouts if any
+      const { data: payouts } = await (supabase as any)
         .from('payouts')
         .select('amount, status')
         .eq('user_id', currentUserId);
 
-      if (payoutsError) throw payoutsError;
-
-      const totalEarnings = (payouts || [])
-        .filter((p: any) => p.status === 'paid' || p.status === 'completed')
+      const payoutCompletedEarnings = (payouts || [])
+        .filter((p: any) => p.status === 'paid' || p.status === 'completed' || p.status === 'confirmed')
         .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
 
-      const pendingEarnings = (payouts || [])
+      const payoutPendingEarnings = (payouts || [])
         .filter((p: any) => p.status === 'pending' || p.status === 'processing')
         .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
 
@@ -102,9 +116,9 @@ const MyStatsPage: React.FC = () => {
         totalViews,
         messagesReceived: msgCount || 0,
         activeListings,
-        salesCount: salesCount || 0,
-        totalEarnings,
-        pendingEarnings,
+        salesCount,
+        totalEarnings: orderCompletedEarnings + payoutCompletedEarnings,
+        pendingEarnings: orderPendingEarnings + payoutPendingEarnings,
       });
     } catch (err) {
       console.error('Error fetching stats:', err);
@@ -119,24 +133,26 @@ const MyStatsPage: React.FC = () => {
   }, [fetchStats]);
 
   return (
-    <div className="w-full max-w-2xl mx-auto pb-12">
+    <div className="w-full max-w-2xl mx-auto pb-20 bg-gray-50/70 min-h-screen">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div className="relative overflow-hidden flex items-center gap-3 px-4 pt-5 pb-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-b-[32px] shadow-lg">
+        <div className="absolute -top-12 -right-10 w-36 h-36 rounded-full bg-white/10" />
         <Button
           variant="text"
           color="secondary"
+          className="relative z-10 !text-white bg-white/15 rounded-2xl"
           size="sm"
           icon={<ArrowLeft className="w-5 h-5" />}
           onClick={() => navigate(-1)}
         >
           Retour
         </Button>
-        <h1 className="text-lg font-bold text-[var(--color-on-surface)]">
+        <h1 className="relative z-10 text-xl font-extrabold tracking-tight text-white">
           Mes statistiques
         </h1>
       </div>
 
-      <div className="px-4">
+      <div className="relative z-10 px-4 -mt-6">
         {loading ? (
           <div className="space-y-6">
             {/* Wallet Skeleton */}
@@ -180,7 +196,7 @@ const MyStatsPage: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: [0.2, 0, 0, 1] }}
             >
-              <div className="relative overflow-hidden bg-gradient-to-br from-violet-600 to-indigo-700 rounded-[28px] p-6 text-white shadow-xl shadow-indigo-100">
+              <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-amber-600 rounded-[28px] p-6 text-white shadow-xl shadow-orange-200/60">
                 {/* Cercles décoratifs de fond */}
                 <div className="absolute -top-12 -right-12 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none" />
                 <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-white/5 rounded-full blur-3xl pointer-events-none" />
@@ -273,7 +289,7 @@ const MyStatsPage: React.FC = () => {
                   }}
                   whileHover={{ y: -4, transition: { duration: 0.15 } }}
                 >
-                  <Card elevation={1} padding="md" className="rounded-3xl border border-gray-100/50 hover:shadow-lg transition-all duration-200 h-full flex flex-col justify-between">
+                  <Card elevation={1} padding="md" className="rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50 hover:shadow-xl transition-all duration-200 h-full flex flex-col justify-between">
                     <div>
                       <div className={cn('w-11 h-11 rounded-2xl flex items-center justify-center', card.bg)}>
                         <span className={card.color}>{card.icon}</span>

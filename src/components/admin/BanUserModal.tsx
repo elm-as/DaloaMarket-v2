@@ -6,8 +6,9 @@ interface BanUserModalProps {
   isOpen: boolean;
   userEmail: string;
   userName?: string | null;
+  userIp?: string | null;
   onClose: () => void;
-  onConfirm: (reason: string) => Promise<void>;
+  onConfirm: (reason: string, banIpAlso: boolean) => Promise<void>;
 }
 
 const PRESET_REASONS = [
@@ -22,10 +23,12 @@ export const BanUserModal: React.FC<BanUserModalProps> = ({
   isOpen,
   userEmail,
   userName,
+  userIp,
   onClose,
   onConfirm,
 }) => {
   const [reason, setReason] = useState('');
+  const [banIpAlso, setBanIpAlso] = useState(true);
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -36,7 +39,7 @@ export const BanUserModal: React.FC<BanUserModalProps> = ({
 
     setLoading(true);
     try {
-      await onConfirm(reason.trim());
+      await onConfirm(reason.trim(), banIpAlso);
       setReason('');
       onClose();
     } finally {
@@ -106,6 +109,20 @@ export const BanUserModal: React.FC<BanUserModalProps> = ({
                 className="w-full p-3 rounded-xl bg-[var(--color-background)] border border-[var(--color-outline)] text-sm text-[var(--color-on-surface)] focus:ring-2 focus:ring-red-500 outline-none resize-none"
                 required
               />
+            </div>
+
+            <div className="bg-red-50 dark:bg-red-950/20 border border-red-200/80 rounded-xl p-3">
+              <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-red-800 dark:text-red-300">
+                <input
+                  type="checkbox"
+                  checked={banIpAlso}
+                  onChange={(e) => setBanIpAlso(e.target.checked)}
+                  className="w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-500 accent-red-600 cursor-pointer"
+                />
+                <span>
+                  Bannir également l'adresse IP {userIp ? `(${userIp})` : ''}
+                </span>
+              </label>
             </div>
 
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-start gap-2 text-xs text-amber-700">

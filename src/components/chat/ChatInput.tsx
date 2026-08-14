@@ -7,7 +7,7 @@ interface ChatInputProps {
   disabled?: boolean;
 }
 
-const QUICK_EMOJIS = ['😀', '😂', '😍', '👍', '❤️', '🙏', '👏', '🔥', '🎉', '💡'];
+const QUICK_EMOJIS = ['😀', '😂', '😍', '👍', '❤️', '🙏', '👏', '🔥', '🎉', '💡', '🌾', '🤝'];
 
 const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled = false }) => {
   const [text, setText] = useState('');
@@ -34,17 +34,18 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled = false }) => {
 
   return (
     <div 
-      className="bg-white border-t border-gray-100 shadow-[0_-8px_30px_rgb(0,0,0,0.03)] px-4 pt-3 flex flex-col w-full relative"
-      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 12px), 12px)' }}
+      className="bg-white/95 backdrop-blur-xl border-t border-gray-100 px-3 py-2 sm:px-4 sm:py-2.5 flex flex-col w-full relative z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.04)]"
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 8px), 8px)' }}
     >
       {/* QUICK EMOJI PICKER */}
       {showEmojiPicker && (
-        <div className="absolute bottom-[calc(100%+8px)] left-4 right-4 bg-white border border-gray-150 rounded-2xl p-2.5 shadow-xl flex items-center justify-between gap-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="absolute bottom-[calc(100%+8px)] left-3 right-3 sm:left-4 sm:right-4 bg-white/95 backdrop-blur-xl border border-gray-100 rounded-2xl p-2 shadow-xl flex items-center justify-between gap-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150">
           {QUICK_EMOJIS.map((emoji) => (
             <button
               key={emoji}
+              type="button"
               onClick={() => handleEmojiSelect(emoji)}
-              className="w-8 h-8 flex items-center justify-center text-lg hover:bg-gray-50 active:scale-90 rounded-lg transition-all"
+              className="w-8 h-8 flex items-center justify-center text-lg hover:bg-gray-100 active:scale-90 rounded-xl transition-all"
             >
               {emoji}
             </button>
@@ -52,9 +53,22 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled = false }) => {
         </div>
       )}
 
-      <div className="flex items-center gap-3 w-full">
+      <div className="flex items-center gap-2 w-full max-w-4xl mx-auto">
         {/* Input Bar Container */}
-        <div className="flex-1 flex items-center bg-gray-50 border border-gray-200 focus-within:border-[#FF7F00] focus-within:bg-white focus-within:ring-4 focus-within:ring-orange-500/10 rounded-2xl px-3.5 py-2.5 transition-all duration-200">
+        <div className="flex-1 flex items-center bg-gray-100/80 hover:bg-gray-100 focus-within:bg-white focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-400 border border-transparent rounded-full px-3.5 py-1.5 transition-all duration-200">
+          <button
+            type="button"
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            disabled={disabled}
+            className={cn(
+              "mr-2 shrink-0 transition-colors p-1 rounded-full hover:bg-gray-200/60 active:scale-90",
+              showEmojiPicker ? "text-orange-600" : "text-gray-400 hover:text-gray-600"
+            )}
+            aria-label="Emoji"
+          >
+            <Smile className="w-5 h-5" />
+          </button>
+
           <input
             type="text"
             value={text}
@@ -64,46 +78,22 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled = false }) => {
             disabled={disabled}
             className="flex-1 bg-transparent text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-0 border-none p-0 outline-none"
           />
-          
-          {/* Attachment Button */}
-          <button
-            type="button"
-            disabled={disabled}
-            className="ml-1 shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
-            aria-label="Pièce jointe"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-            </svg>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            disabled={disabled}
-            className={cn(
-              "ml-1 shrink-0 transition-colors",
-              showEmojiPicker ? "text-[#FF7F00]" : "text-gray-400 hover:text-gray-600"
-            )}
-            aria-label="Emoji"
-          >
-            <Smile className="w-5 h-5" />
-          </button>
         </div>
 
         {/* Send Button */}
         <button
+          type="button"
           onClick={handleSend}
           disabled={disabled || !text.trim()}
           className={cn(
-            "w-11 h-11 rounded-2xl flex items-center justify-center text-white active:scale-95 transition-all duration-200 shrink-0 shadow-md",
+            "w-10 h-10 rounded-full flex items-center justify-center text-white active:scale-90 transition-all duration-200 shrink-0 shadow-md",
             text.trim()
-              ? "bg-gradient-to-r from-[#FF7F00] to-orange-600 shadow-orange-500/20"
-              : "bg-gray-200 text-gray-400 shadow-none cursor-not-allowed"
+              ? "bg-gradient-to-br from-orange-500 to-amber-600 shadow-orange-500/25 cursor-pointer scale-100"
+              : "bg-gray-200 text-gray-400 shadow-none cursor-not-allowed opacity-70"
           )}
           aria-label="Envoyer"
         >
-          <Send className={cn("h-4.5 w-4.5 transition-transform", text.trim() ? "translate-x-[1px] -translate-y-[1px]" : "")} />
+          <Send className={cn("h-4 w-4 transition-transform", text.trim() ? "translate-x-0.5" : "")} />
         </button>
       </div>
     </div>

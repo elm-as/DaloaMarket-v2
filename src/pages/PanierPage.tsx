@@ -9,23 +9,15 @@ import {
   Plus,
   ShieldCheck,
   Truck,
-  Info,
   Lock,
 } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { formatPrice } from "../lib/utils";
+import { formatPrice, cn } from "../lib/utils";
 import { supabase } from "../lib/supabase";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { EmptyState } from "../components/ui/EmptyState";
-import {
-  calculateOrderPricing,
-  DELIVERY_MIN,
-  DELIVERY_RATE_PER_KM,
-  DELIVERY_FREE_KM,
-  BUYER_FEE_RATE,
-} from "../lib/pricing";
 import toast from "react-hot-toast";
 
 const MAX_QUANTITY = 99;
@@ -38,38 +30,46 @@ const PanierPage: React.FC = () => {
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [stockMap, setStockMap] = useState<Record<string, number>>({});
 
+  const getStockKey = (listingId: string, variantId?: string) => `${listingId}::${variantId || 'base'}`;
+
   useEffect(() => {
     const listingIds = [...new Set(cartItems.map((i) => i.listing_id))];
     if (listingIds.length === 0) return;
 
     supabase
       .from("listings")
-      .select("id, stock, status, title")
+      .select("id, stock, status, title, variants")
       .in("id", listingIds)
       .then(({ data, error }) => {
         if (!error && data) {
           const map: Record<string, number> = {};
-          const dbListings = new Map<string, { stock: number; status: string; title: string }>();
+          const dbListings = new Map<string, { stock: number; status: string; title: string; variants: any[] }>();
           data.forEach((l: any) => {
-            map[l.id] = l.stock ?? 0;
-            dbListings.set(l.id, { stock: l.stock ?? 0, status: l.status, title: l.title });
+            const variants = Array.isArray(l.variants) ? l.variants : [];
+            map[getStockKey(l.id)] = l.stock ?? 0;
+            variants.forEach((variant: any) => {
+              map[getStockKey(l.id, variant.id)] = variant.stock ?? 0;
+            });
+            dbListings.set(l.id, { stock: l.stock ?? 0, status: l.status, title: l.title, variants });
           });
           setStockMap(map);
 
           // Auto-adjust or remove items based on real stock/status
           cartItems.forEach((item) => {
             const listing = dbListings.get(item.listing_id);
-            if (!listing || listing.status !== "active" || listing.stock <= 0) {
+            const variant = item.variant_id ? listing?.variants.find((candidate: any) => candidate.id === item.variant_id) : undefined;
+            const availableStock = item.variant_id ? (variant?.stock ?? 0) : (listing?.stock ?? 0);
+            if (!listing || listing.status !== "active" || availableStock <= 0 || (item.variant_id && !variant) || (listing.variants.length > 0 && !item.variant_id)) {
               // Item sold, deleted, or out of stock
               removeFromCart(item.id);
               toast.error(
-                `"${item.listing_title}" a été retiré du panier (${!listing ? 'annonce supprimée' : listing.stock <= 0 ? 'rupture de stock' : 'annonce inactive'})`
+                `"${item.listing_title}"${item.variant_label ? ` (${item.variant_label})` : ''} a été retiré du panier (${!listing ? 'annonce supprimée' : listing.variants.length > 0 && !item.variant_id ? 'taille à choisir' : availableStock <= 0 ? 'rupture de stock' : 'taille indisponible'})`
               );
-            } else if (item.quantity > listing.stock) {
+            } else if (item.quantity > availableStock) {
               // Quantity exceeds available stock — cap it
-              updateQuantity(item.id, listing.stock, listing.stock);
+              updateQuantity(item.id, availableStock, availableStock);
               toast(
-                `Quantité de "${item.listing_title}" ajustée à ${listing.stock} (stock disponible)`,
+                `Quantité de "${item.listing_title}"${item.variant_label ? ` (${item.variant_label})` : ''} ajustée à ${availableStock}`,
                 { icon: "⚠️" }
               );
             }
@@ -78,30 +78,19 @@ const PanierPage: React.FC = () => {
       });
   }, [cartItems.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.listing_price * item.quantity,
-    0
-  );
-
-  // On PanierPage we don't have seller/buyer coords yet, so delivery = minimum (500F).
-  // The real distance-based fee is calculated on CheckoutPage.
-  const pricing = calculateOrderPricing(subtotal, 0);
-  const deliveryFeeMin = pricing.delivery; // This is the minimum (DELIVERY_MIN)
-  const buyerFee = pricing.buyerFee;
-  const total = pricing.total;
-
-  const deliveryAndFees = deliveryFeeMin + buyerFee;
-
   const getItemMaxQty = (item: (typeof cartItems)[0]): number => {
-    const stock = stockMap[item.listing_id];
+    const stock = stockMap[getStockKey(item.listing_id, item.variant_id)] ?? stockMap[item.listing_id];
     if (stock === undefined) return item.quantity;
     return Math.min(Math.max(0, stock), MAX_QUANTITY);
   };
 
   const handleQuantityChange = (itemId: string, newQty: number) => {
-    if (newQty < 1) return;
     const item = cartItems.find((i) => i.id === itemId);
     if (!item) return;
+    if (newQty < 1) {
+      removeFromCart(itemId);
+      return;
+    }
     const max = getItemMaxQty(item);
     if (max <= 0) {
       toast.error("Produit en rupture de stock");
@@ -132,28 +121,26 @@ const PanierPage: React.FC = () => {
   if (cartItems.length === 0) {
     return (
       <motion.div
-        className="min-h-screen bg-[var(--color-background)]"
+        className="min-h-screen bg-gray-50/70"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-[var(--color-outline)] px-4 py-3">
-          <div className="flex items-center gap-3 max-w-2xl mx-auto">
-            <Link
-              to="/"
-              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-full hover:bg-gray-100 active:scale-[0.97] transition-all"
-              aria-label="Retour"
-            >
-              <ArrowLeft className="h-5 w-5 text-[var(--color-on-surface)]" />
+        <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-amber-600 px-5 pt-5 pb-14 rounded-b-[36px] shadow-lg">
+          <div className="absolute -top-12 -right-10 w-36 h-36 rounded-full bg-white/10" />
+          <div className="relative flex items-center gap-3">
+            <Link to="/" className="w-10 h-10 inline-flex items-center justify-center rounded-2xl bg-white/15 text-white hover:bg-white/25 active:scale-95 transition-all" aria-label="Retour">
+              <ArrowLeft className="h-5 w-5" />
             </Link>
-            <h1 className="text-[17px] font-semibold text-[var(--color-on-surface)]">
-              Mon panier
-            </h1>
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-orange-100">Votre sélection</p>
+              <h1 className="text-2xl font-extrabold tracking-tight text-white">Mon panier</h1>
+            </div>
           </div>
         </div>
 
         <EmptyState
-          icon={<ShoppingBag className="w-16 h-16 opacity-40" />}
+          icon={<ShoppingBag className="w-16 h-16 text-orange-400 opacity-70" />}
           title="Votre panier est vide"
           description="Parcourez les annonces et ajoutez des articles à votre panier."
           action={{
@@ -167,235 +154,227 @@ const PanierPage: React.FC = () => {
 
   return (
     <motion.div
-      className="min-h-screen bg-[var(--color-background)] pb-safe pb-28"
+      className="min-h-screen bg-gray-50/70 pb-safe pb-28"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.25 }}
     >
-      <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-[var(--color-outline)] px-4 py-3">
-        <div className="flex items-center gap-3 max-w-2xl mx-auto">
-          <Link
-            to="/"
-            className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-full hover:bg-gray-100 active:scale-[0.97] transition-all"
-            aria-label="Retour"
-          >
-            <ArrowLeft className="h-5 w-5 text-[var(--color-on-surface)]" />
-          </Link>
-          <h1 className="text-[17px] font-semibold text-[var(--color-on-surface)]">
-            Mon panier
-          </h1>
-          <span className="ml-auto text-[14px] text-[var(--color-on-surface-variant)]">
+      {/* ── COMPACT HERO BANNER ── */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-amber-600 px-4 pt-4 pb-10 rounded-b-[28px] shadow-md">
+        <div className="absolute -top-10 -right-8 w-32 h-32 rounded-full bg-white/10" />
+        <div className="absolute -bottom-10 -left-6 w-24 h-24 rounded-full bg-white/10" />
+        <div className="relative max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Link
+              to="/"
+              className="w-8 h-8 inline-flex items-center justify-center rounded-xl bg-white/15 text-white hover:bg-white/25 active:scale-95 transition-all"
+              aria-label="Retour"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <div>
+              <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-orange-100">
+                Votre sélection
+              </p>
+              <h1 className="text-lg sm:text-xl font-extrabold tracking-tight text-white leading-tight">
+                Mon panier
+              </h1>
+            </div>
+          </div>
+          <span className="rounded-full bg-white/20 backdrop-blur-md px-2.5 py-0.5 text-[11px] font-extrabold text-white border border-white/20">
             {cartItems.length} article{cartItems.length > 1 ? "s" : ""}
           </span>
         </div>
       </div>
 
-      <div className="px-4 py-4 space-y-3 max-w-2xl mx-auto">
-        <AnimatePresence>
-          {cartItems.map((item) => {
-            const lineTotal = item.listing_price * item.quantity;
-            const isRemoving = removingId === item.id;
+      {/* ── CONTENT (OVERLAPPING HERO) ── */}
+      <div className="relative z-10 -mt-5 max-w-4xl mx-auto px-3 sm:px-4 lg:grid lg:grid-cols-[1fr_360px] lg:gap-6 lg:items-start">
+        {/* Items List */}
+        <div className="space-y-2.5 mb-4 lg:mb-0">
+          <AnimatePresence>
+            {cartItems.map((item) => {
+              const lineTotal = item.listing_price * item.quantity;
+              const isRemoving = removingId === item.id;
 
-            return (
-              <motion.div
-                key={item.id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -80, height: 0, marginBottom: 0 }}
-                transition={{ duration: 0.25, ease: "easeInOut" }}
-              >
-                <Card
-                  elevation={1}
-                  padding="md"
-                  className={isRemoving ? "opacity-50 pointer-events-none" : ""}
+              return (
+                <motion.div
+                  key={item.id}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -60, height: 0, marginBottom: 0 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="w-20 h-20 flex-shrink-0 rounded-[var(--radius-md)] overflow-hidden bg-[var(--color-surface-variant)]">
-                      {item.listing_photo ? (
-                        <img
-                          src={item.listing_photo}
-                          alt={item.listing_title}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <ShoppingBag className="h-8 w-8 text-[var(--color-on-surface-variant)] opacity-40" />
-                        </div>
-                      )}
-                    </div>
+                  <div
+                    className={cn(
+                      "bg-white rounded-2xl p-3 border border-gray-100 shadow-sm transition-all",
+                      isRemoving && "opacity-50 pointer-events-none"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* Thumbnail */}
+                      <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-orange-50/40 border border-orange-100/40">
+                        {item.listing_photo ? (
+                          <img
+                            src={item.listing_photo}
+                            alt={item.listing_title}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ShoppingBag className="h-6 w-6 text-orange-400 opacity-40" />
+                          </div>
+                        )}
+                      </div>
 
-                    <div className="flex-1 min-w-0">
-                      <Link
-                        to={`/listings/${item.listing_id}`}
-                        className="text-[15px] font-semibold text-[var(--color-on-surface)] leading-tight line-clamp-2 hover:text-[var(--color-primary)] transition-colors"
-                      >
-                        {item.listing_title}
-                      </Link>
-
-                      <p className="text-[14px] text-[var(--color-on-surface-variant)] mt-1">
-                        {formatPrice(item.listing_price)} / unité
-                      </p>
-
-                      <div className="flex items-center justify-between mt-3">
-                        <div className="flex items-center gap-1 bg-[var(--color-surface-variant)] rounded-full p-0.5">
-                          <button
-                            onClick={() =>
-                              handleQuantityChange(item.id, item.quantity - 1)
-                            }
-                            disabled={item.quantity <= 1}
-                            className="min-w-[32px] min-h-[32px] flex items-center justify-center rounded-full text-[var(--color-on-surface)] hover:bg-white/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                            aria-label="Réduire la quantité"
+                      {/* Item details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-1.5">
+                          <Link
+                            to={`/listings/${item.listing_id}`}
+                            className="text-xs sm:text-sm font-extrabold text-gray-900 line-clamp-1 hover:text-orange-600 transition-colors"
                           >
-                            <Minus className="h-4 w-4" />
-                          </button>
-
-                          <span className="min-w-[28px] text-center text-[15px] font-semibold text-[var(--color-on-surface)] tabular-nums">
-                            {item.quantity}
-                          </span>
-
-                          <button
-                            onClick={() =>
-                              handleQuantityChange(item.id, item.quantity + 1)
-                            }
-                            disabled={item.quantity >= getItemMaxQty(item)}
-                            className="min-w-[32px] min-h-[32px] flex items-center justify-center rounded-full text-[var(--color-on-surface)] hover:bg-white/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                            aria-label="Augmenter la quantité"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <span className="text-[15px] font-bold text-[var(--color-on-surface)] tabular-nums">
-                            {formatPrice(lineTotal)}
-                          </span>
+                            {item.listing_title}
+                          </Link>
                           <button
                             onClick={() => handleRemove(item.id)}
-                            className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-full text-[var(--color-on-surface-variant)] hover:text-[var(--color-error)] hover:bg-[var(--color-error-light)] transition-colors"
+                            className="w-6 h-6 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 active:scale-95 transition-all flex-shrink-0"
                             aria-label={`Supprimer ${item.listing_title}`}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
+                        </div>
+
+                        {/* Price & Variant Pill */}
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                          <span className="text-[11px] font-semibold text-gray-500">
+                            {formatPrice(item.listing_price)}
+                          </span>
+                          {item.variant_label && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-orange-50 text-[10px] font-bold text-orange-700 border border-orange-200/50">
+                              {item.variant_label}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Quantity Stepper & Line Total */}
+                        <div className="mt-2 flex items-center justify-between pt-1 border-t border-gray-50">
+                          {/* Stepper (+/-) */}
+                          <div className="flex items-center gap-1 rounded-xl bg-gray-50 p-0.5 border border-gray-100">
+                            <button
+                              onClick={() =>
+                                handleQuantityChange(item.id, item.quantity - 1)
+                              }
+                              className="flex h-6 w-6 items-center justify-center rounded-lg bg-white text-gray-700 shadow-2xs hover:text-orange-600 active:scale-95 transition-all"
+                              aria-label="Réduire la quantité"
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+
+                            <span className="min-w-[22px] text-center text-xs font-black text-gray-900 tabular-nums">
+                              {item.quantity}
+                            </span>
+
+                            <button
+                              onClick={() =>
+                                handleQuantityChange(item.id, item.quantity + 1)
+                              }
+                              disabled={item.quantity >= getItemMaxQty(item)}
+                              className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-2xs disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all"
+                              aria-label="Augmenter la quantité"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+
+                          {/* Line Total */}
+                          <span className="text-xs sm:text-sm font-black text-orange-600 tabular-nums">
+                            {formatPrice(lineTotal)}
+                          </span>
                         </div>
                       </div>
                     </div>
                   </div>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
 
-        <Card elevation={2} padding="md" className="mt-4">
-          <h2 className="text-[15px] font-semibold text-[var(--color-on-surface)] mb-4">
-            Résumé du panier
-          </h2>
+          {/* Delivery Note banner */}
+          <div className="rounded-2xl border border-orange-100 bg-orange-50/60 p-2.5 shadow-2xs flex items-center gap-2 text-[11px] text-orange-950">
+            <Truck className="h-3.5 w-3.5 text-orange-600 flex-shrink-0" />
+            <p className="leading-snug">
+              <span className="font-bold">Livraison & Retrait :</span> Frais exacts calculés selon votre quartier à l'étape suivante.
+            </p>
+          </div>
+        </div>
 
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between text-[14px]">
-              <span className="text-[var(--color-on-surface-variant)] flex items-center gap-1.5">
-                <ShoppingBag className="h-4 w-4" />
-                Sous-total
-              </span>
-              <span className="font-medium text-[var(--color-on-surface)] tabular-nums">
-                {formatPrice(subtotal)}
-              </span>
-            </div>
+        {/* Desktop Sticky Summary */}
+        <div className="hidden space-y-3 lg:sticky lg:top-20 lg:block">
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-md shadow-gray-200/50 p-5 space-y-4">
+            <h2 className="text-base font-extrabold tracking-tight text-gray-900">
+              Résumé de la commande
+            </h2>
 
-            <div className="flex items-center justify-between text-[14px]">
-              <span className="text-[var(--color-on-surface-variant)] flex items-center gap-1.5">
-                <Truck className="h-4 w-4" />
-                Livraison et frais
-                <span className="group relative cursor-help">
-                  <Info className="h-3.5 w-3.5 text-[var(--color-on-surface-variant)] opacity-50" />
-                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2.5 bg-gray-900 text-white text-[11px] rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 leading-relaxed pointer-events-none">
-                    Livraison : à partir de {formatPrice(deliveryFeeMin)} (base {DELIVERY_MIN} FCFA, puis {DELIVERY_RATE_PER_KM} FCFA/km au-delà de {DELIVERY_FREE_KM} km). Frais de service : {(BUYER_FEE_RATE * 100)}%
-                  </span>
+            <div className="space-y-2.5 text-xs">
+              <div className="flex justify-between items-center text-gray-600 font-medium">
+                <span>Total articles ({cartItems.reduce((acc, i) => acc + i.quantity, 0)})</span>
+                <span className="font-extrabold text-gray-900">
+                  {formatPrice(cartItems.reduce((sum, item) => sum + item.listing_price * item.quantity, 0))}
                 </span>
-              </span>
-              <span className="font-medium text-[var(--color-on-surface)] tabular-nums">
-                à partir de {formatPrice(deliveryAndFees)}
-              </span>
+              </div>
+              <div className="flex justify-between items-center text-gray-500">
+                <span>Frais de livraison</span>
+                <span className="font-bold text-orange-600">Calculés au checkout</span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 text-[12px] px-1 pt-0.5 bg-amber-50 border border-amber-200 rounded-lg p-2">
-              <Info className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
-              <span className="text-amber-700">
-                Le montant exact de la livraison sera calculé au checkout selon la distance vendeur → acheteur.
-              </span>
+            <div className="pt-2 border-t border-gray-100">
+              <Button
+                variant="filled"
+                color="primary"
+                size="lg"
+                className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-extrabold shadow-md shadow-orange-500/20 active:scale-[0.98]"
+                icon={<ShieldCheck className="h-4 w-4" />}
+                onClick={handleCheckout}
+              >
+                Passer la commande
+              </Button>
+              <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-gray-500 mt-2.5">
+                <Lock className="h-3 w-3 text-emerald-600" />
+                <span>Paiement sécurisé Escrow</span>
+              </div>
             </div>
-
-            <div className="border-t border-[var(--color-outline)] pt-3 mt-1" />
-
-            <div className="flex items-center justify-between">
-              <span className="text-[17px] font-semibold text-[var(--color-on-surface)]">
-                Total estimé
-              </span>
-              <span className="text-[20px] font-bold text-[var(--color-primary)] tabular-nums">
-                ~ {formatPrice(total)}
-              </span>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-[var(--color-outline)] px-3 py-2.5 md:hidden">
-        <div className="flex flex-col gap-1.5 max-w-2xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-[11px] text-[var(--color-on-surface-variant)]">
-                Total estimé
-              </span>
-              <span className="text-[18px] font-bold text-[var(--color-primary)] tabular-nums">
-                ~ {formatPrice(total)}
-              </span>
-            </div>
-            <Button
-              variant="filled"
-              color="primary"
-              size="md"
-              icon={<ShieldCheck className="h-4 w-4" />}
-              onClick={handleCheckout}
-            >
-              Payer {formatPrice(total)} F CFA
-            </Button>
-          </div>
-          <div className="flex items-center justify-center gap-3 text-[11px] text-[var(--color-on-surface-variant)]">
-            <span className="flex items-center gap-1">
-              <Lock className="h-3 w-3" /> Paiement 100% sécurisé
-            </span>
-            <span className="text-gray-300">|</span>
-            <span className="flex items-center gap-2">
-              <img src="/Orange_logo.svg" alt="Orange Money" className="h-3.5 object-contain" />
-              <img src="/MTN logo.jpeg" alt="MTN MoMo" className="h-3.5 rounded-sm object-contain" />
-              <img src="/wave-logo.png" alt="Wave" className="h-3.5 rounded-sm object-contain" />
-            </span>
           </div>
         </div>
       </div>
 
-      <div className="hidden md:flex flex-col items-end px-4 pb-6 max-w-2xl mx-auto gap-2">
-        <Button
-          variant="filled"
-          color="primary"
-          size="lg"
-          icon={<ShieldCheck className="h-5 w-5" />}
-          onClick={handleCheckout}
-        >
-          Payer {formatPrice(total)} F CFA en sécurité
-        </Button>
-        <div className="flex items-center gap-3 text-[12px] text-[var(--color-on-surface-variant)]">
-          <span className="flex items-center gap-1">
-            <Lock className="h-3.5 w-3.5" /> Paiement 100% sécurisé
-          </span>
-          <span className="text-gray-300">|</span>
-          <span className="flex items-center gap-2">
-            <img src="/Orange_logo.svg" alt="Orange Money" className="h-4 object-contain" />
-            <img src="/MTN logo.jpeg" alt="MTN MoMo" className="h-4 rounded-sm object-contain" />
-            <img src="/wave-logo.png" alt="Wave" className="h-4 rounded-sm object-contain" />
-          </span>
+      {/* ── MOBILE STICKY BOTTOM CTA BAR ── */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-100 bg-white/95 px-4 py-2.5 shadow-[0_-6px_20px_rgba(0,0,0,0.06)] backdrop-blur-xl lg:hidden"
+        style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom, 0px))' }}
+      >
+        <div className="flex items-center justify-between gap-3 max-w-lg mx-auto">
+          <div>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+              Total ({cartItems.length})
+            </span>
+            <span className="text-base font-black text-orange-600 tabular-nums">
+              {formatPrice(cartItems.reduce((sum, item) => sum + item.listing_price * item.quantity, 0))}
+            </span>
+          </div>
+
+          <Button
+            variant="filled"
+            color="primary"
+            size="md"
+            className="flex-1 max-w-[200px] rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 font-extrabold text-xs shadow-md shadow-orange-500/20 active:scale-[0.98] py-2.5"
+            icon={<ShieldCheck className="h-4 w-4" />}
+            onClick={handleCheckout}
+          >
+            Commander
+          </Button>
         </div>
       </div>
     </motion.div>

@@ -173,8 +173,20 @@ export default function DaloaMap({
   }, [deliveryPersonPosition]);
 
   return (
-    <div className={className}>
-      <div ref={containerRef} style={{ width: '100%', height }} className="rounded-2xl overflow-hidden" />
+    <section className={`overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-lg shadow-gray-200/50 ${className}`}>
+      <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-orange-500">Suivi de livraison</p>
+          <p className="text-sm font-extrabold text-gray-900">Itinéraire à Daloa</p>
+        </div>
+        <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-extrabold text-orange-700">En direct</span>
+      </div>
+      <div className="relative">
+        <div ref={containerRef} style={{ width: '100%', height }} className="overflow-hidden" />
+        <div className="pointer-events-none absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-bold text-gray-700 shadow-sm backdrop-blur">
+          Vendeur · Vous · Livreur
+        </div>
+      </div>
       {routeInfo && (
         <div className="flex items-center justify-center gap-4 mt-2 px-4 py-2.5 bg-white/90 backdrop-blur rounded-xl text-sm">
           <span className="text-[var(--color-on-surface)]">
@@ -185,6 +197,6 @@ export default function DaloaMap({
           </span>
         </div>
       )}
-    </div>
+    </section>
   );
 }

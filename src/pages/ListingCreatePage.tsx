@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, AlertTriangle, ArrowRight, CheckCircle2, Star } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -9,10 +9,11 @@ import { useSupabase } from '../hooks/useSupabase';
 import { supabase } from '../lib/supabase';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { MAX_FREE_LISTINGS } from '../lib/featureFlags';
-import { SELLER_FEE_RATE } from '../lib/pricing';
+import { SELLER_FEE_RATE, PRO_SELLER_FEE_RATE } from '../lib/pricing';
 import { Button } from '../components/ui/Button';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { getListingPath } from '../lib/utils';
+import type { ListingVariant } from '../types/listing';
 
 import { ListingStepper } from '../components/listings/create/ListingStepper';
 import { ListingLivePreview } from '../components/listings/create/ListingLivePreview';
@@ -52,6 +53,7 @@ const ListingCreatePage: React.FC = () => {
   const [loadingListing, setLoadingListing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdListingId, setCreatedListingId] = useState<string | null>(null);
+  const [variants, setVariants] = useState<ListingVariant[]>([]);
 
   const {
     register,
@@ -86,7 +88,7 @@ const ListingCreatePage: React.FC = () => {
   const origPriceNum = parseInt(watchOriginalPrice, 10);
   const discountPercent = (origPriceNum > priceNum && priceNum > 0) ? Math.round(((origPriceNum - priceNum) / origPriceNum) * 100) : 0;
   const isPro = userProfile?.pro_until ? new Date(userProfile.pro_until) > new Date() : false;
-  const currentSellerFeeRate = isPro ? 0.025 : SELLER_FEE_RATE;
+  const currentSellerFeeRate = isPro ? PRO_SELLER_FEE_RATE : SELLER_FEE_RATE;
   const sellerFee = !isNaN(priceNum) ? Math.round(priceNum * currentSellerFeeRate) : 0;
   const netPayout = !isNaN(priceNum) ? priceNum - sellerFee : 0;
 
@@ -151,6 +153,15 @@ const ListingCreatePage: React.FC = () => {
           original_price: (data as any).original_price != null ? String((data as any).original_price) : '',
         });
 
+        const loadedVariants = Array.isArray((data as any).variants) ? (data as any).variants : [];
+        setVariants(loadedVariants.map((variant: any, index: number) => ({
+          id: String(variant.id || `variant_${index}_${Date.now()}`),
+          label: String(variant.label || ''),
+          price: variant.price == null || variant.price === '' ? null : Number(variant.price),
+          stock: Math.max(0, Number(variant.stock) || 0),
+          active: variant.active !== false,
+        })));
+
         if (data.photos && data.photos.length > 0) {
           setexistingPhotos(data.photos);
         }
@@ -170,14 +181,24 @@ const ListingCreatePage: React.FC = () => {
         toast.error("Veuillez ajouter au moins une photo pour votre annonce.");
         return;
       }
-      const isValid = await trigger(['title', 'category']);
+      const isValid = await trigger(['title', 'category', 'condition']);
       if (isValid) {
         setCurrentStep(2);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } else if (currentStep === 2) {
-      const isValid = await trigger(['price', 'condition']);
+      const isValid = await trigger(['price', 'stock']);
       if (isValid) {
+        if (variants.length > 0) {
+          if (variants.some((v) => !v.label && !v.size && !v.color)) {
+            toast.error('Chaque déclinaison doit avoir au moins une couleur, taille ou libellé.');
+            return;
+          }
+          if (variants.some((v) => v.stock < 1 || (v.price != null && v.price < 300))) {
+            toast.error('Chaque option doit avoir un stock (>= 1) et un prix valide (>= 300 F).');
+            return;
+          }
+        }
         setCurrentStep(3);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -233,7 +254,47 @@ const ListingCreatePage: React.FC = () => {
     setSubmitting(true);
 
     try {
+      const normalizedVariants = variants.map((variant) => {
+        const color = variant.color?.trim() || null;
+        const color_code = variant.color_code?.trim() || null;
+        const size = variant.size?.trim() || null;
+
+        let label = (variant.label || '').trim();
+        if (!label) {
+          if (color && size) label = `${color} · ${size}`;
+          else if (color) label = color;
+          else if (size) label = size;
+          else label = 'Option standard';
+        }
+
+        return {
+          id: variant.id || `variant_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          label,
+          color,
+          color_code,
+          size,
+          price: variant.price == null || Number.isNaN(Number(variant.price)) ? null : Math.round(Number(variant.price)),
+          stock: Math.max(0, Math.floor(Number(variant.stock) || 0)),
+          active: variant.active !== false,
+        };
+      });
+
+      if (normalizedVariants.some((variant) => !variant.label)) {
+        toast.error('Chaque option doit avoir un nom ou une déclinaison.');
+        setCurrentStep(2);
+        return;
+      }
+
+      if (normalizedVariants.some((variant) => variant.stock < 1 || (variant.price != null && variant.price < 300))) {
+        toast.error('Chaque déclinaison doit avoir un stock et un prix valides.');
+        setCurrentStep(2);
+        return;
+      }
+
       const listingId = editId || crypto.randomUUID();
+      const totalStock = normalizedVariants.length > 0
+        ? normalizedVariants.reduce((sum, variant) => sum + variant.stock, 0)
+        : Math.max(1, parseInt(values.stock, 10) || 1);
 
       // 3. Uploader les photos AVANT d'insérer l'annonce dans la base de données
       let uploadedUrls: string[] = [];
@@ -262,7 +323,8 @@ const ListingCreatePage: React.FC = () => {
             condition: values.condition,
             district: values.district,
             contact_phone: values.phone.trim(),
-            stock: parseInt(values.stock, 10) || 1,
+            stock: totalStock,
+            variants: normalizedVariants,
             photos: finalPhotos,
           } as any)
           .eq('id', editId);
@@ -285,7 +347,8 @@ const ListingCreatePage: React.FC = () => {
             condition: values.condition,
             district: values.district,
             contact_phone: values.phone.trim(),
-            stock: parseInt(values.stock, 10) || 1,
+            stock: totalStock,
+            variants: normalizedVariants,
             status: 'active',
             photos: finalPhotos,
           } as any)
@@ -339,227 +402,272 @@ const ListingCreatePage: React.FC = () => {
 
   return (
     <motion.div
-      className="min-h-screen bg-[var(--color-background)] pb-12"
+      className="min-h-screen bg-gray-50/60 pb-safe pb-28 overflow-x-hidden w-full max-w-full"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.25 }}
     >
-      {/* HEADER */}
-      <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex items-center justify-between safe-top">
-        <button
-          onClick={() => navigate(-1)}
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 rounded-full hover:bg-gray-100 active:scale-[0.97] transition-all"
-          aria-label="Retour"
-        >
-          <ArrowLeft className="h-5 w-5" style={{ color: 'var(--color-on-surface)' }} />
-        </button>
-        <h1 className="text-base font-semibold" style={{ color: 'var(--color-on-surface)' }}>
-          {isEditing ? "Modifier l'annonce" : 'Nouvelle annonce'}
-        </h1>
-        <div className="w-[44px]" />
-      </div>
+      {/* ── HERO BANNER (THEME SIGNATURE DALOAMARKET) ── */}
+      <header className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-orange-500 to-amber-600 px-4 sm:px-6 pt-6 pb-12 rounded-b-[36px] shadow-lg shadow-orange-500/15">
+        <div className="absolute -top-12 -right-10 w-36 h-36 rounded-full bg-white/10 pointer-events-none" />
+        <div className="absolute -bottom-14 -left-8 w-32 h-32 rounded-full bg-white/10 pointer-events-none" />
+        <div className="relative max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="w-10 h-10 inline-flex items-center justify-center rounded-2xl bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white active:scale-95 transition-all shadow-xs"
+              aria-label="Retour"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-100">
+                Espace Vendeur · Daloa
+              </p>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                {isEditing ? "Modifier l'annonce" : "Publier une annonce"}
+              </h1>
+            </div>
+          </div>
+          <span className="inline-flex rounded-full bg-white/20 backdrop-blur-md px-3.5 py-1 text-xs font-black text-white border border-white/25 shadow-2xs">
+            {isEditing ? "Édition" : "Gratuit"}
+          </span>
+        </div>
+      </header>
 
       {!hasPayoutInfo ? (
-        <div className="p-4 mt-8 flex flex-col items-center text-center">
-          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
-            <AlertTriangle className="w-8 h-8 text-red-500" />
+        <div className="relative z-10 -mt-6 px-4 max-w-lg mx-auto">
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-xl shadow-gray-200/50 flex flex-col items-center text-center">
+            <div className="w-14 h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mb-3.5 shadow-xs">
+              <AlertTriangle className="w-7 h-7" />
+            </div>
+            <h2 className="text-base font-black text-gray-900 mb-1.5">Informations de retrait requises</h2>
+            <p className="text-xs text-gray-500 mb-5 leading-relaxed">
+              Pour vendre sur DaloaMarket, vous devez d'abord configurer le compte Mobile Money (Wave, Orange, MTN...) sur lequel vous recevrez vos paiements.
+            </p>
+            <Button
+              color="primary"
+              onClick={() => navigate('/settings/payout')}
+              className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-black shadow-lg shadow-orange-500/25 active:scale-[0.98]"
+            >
+              Configurer mes coordonnées
+            </Button>
           </div>
-          <h2 className="text-lg font-bold text-gray-900 mb-2">Informations de retrait manquantes</h2>
-          <p className="text-sm text-gray-600 mb-6">
-            Pour vendre sur DaloaMarket, vous devez d'abord configurer le compte (Wave, Orange, MTN...) sur lequel vous souhaitez recevoir l'argent de vos ventes.
-          </p>
-          <Button
-            color="primary"
-            onClick={() => navigate('/settings?tab=compte')}
-            className="w-full max-w-xs"
-          >
-            Configurer maintenant
-          </Button>
         </div>
       ) : !hasShopLocation ? (
-        <div className="p-4 mt-8 flex flex-col items-center text-center">
-          <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mb-4">
-            <AlertTriangle className="w-8 h-8 text-amber-500" />
+        <div className="relative z-10 -mt-6 px-4 max-w-lg mx-auto">
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-xl shadow-gray-200/50 flex flex-col items-center text-center">
+            <div className="w-14 h-14 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mb-3.5 shadow-xs">
+              <AlertTriangle className="w-7 h-7" />
+            </div>
+            <h2 className="text-base font-black text-gray-900 mb-1.5">Position de boutique requise</h2>
+            <p className="text-xs text-gray-500 mb-5 leading-relaxed">
+              Afin que vos acheteurs et les livreurs de Daloa puissent localiser vos articles et calculer la livraison, veuillez positionner votre boutique sur la carte.
+            </p>
+            <Button
+              color="primary"
+              onClick={() => navigate('/settings?tab=boutique')}
+              className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-black shadow-lg shadow-orange-500/25 active:scale-[0.98]"
+            >
+              Définir la position GPS
+            </Button>
           </div>
-          <h2 className="text-lg font-bold text-gray-900 mb-2">Position de votre boutique requise</h2>
-          <p className="text-sm text-gray-600 mb-6">
-            Afin que vos acheteurs et les livreurs de Daloa puissent localiser facilement vos articles, vous devez définir l'emplacement de votre boutique sur la carte.
-          </p>
-          <Button
-            color="primary"
-            onClick={() => navigate('/settings?tab=shop')}
-            className="w-full max-w-xs"
-          >
-            Définir l'emplacement de ma boutique
-          </Button>
         </div>
       ) : !canCreateNew ? (
-        <div className="p-4 mt-8 flex flex-col items-center text-center max-w-sm mx-auto">
-          <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mb-4 border border-amber-200">
-            <Star className="w-8 h-8 text-amber-500 fill-amber-500" />
+        <div className="relative z-10 -mt-6 px-4 max-w-lg mx-auto">
+          <div className="bg-white rounded-3xl p-6 border border-amber-100 shadow-xl shadow-amber-100/50 flex flex-col items-center text-center">
+            <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mb-3.5 border border-amber-200 shadow-xs">
+              <Star className="w-7 h-7 text-amber-500 fill-amber-500" />
+            </div>
+            <h2 className="text-base font-black text-gray-900 mb-1.5">Limite d'annonces gratuites ({MAX_FREE_LISTINGS}/10)</h2>
+            <p className="text-xs text-gray-500 mb-5 leading-relaxed">
+              Votre compte Standard est limité à {MAX_FREE_LISTINGS} annonces actives. Passez au Pass Vendeur Pro pour publier sans limite !
+            </p>
+            <Button
+              color="primary"
+              onClick={() => navigate('/devenir-pro')}
+              className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-black shadow-lg shadow-orange-500/25 active:scale-[0.98]"
+            >
+              Devenir Vendeur Pro
+            </Button>
           </div>
-          <h2 className="text-lg font-bold text-gray-900 mb-2">Limite d'annonces gratuites atteinte ({MAX_FREE_LISTINGS}/10)</h2>
-          <p className="text-sm text-gray-600 mb-6">
-            Votre compte Standard est limité à {MAX_FREE_LISTINGS} annonces actives. Passez au Pass Vendeur Pro pour publier des produits en illimité !
-          </p>
-          <Button
-            color="primary"
-            onClick={() => navigate('/become-pro')}
-            className="w-full max-w-xs"
-          >
-            Devenir Vendeur Pro
-          </Button>
         </div>
       ) : (
       <>
-        {/* STEPPER BAR */}
-        <ListingStepper currentStep={currentStep} onStepClick={(step) => setCurrentStep(step)} />
-
-        {/* DISCREET GUIDE LINK */}
-        <div className="max-w-lg mx-auto px-4 pt-2 pb-1 flex items-center justify-between text-xs text-gray-500">
-          <span className="truncate pr-2">Conseils pour réussir votre annonce :</span>
-          <Link to="/guide-vendeur" className="text-[var(--color-primary)] font-semibold hover:underline flex items-center gap-1 shrink-0">
-            <span>Guide Vendeur</span>
-            <ArrowRight className="w-3 h-3" />
-          </Link>
+        {/* ── STEPPER FLOATING CARD ── */}
+        <div className="relative z-10 -mt-6 max-w-lg mx-auto px-4 w-full">
+          <div className="bg-white rounded-3xl p-2.5 sm:p-3 border border-gray-100/90 shadow-xl shadow-gray-200/50">
+            <ListingStepper currentStep={currentStep} onStepClick={(step) => setCurrentStep(step)} />
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="max-w-lg mx-auto px-4 py-2 space-y-5">
-          <AnimatePresence mode="wait">
-            {/* STEP 1: Photos & Infos Générales */}
-            {currentStep === 1 && (
-              <motion.div
-                key="step1"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-5"
-              >
-                <ListingPhotosSection
-                  photos={photos}
-                  setPhotos={setPhotos}
-                  existingPhotos={existingPhotos}
-                  setexistingPhotos={setexistingPhotos}
-                  isEditing={isEditing}
-                />
+        {/* DESKTOP SPLIT-SCREEN LAYOUT */}
+        <div className="max-w-6xl mx-auto px-4 lg:px-6 py-2 lg:grid lg:grid-cols-[1fr_420px] lg:gap-8 lg:items-start">
+          {/* LEFT COLUMN: FORM */}
+          <div>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              <AnimatePresence mode="wait">
+                {/* ── STEP 1: Photos, Titre, Catégorie & État ── */}
+                {currentStep === 1 && (
+                  <motion.div
+                    key="step1"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-4"
+                  >
+                    <ListingPhotosSection
+                      photos={photos}
+                      setPhotos={setPhotos}
+                      existingPhotos={existingPhotos}
+                      setexistingPhotos={setexistingPhotos}
+                      isEditing={isEditing}
+                    />
 
-                <ListingGeneralInfoSection
-                  register={register}
-                  errors={errors}
-                  watchDescription={watchDescription}
-                />
-              </motion.div>
-            )}
+                    <ListingGeneralInfoSection
+                      register={register}
+                      errors={errors}
+                      mode="title_only"
+                    />
 
-            {/* STEP 2: Prix, Détails & Stock */}
-            {currentStep === 2 && (
-              <motion.div
-                key="step2"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-5"
-              >
-                <ListingPricingSection
-                  register={register}
-                  errors={errors}
-                  priceNum={priceNum}
-                  sellerFee={sellerFee}
-                  discountPercent={discountPercent}
-                  netPayout={netPayout}
-                  isPro={isPro}
-                />
+                    <ListingDetailsSection
+                      register={register}
+                      errors={errors}
+                      watchCategory={watchCategory}
+                      watchCondition={watchCondition}
+                      setValue={setValue}
+                    />
+                  </motion.div>
+                )}
 
-                <ListingDetailsSection
-                  register={register}
-                  errors={errors}
-                  watchCategory={watchCategory}
-                  watchCondition={watchCondition}
-                  setValue={setValue}
-                />
-              </motion.div>
-            )}
+                {/* ── STEP 2: Prix, Promo & Déclinaisons (Couleurs & Tailles) ── */}
+                {currentStep === 2 && (
+                  <motion.div
+                    key="step2"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-4"
+                  >
+                    <ListingPricingSection
+                      register={register}
+                      errors={errors}
+                      priceNum={priceNum}
+                      sellerFee={sellerFee}
+                      discountPercent={discountPercent}
+                      netPayout={netPayout}
+                      isPro={isPro}
+                      variants={variants}
+                      onVariantsChange={(nextVariants) => {
+                        setVariants(nextVariants);
+                        if (nextVariants.length > 0) {
+                          setValue('stock', String(nextVariants.reduce((sum, variant) => sum + Math.max(0, Number(variant.stock) || 0), 0)));
+                        }
+                      }}
+                    />
+                  </motion.div>
+                )}
 
-            {/* STEP 3: Aperçu en Direct & Validation Logistique */}
-            {currentStep === 3 && (
-              <motion.div
-                key="step3"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-5"
-              >
-                {/* Live Preview Card */}
-                <ListingLivePreview
-                  title={watchTitle}
-                  price={watchPrice}
-                  originalPrice={watchOriginalPrice}
-                  category={watchCategory}
-                  condition={watchCondition}
-                  district={watchDistrict}
-                  photos={photos}
-                  existingPhotos={existingPhotos}
-                  discountPercent={discountPercent}
-                  sellerName={userProfile?.full_name || 'Vous'}
-                  isPro={isPro}
-                />
+                {/* ── STEP 3: Description, Quartier Daloa & Contact (Publication directe) ── */}
+                {currentStep === 3 && (
+                  <motion.div
+                    key="step3"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-4"
+                  >
+                    <ListingGeneralInfoSection
+                      register={register}
+                      errors={errors}
+                      watchDescription={watchDescription}
+                      mode="description_only"
+                    />
 
-                {/* Logistique & Contact */}
-                <ListingLogisticsSection register={register} errors={errors} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+                    {/* Logistique & Contact */}
+                    <ListingLogisticsSection register={register} errors={errors} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-          {/* Spacer for bottom sticky navigation */}
-          <div className="h-28" />
-        </form>
+              {/* Spacer for bottom sticky navigation on mobile */}
+              <div className="h-28 lg:h-8" />
+            </form>
+          </div>
+
+          {/* RIGHT COLUMN: PERMANENT DESKTOP LIVE PREVIEW */}
+          <div className="hidden lg:block lg:sticky lg:top-20 space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-sm font-black text-gray-900 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Aperçu en direct pour les acheteurs
+              </h3>
+              <span className="text-xs text-gray-400 font-bold">Temps réel</span>
+            </div>
+
+            <div className="bg-white rounded-3xl p-4 shadow-md shadow-gray-100 border border-gray-100">
+              <ListingLivePreview
+                title={watchTitle}
+                price={watchPrice}
+                originalPrice={watchOriginalPrice}
+                category={watchCategory}
+                condition={watchCondition}
+                district={watchDistrict}
+                photos={photos}
+                existingPhotos={existingPhotos}
+                discountPercent={discountPercent}
+                sellerName={userProfile?.full_name || 'Vous'}
+                isPro={isPro}
+              />
+            </div>
+          </div>
+        </div>
 
         {/* ─── BOTTOM STICKY NAVIGATION ─── */}
         <div
-          className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 px-4 py-3 z-30 shadow-lg"
-          style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 8px), 8px)' }}
+          className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100/90 px-4 py-3 z-40 shadow-[0_-4px_24px_rgba(0,0,0,0.06)]"
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 12px), 12px)' }}
         >
           <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
             {currentStep > 1 ? (
-              <Button
+              <button
                 type="button"
-                variant="outlined"
-                color="secondary"
-                size="lg"
                 onClick={handlePrevStep}
-                className="w-[100px] shrink-0"
+                className="h-12 px-5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-black text-xs sm:text-sm active:scale-95 transition-all flex items-center justify-center shrink-0 border border-gray-200/50"
               >
                 Précédent
-              </Button>
-            ) : <div />}
+              </button>
+            ) : null}
 
             {currentStep < 3 ? (
-              <Button
+              <button
                 type="button"
-                variant="filled"
-                color="primary"
-                size="lg"
                 onClick={handleNextStep}
-                className="flex-1 flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20"
+                className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-orange-500 via-orange-500 to-amber-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 active:scale-95 transition-all"
               >
-                Suivant <ArrowRight className="w-4 h-4" />
-              </Button>
+                <span>Suivant</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
             ) : (
-              <Button
+              <button
                 type="button"
-                variant="filled"
-                color="primary"
-                size="lg"
-                loading={submitting}
-                disabled={!isEditing && !canCreateNew}
+                disabled={submitting || (!isEditing && !canCreateNew)}
                 onClick={handleSubmit(onSubmit)}
-                className="flex-1 flex items-center justify-center gap-1.5 shadow-lg shadow-orange-500/30 bg-gradient-to-r from-[#FF7F00] to-orange-600 font-bold"
+                className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 active:scale-95 transition-all disabled:opacity-50"
               >
-                {isEditing ? 'Enregistrer' : 'Publier l\'annonce'}
-              </Button>
+                {submitting ? (
+                  <LoadingSpinner size="sm" className="text-white" />
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{isEditing ? 'Enregistrer les modifications' : 'Publier mon annonce'}</span>
+                  </>
+                )}
+              </button>
             )}
           </div>
         </div>

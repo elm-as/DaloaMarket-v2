@@ -1,16 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useSupabase } from '../hooks/useSupabase';
 import { supabase } from '../lib/supabase';
-import { usePageTitle } from '../hooks/usePageTitle';
 import { cn, formatDate, extractUuid, formatShopShareText, shareWithImage } from '../lib/utils';
-import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
 import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
-import { SectionHeader } from '../components/ui/SectionHeader';
 import { Avatar } from '../components/profile/Avatar';
-import { ProBadge } from '../components/profile/ProBadge';
 import { ListingCard } from '../components/listings/ListingCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -24,7 +19,14 @@ import {
   Store,
   Package,
   Share2,
+  ShieldCheck,
+  Truck,
+  Info,
+  CheckCircle2,
+  HandCoins,
 } from 'lucide-react';
+import { useSEO } from '../hooks/useSEO';
+import { affiliatedDeliverersService, type SellerDeliverySettings } from '../services/affiliatedDeliverersService';
 
 interface SellerProfile {
   id: string;
@@ -54,6 +56,7 @@ interface SellerListing {
   boosted_until: string | null;
   status: string;
   user_id: string;
+  variants?: { id: string; label: string; price: number | null; stock: number; active?: boolean }[];
 }
 
 interface Review {
@@ -67,7 +70,7 @@ interface Review {
   } | null;
 }
 
-import { useSEO } from '../hooks/useSEO';
+type TabType = 'listings' | 'reviews' | 'about';
 
 const SellerProfilePage: React.FC = () => {
   const { sellerId } = useParams<{ sellerId: string }>();
@@ -77,39 +80,56 @@ const SellerProfilePage: React.FC = () => {
   const [seller, setSeller] = useState<SellerProfile | null>(null);
   const [listings, setListings] = useState<SellerListing[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [deliverySettings, setDeliverySettings] = useState<SellerDeliverySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>('listings');
 
   const shopTitle = seller?.shop_name || seller?.full_name || 'Boutique';
   const isPro = seller?.pro_until ? new Date(seller.pro_until) > new Date() : false;
+  const themeColor = seller?.shop_theme_color || '#FF7F00';
 
-  const storeSchema = seller ? {
-    '@context': 'https://schema.org',
-    '@type': isPro ? 'Store' : 'LocalBusiness',
-    'name': shopTitle,
-    'description': seller.shop_description || `Boutique de ${seller.full_name || 'vendeur'} sur DaloaMarket à Daloa`,
-    'url': `https://daloamarket.shop/seller/${seller.id}`,
-    'image': seller.shop_logo_url || seller.shop_banner_url || seller.avatar_url || 'https://daloamarket.shop/web-app-manifest-512x512.png',
-    'address': {
-      '@type': 'PostalAddress',
-      'addressLocality': 'Daloa',
-      'addressRegion': 'Haut-Sassandra',
-      'addressCountry': 'CI',
-    },
-    'aggregateRating': seller.rating ? {
-      '@type': 'AggregateRating',
-      'ratingValue': seller.rating,
-      'reviewCount': reviews.length || 1,
-    } : undefined,
-  } : undefined;
+  const storeSchema = seller
+    ? {
+        '@context': 'https://schema.org',
+        '@type': isPro ? 'Store' : 'LocalBusiness',
+        name: shopTitle,
+        description:
+          seller.shop_description ||
+          `Boutique de ${seller.full_name || 'vendeur'} sur DaloaMarket à Daloa`,
+        url: `https://daloamarket.com/seller/${seller.id}`,
+        image:
+          seller.shop_logo_url ||
+          seller.shop_banner_url ||
+          seller.avatar_url ||
+          'https://daloamarket.com/web-app-manifest-512x512.png',
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: 'Daloa',
+          addressRegion: 'Haut-Sassandra',
+          addressCountry: 'CI',
+        },
+        aggregateRating: seller.rating
+          ? {
+              '@type': 'AggregateRating',
+              ratingValue: seller.rating,
+              reviewCount: reviews.length || 1,
+            }
+          : undefined,
+      }
+    : undefined;
 
   useSEO(`${shopTitle} — Boutique sur DaloaMarket`, {
-    description: seller?.shop_description || `Découvrez les annonces et articles de la boutique ${shopTitle} sur DaloaMarket à Daloa (Côte d'Ivoire).`,
+    description:
+      seller?.shop_description ||
+      `Découvrez les annonces et articles de la boutique ${shopTitle} sur DaloaMarket à Daloa (Côte d'Ivoire).`,
     keywords: `${shopTitle}, boutique Daloa, annonces ${shopTitle}, e-commerce Daloa, Côte d'Ivoire`,
     ogTitle: `${shopTitle} sur DaloaMarket`,
-    ogDescription: seller?.shop_description || `Boutique officielle de ${shopTitle} à Daloa. Vente en ligne et de proximité.`,
+    ogDescription:
+      seller?.shop_description ||
+      `Boutique officielle de ${shopTitle} à Daloa. Vente en ligne et de proximité.`,
     ogImage: seller?.shop_logo_url || seller?.shop_banner_url || seller?.avatar_url || undefined,
-    canonical: seller ? `https://daloamarket.shop/seller/${seller.id}` : undefined,
+    canonical: seller ? `https://daloamarket.com/seller/${seller.id}` : undefined,
     jsonLd: storeSchema,
   });
 
@@ -127,7 +147,11 @@ const SellerProfilePage: React.FC = () => {
         const { data } = await supabase.from('users').select('*').eq('id', targetUuid).maybeSingle();
         sellerData = data as any;
       } else if (sellerId) {
-        const { data: shopMatch } = await supabase.from('users').select('*').ilike('shop_name', sellerId).maybeSingle();
+        const { data: shopMatch } = await supabase
+          .from('users')
+          .select('*')
+          .ilike('shop_name', sellerId)
+          .maybeSingle();
         if (shopMatch) {
           sellerData = shopMatch as any;
         } else {
@@ -143,6 +167,14 @@ const SellerProfilePage: React.FC = () => {
 
       const targetUserId = sellerData.id;
 
+      // Fetch delivery settings (Cash on delivery, etc.)
+      try {
+        const delivSettings = await affiliatedDeliverersService.getSellerDeliverySettings(targetUserId);
+        setDeliverySettings(delivSettings);
+      } catch (e) {
+        console.warn('Could not fetch delivery settings:', e);
+      }
+
       const { data: listingsData, error: listingsError } = await supabase
         .from('listings')
         .select('*')
@@ -151,7 +183,7 @@ const SellerProfilePage: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (listingsError) throw listingsError;
-      setListings(listingsData || []);
+      setListings((listingsData || []) as unknown as SellerListing[]);
 
       const { data: reviewsData, error: reviewsError } = await supabase
         .from('reviews')
@@ -161,7 +193,6 @@ const SellerProfilePage: React.FC = () => {
 
       if (reviewsError) throw reviewsError;
       setReviews((reviewsData || []) as unknown as Review[]);
-
     } catch (err) {
       console.error('Error fetching seller data:', err);
       setError('Impossible de charger le profil du vendeur.');
@@ -175,12 +206,14 @@ const SellerProfilePage: React.FC = () => {
   }, [fetchSellerData]);
 
   const handleContact = () => {
-    if (!user || !seller || listings.length === 0) return;
-    const listingId = listings[0].id;
+    if (!seller) return;
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    const listingId = listings[0]?.id || 'contact';
     navigate(`/messages/${listingId}/${seller.id}`);
   };
-
-
 
   const handleShareShop = async () => {
     if (!seller) return;
@@ -188,15 +221,10 @@ const SellerProfilePage: React.FC = () => {
     const imageUrl = seller.shop_logo_url || seller.shop_banner_url || seller.avatar_url || null;
     const res = await shareWithImage(title, text, imageUrl);
     if (res.copied) {
-      toast.success('Lien et texte de la boutique copiés ! (Faites Ctrl+V dans la légende si besoin)', { duration: 5000 });
+      toast.success('Lien et texte de la boutique copiés ! (Faites Coller pour partager)', {
+        duration: 4000,
+      });
     }
-  };
-
-  const copyToClipboard = (url: string) => {
-    navigator.clipboard.writeText(url).then(
-      () => toast.success('Lien de la boutique copié !'),
-      () => toast.error('Impossible de copier le lien')
-    );
   };
 
   const renderStars = (rating: number) => {
@@ -204,16 +232,13 @@ const SellerProfilePage: React.FC = () => {
       <Star
         key={i}
         className={cn(
-          'w-4 h-4',
-          i < Math.round(rating)
-            ? 'text-amber-400 fill-amber-400'
-            : 'text-gray-300'
+          'w-3.5 h-3.5',
+          i < Math.round(rating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200'
         )}
       />
     ));
   };
 
-  // Map listings to ListingCard format
   const listingCardData = listings.map((listing) => ({
     id: listing.id,
     title: listing.title,
@@ -232,42 +257,18 @@ const SellerProfilePage: React.FC = () => {
     stock: (listing as any).stock || 1,
     listing_user_id: listing.user_id,
     original_price: (listing as any).original_price || null,
+    variants: listing.variants || [],
   }));
 
   if (loading) {
     return (
-      <div className="w-full max-w-2xl mx-auto">
-        <div className="px-4 py-3">
-          <Button
-            variant="text"
-            color="secondary"
-            size="sm"
-            icon={<ArrowLeft className="w-5 h-5" />}
-            onClick={() => navigate(-1)}
-          >
-            Retour
-          </Button>
-        </div>
-
-        <Card elevation={2} padding="lg" className="mx-4 rounded-2xl">
-          <div className="flex flex-col items-center text-center">
-            <Skeleton width="80px" height="80px" rounded="full" />
-            <Skeleton width="160px" height="24px" className="mt-3" />
-            <Skeleton width="100px" height="16px" className="mt-1" />
-            <Skeleton width="200px" height="16px" className="mt-2" />
-            <div className="flex gap-3 mt-4">
-              <Skeleton width="120px" height="40px" rounded="md" />
-              <Skeleton width="120px" height="40px" rounded="md" />
-            </div>
-          </div>
-        </Card>
-
-        <div className="px-4 mt-6">
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} height="200px" rounded="lg" />
-            ))}
-          </div>
+      <div className="w-full max-w-4xl mx-auto px-4 pt-6 space-y-4">
+        <Skeleton height="180px" rounded="lg" className="rounded-3xl" />
+        <Skeleton height="140px" rounded="lg" className="rounded-3xl" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} height="220px" rounded="lg" className="rounded-2xl" />
+          ))}
         </div>
       </div>
     );
@@ -275,252 +276,363 @@ const SellerProfilePage: React.FC = () => {
 
   if (error || !seller) {
     return (
-      <div className="w-full max-w-2xl mx-auto">
-        <div className="px-4 py-3">
-          <Button
-            variant="text"
-            color="secondary"
-            size="sm"
-            icon={<ArrowLeft className="w-5 h-5" />}
-            onClick={() => navigate(-1)}
-          >
-            Retour
-          </Button>
-        </div>
-        <ErrorState
-          message={error || 'Vendeur introuvable.'}
-          onRetry={fetchSellerData}
-        />
+      <div className="w-full max-w-2xl mx-auto px-4 pt-12">
+        <ErrorState message={error || 'Vendeur introuvable.'} onRetry={fetchSellerData} />
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto pb-12">
-      {/* Header */}
-      <div className="px-4 py-3">
-        <Button
-          variant="text"
-          color="secondary"
-          size="sm"
-          icon={<ArrowLeft className="w-5 h-5" />}
-          onClick={() => navigate(-1)}
-        >
-          Retour
-        </Button>
+    <div className="min-h-screen bg-gray-50/70 pb-32">
+      {/* ── 1. IMMERSIVE HERO BANNER ── */}
+      <div className="relative w-full h-44 sm:h-56 md:h-64 overflow-hidden bg-gray-900">
+        {seller.shop_banner_url ? (
+          <img
+            src={seller.shop_banner_url}
+            alt="Bannière"
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div
+            className="w-full h-full opacity-90 transition-colors"
+            style={{
+              background: `linear-gradient(135deg, ${themeColor}, ${themeColor}bb, #111827)`,
+            }}
+          />
+        )}
+        {/* Soft dark gradient vignette */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/40" />
+
+        {/* Floating Top Bar (Back & Share) */}
+        <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between max-w-5xl mx-auto">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 rounded-2xl bg-black/40 backdrop-blur-md text-white border border-white/20 flex items-center justify-center active:scale-95 transition-all shadow-md hover:bg-black/60"
+            aria-label="Retour"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleShareShop}
+            className="w-10 h-10 rounded-2xl bg-black/40 backdrop-blur-md text-white border border-white/20 flex items-center justify-center active:scale-95 transition-all shadow-md hover:bg-black/60"
+            title="Partager la vitrine"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Profile Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <Card elevation={3} padding="lg" className="mx-4 rounded-2xl relative overflow-hidden">
-          {/* Shop Banner */}
-          {seller.shop_banner_url && (
-            <div className="absolute top-0 left-0 right-0 h-32">
-              <img
-                src={seller.shop_banner_url}
-                alt="Shop banner"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black/30" />
-            </div>
-          )}
-
-          {/* Thème color overlay if no banner */}
-          {!seller.shop_banner_url && seller.shop_theme_color && (
-            <div
-              className="absolute top-0 left-0 right-0 h-32 opacity-20"
-              style={{ backgroundColor: seller.shop_theme_color }}
-            />
-          )}
-
-          {!seller.shop_banner_url && !seller.shop_theme_color && (
-            <div
-              className="absolute top-0 left-0 right-0 h-32 opacity-10"
-              style={{ background: 'var(--gradient-primary)' }}
-            />
-          )}
-
-          <div className="relative flex flex-col items-center text-center pt-20">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-            >
-              <Avatar
-                src={seller.shop_logo_url || seller.avatar_url}
-                name={seller.shop_name || seller.full_name}
-                size="xl"
-                className="ring-4 ring-white shadow-lg"
-                style={seller.shop_theme_color ? { borderColor: seller.shop_theme_color } : undefined}
-              />
-            </motion.div>
-
-            {/* Shop Name */}
-            {seller.shop_name ? (
-              <div className="mt-4 flex items-center gap-2">
-                <Store className="w-4 h-4 text-[var(--color-primary)]" />
-                <h2 className="text-xl font-bold text-[var(--color-on-surface)]">
-                  {seller.shop_name}
-                </h2>
+      {/* ── 2. SELLER IDENTITY OVERLAPPING CARD ── */}
+      <div className="relative z-10 max-w-4xl mx-auto px-4 -mt-16 sm:-mt-20">
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 p-6 sm:p-8 relative">
+          {/* Avatar with Signature Glow */}
+          <div className="relative flex justify-center -mt-16 sm:-mt-20">
+            <div className="relative inline-block">
+              <div
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-full p-1 bg-white shadow-2xl transition-transform hover:scale-105"
+                style={{
+                  boxShadow: `0 14px 32px -6px ${themeColor}45`,
+                }}
+              >
+                {seller.shop_logo_url || seller.avatar_url ? (
+                  <img
+                    src={seller.shop_logo_url || seller.avatar_url || ''}
+                    alt={shopTitle}
+                    className="w-full h-full rounded-full object-cover bg-gray-100"
+                  />
+                ) : (
+                  <div
+                    className="w-full h-full rounded-full flex items-center justify-center text-white font-black text-2xl uppercase"
+                    style={{ backgroundColor: themeColor }}
+                  >
+                    {shopTitle.charAt(0)}
+                  </div>
+                )}
               </div>
-            ) : (
-              <h2 className="mt-4 text-xl font-bold text-[var(--color-on-surface)]">
-                {seller.full_name || 'Vendeur'}
-              </h2>
-            )}
-
-            {/* Shop Description */}
-            {seller.shop_description && (
-              <p className="mt-2 text-sm text-[var(--color-on-surface-variant)] max-w-md">
-                {seller.shop_description}
-              </p>
-            )}
-
-            {isPro && <ProBadge size="md" className="mt-1" />}
-
-            {/* Rating */}
-            {seller.rating != null && (
-              <div className="flex items-center gap-1 mt-2">
-                {renderStars(seller.rating)}
-                <span className="text-sm text-[var(--color-on-surface-variant)] ml-1">
-                  {seller.rating.toFixed(1)}
+              {isPro && (
+                <span className="absolute bottom-0 right-0 translate-x-1 translate-y-1 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black text-amber-950 bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 ring-2 ring-white shadow-lg">
+                  <Star className="w-3 h-3 fill-amber-950" />
+                  PRO
                 </span>
-              </div>
-            )}
+              )}
+            </div>
+          </div>
 
-            {/* Member since */}
-            <div className="flex items-center gap-1 mt-2 text-xs text-[var(--color-on-surface-variant)]">
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Membre depuis {formatDate(seller.created_at)}</span>
+          {/* Seller Information */}
+          <div className="mt-3 text-center">
+            <div className="inline-flex items-center justify-center gap-2">
+              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+                {shopTitle}
+              </h1>
+              <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
             </div>
 
-            {/* Contact info */}
-            <div className="flex flex-wrap items-center justify-center gap-3 mt-2 text-sm text-[var(--color-on-surface-variant)]">
+            {/* Chips */}
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
               {seller.district && (
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
+                <span className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 bg-gray-50 px-3 py-1 rounded-full border border-gray-200/80">
+                  <MapPin className="w-3.5 h-3.5 text-orange-500" />
                   {seller.district}
                 </span>
               )}
+              {deliverySettings?.cash_on_delivery_enabled && (
+                <span className="inline-flex items-center gap-1 text-xs font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-2xs">
+                  <HandCoins className="w-3.5 h-3.5 text-emerald-600" />
+                  Paiement à la livraison
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-200/80">
+                <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                Depuis {formatDate(seller.created_at)}
+              </span>
             </div>
 
-            {/* Action buttons */}
-            <div className="flex flex-wrap items-center justify-center gap-3 mt-4 w-full max-w-sm">
-              {user && user.id !== sellerId && (
-                <Button
-                  variant="filled"
-                  size="sm"
-                  fullWidth={!isPro}
-                  className="flex-1"
-                  icon={<MessageSquare className="w-4 h-4" />}
-                  onClick={handleContact}
-                  style={seller.shop_theme_color ? { backgroundColor: seller.shop_theme_color } : undefined}
-                >
-                  Contacter
-                </Button>
-              )}
-
-              {/* Bouton Partager réservé UNIQUEMENT aux vendeurs Pro */}
-              {isPro && (
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  size="sm"
-                  fullWidth={!user || user.id === sellerId}
-                  className="flex-1 border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary-50)]"
-                  icon={<Share2 className="w-4 h-4" />}
-                  onClick={handleShareShop}
-                >
-                  {user?.id === sellerId ? 'Partager ma boutique' : 'Partager la boutique'}
-                </Button>
-              )}
-            </div>
-          </div>
-        </Card>
-      </motion.div>
-
-      {/* Active Listings */}
-      <div className="mt-6">
-
-        {listings.length === 0 ? (
-          <div className="px-4">
-            <EmptyState
-              icon={<Package className="w-16 h-16 opacity-40" />}
-              title="Ce vendeur n'a pas d'annonce active"
-              description="Revenez plus tard pour decouvrir ses nouvelles annonces."
-            />
-          </div>
-        ) : (
-          <div className="px-4">
-            <AnimatePresence>
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                {listingCardData.map((listing, index) => (
-                  <motion.div
-                    key={listing.id}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.25, delay: index * 0.05 }}
-                  >
-                    <ListingCard listing={listing} index={index} />
-                  </motion.div>
-                ))}
+            {/* Description */}
+            {seller.shop_description && (
+              <div className="max-w-md mx-auto mt-3.5">
+                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed bg-gray-50/80 px-4 py-3 rounded-2xl border border-gray-100 italic">
+                  "{seller.shop_description}"
+                </p>
               </div>
-            </AnimatePresence>
-          </div>
-        )}
-      </div>
+            )}
 
-      {/* Reviews */}
-      <div className="mt-6">
-        <SectionHeader title="Avis recus" />
-
-        <div className="px-4">
-          {reviews.length === 0 ? (
-            <EmptyState
-              icon={<Star className="w-16 h-16 opacity-40" />}
-              title="Aucun avis reçu"
-              description="Ce vendeur n'a pas encore d'avis."
-            />
-          ) : (
-            <div className="space-y-3">
-              {reviews.map((review, index) => (
-                <motion.div
-                  key={review.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25, delay: index * 0.05 }}
+            {/* CTA Buttons Row */}
+            <div className="flex items-center justify-center gap-2.5 mt-4 max-w-sm mx-auto">
+              {user && user.id !== seller.id && (
+                <button
+                  type="button"
+                  onClick={handleContact}
+                  className="flex-1 h-11 px-5 rounded-2xl text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
+                  style={{
+                    backgroundColor: themeColor,
+                    boxShadow: `0 8px 20px -4px ${themeColor}50`,
+                  }}
                 >
-                  <Card elevation={1} padding="sm" className="rounded-2xl">
-                    <div className="flex items-start gap-3">
-                      <Avatar
-                        src={review.reviewer?.avatar_url}
-                        name={review.reviewer?.full_name}
-                        size="sm"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-semibold text-gray-900">
-                            {review.reviewer?.full_name || 'Utilisateur'}
-                          </p>
-                          <span className="text-xs text-gray-400">
-                            {formatDate(review.created_at)}
-                          </span>
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Contacter</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleShareShop}
+                className="flex-1 h-11 px-5 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 active:scale-95 transition-all bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm"
+              >
+                <Share2 className="w-4 h-4 text-gray-500" />
+                <span>Partager</span>
+              </button>
+            </div>
+
+            {/* 3 Compact KPI Stats Strip */}
+            <div className="flex items-center justify-between mt-4 py-2 px-2.5 bg-gray-50/90 rounded-2xl border border-gray-100/90 max-w-sm mx-auto divide-x divide-gray-200/60 shadow-2xs">
+              <div className="flex-1 text-center px-1">
+                <span className="block text-sm font-black text-gray-900 leading-tight">{listings.length}</span>
+                <span className="text-[10.5px] font-bold text-gray-400">articles</span>
+              </div>
+              <div className="flex-1 text-center px-1">
+                <span className="block text-sm font-black text-amber-700 leading-tight">
+                  {seller.rating ? `${seller.rating.toFixed(1)} ★` : 'Nouveau'}
+                </span>
+                <span className="text-[10.5px] font-bold text-amber-600/80">{reviews.length} avis</span>
+              </div>
+              <div className="flex-1 text-center px-1">
+                <span className="block text-sm font-black text-emerald-700 leading-tight">
+                  {deliverySettings?.cash_on_delivery_enabled ? 'COD Activé' : 'Sur place'}
+                </span>
+                <span className="text-[10.5px] font-bold text-emerald-600/80">
+                  {deliverySettings?.cash_on_delivery_enabled ? 'Paiement livr.' : 'Boutique'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 3. MODERN SEGMENT TABS ── */}
+        <div className="mt-6 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-1">
+          <div className="flex items-center">
+            <button
+              type="button"
+              onClick={() => setActiveTab('listings')}
+              className={cn(
+                'relative flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-black transition-all rounded-xl select-none',
+                activeTab === 'listings' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'
+              )}
+            >
+              <Package className="w-4 h-4" />
+              <span>Articles ({listings.length})</span>
+              {activeTab === 'listings' && (
+                <motion.div
+                  layoutId="activeSellerTab"
+                  className="absolute bottom-0 left-4 right-4 h-0.5 rounded-full"
+                  style={{ backgroundColor: themeColor }}
+                />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('reviews')}
+              className={cn(
+                'relative flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-black transition-all rounded-xl select-none',
+                activeTab === 'reviews' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'
+              )}
+            >
+              <Star className="w-4 h-4" />
+              <span>Avis clients ({reviews.length})</span>
+              {activeTab === 'reviews' && (
+                <motion.div
+                  layoutId="activeSellerTab"
+                  className="absolute bottom-0 left-4 right-4 h-0.5 rounded-full"
+                  style={{ backgroundColor: themeColor }}
+                />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('about')}
+              className={cn(
+                'relative flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-black transition-all rounded-xl select-none',
+                activeTab === 'about' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'
+              )}
+            >
+              <Info className="w-4 h-4" />
+              <span>Garanties</span>
+              {activeTab === 'about' && (
+                <motion.div
+                  layoutId="activeSellerTab"
+                  className="absolute bottom-0 left-4 right-4 h-0.5 rounded-full"
+                  style={{ backgroundColor: themeColor }}
+                />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* ── 4. TAB CONTENT ── */}
+        <div className="mt-4">
+          {activeTab === 'listings' && (
+            <div>
+              {listings.length === 0 ? (
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center space-y-2">
+                  <Package className="w-12 h-12 text-gray-300 mx-auto" />
+                  <h3 className="text-sm font-black text-gray-800">Aucun article actif</h3>
+                  <p className="text-xs text-gray-400">
+                    Ce vendeur n'a pas encore publié d'annonce en ligne.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  {listingCardData.map((listing) => (
+                    <ListingCard key={listing.id} listing={listing as any} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'reviews' && (
+            <div className="space-y-3">
+              {reviews.length === 0 ? (
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 text-center space-y-2">
+                  <Star className="w-10 h-10 text-gray-300 mx-auto" />
+                  <h3 className="text-sm font-black text-gray-800">Pas encore d'avis</h3>
+                  <p className="text-xs text-gray-400">
+                    Les retours des acheteurs apparaîtront ici après leurs commandes.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {reviews.map((review, index) => (
+                    <motion.div
+                      key={review.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: index * 0.04 }}
+                      className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <Avatar
+                            src={review.reviewer?.avatar_url}
+                            name={review.reviewer?.full_name}
+                            size="sm"
+                          />
+                          <div>
+                            <p className="text-xs font-black text-gray-900">
+                              {review.reviewer?.full_name || 'Acheteur'}
+                            </p>
+                            <span className="text-[10px] text-gray-400">
+                              {formatDate(review.created_at)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-0.5 mt-1">
+                        <div className="flex items-center gap-0.5">
                           {renderStars(review.rating)}
                         </div>
-                        {review.comment && (
-                          <p className="text-sm text-gray-600 mt-1">{review.comment}</p>
-                        )}
                       </div>
+                      {review.comment && (
+                        <p className="text-xs text-gray-600 leading-relaxed pl-1">
+                          {review.comment}
+                        </p>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'about' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Carte Paiement à la Livraison */}
+              {deliverySettings?.cash_on_delivery_enabled ? (
+                <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-3xl p-5 space-y-2 relative overflow-hidden sm:col-span-2">
+                  <div className="flex items-center gap-3 text-emerald-800">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+                      <HandCoins className="w-5 h-5" />
                     </div>
-                  </Card>
-                </motion.div>
-              ))}
+                    <div>
+                      <h4 className="text-sm font-black text-emerald-950 uppercase tracking-wider">
+                        Paiement à la Livraison Activé
+                      </h4>
+                      <p className="text-[11px] font-bold text-emerald-700">
+                        Ce vendeur accepte le règlement en mains propres
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-emerald-900/80 leading-relaxed pt-1">
+                    Commandez sereinement et payez directement en espèces ou par Mobile Money auprès du livreur lors de la remise de votre colis à Daloa.
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 space-y-2">
+                <div className="flex items-center gap-2.5 text-emerald-600">
+                  <ShieldCheck className="w-5 h-5" />
+                  <h4 className="text-xs font-black text-gray-900 uppercase tracking-wider">
+                    Paiement Sécurisé Escrow
+                  </h4>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Votre argent est conservé en toute sécurité par DaloaMarket jusqu'à ce que vous confirmiez la bonne réception de votre commande.
+                </p>
+              </div>
+
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 space-y-2">
+                <div className="flex items-center gap-2.5 text-orange-600">
+                  <Truck className="w-5 h-5" />
+                  <h4 className="text-xs font-black text-gray-900 uppercase tracking-wider">
+                    Livraison DaloaDelivery
+                  </h4>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Livraison rapide en point relais ou directement à votre porte partout à Daloa avec suivi en temps réel.
+                </p>
+              </div>
             </div>
           )}
         </div>
