@@ -327,14 +327,25 @@ const SellerProfilePage: React.FC = () => {
 
       {/* ── 2. SELLER IDENTITY OVERLAPPING CARD ── */}
       <div className="relative z-10 max-w-4xl mx-auto px-4 -mt-16 sm:-mt-20">
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 p-6 sm:p-8 relative">
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 p-6 sm:p-8 relative overflow-hidden">
+          {/* Ambient Brand Glow & Top Accent Line */}
+          <div
+            className="absolute top-0 left-8 right-8 h-1 rounded-b-full opacity-90"
+            style={{ background: `linear-gradient(90deg, transparent, ${themeColor}, transparent)` }}
+          />
+          <div
+            className="absolute inset-0 rounded-3xl pointer-events-none"
+            style={{ background: `radial-gradient(circle at 50% 0%, ${themeColor}14, transparent 60%)` }}
+          />
+
           {/* Avatar with Signature Glow */}
           <div className="relative flex justify-center -mt-16 sm:-mt-20">
             <div className="relative inline-block">
               <div
                 className="w-24 h-24 sm:w-28 sm:h-28 rounded-full p-1 bg-white shadow-2xl transition-transform hover:scale-105"
                 style={{
-                  boxShadow: `0 14px 32px -6px ${themeColor}45`,
+                  border: `3.5px solid ${themeColor}`,
+                  boxShadow: `0 12px 30px -4px ${themeColor}55`,
                 }}
               >
                 {seller.shop_logo_url || seller.avatar_url ? (
@@ -362,19 +373,26 @@ const SellerProfilePage: React.FC = () => {
           </div>
 
           {/* Seller Information */}
-          <div className="mt-3 text-center">
+          <div className="mt-3 text-center relative z-10">
             <div className="inline-flex items-center justify-center gap-2">
               <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
                 {shopTitle}
               </h1>
-              <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: themeColor }} />
             </div>
 
             {/* Chips */}
             <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
               {seller.district && (
-                <span className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 bg-gray-50 px-3 py-1 rounded-full border border-gray-200/80">
-                  <MapPin className="w-3.5 h-3.5 text-orange-500" />
+                <span
+                  className="inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-full border shadow-2xs"
+                  style={{
+                    backgroundColor: `${themeColor}12`,
+                    borderColor: `${themeColor}35`,
+                    color: themeColor,
+                  }}
+                >
+                  <MapPin className="w-3.5 h-3.5" style={{ color: themeColor }} />
                   {seller.district}
                 </span>
               )}
@@ -390,10 +408,15 @@ const SellerProfilePage: React.FC = () => {
               </span>
             </div>
 
-            {/* Description */}
+            {/* Description Quote */}
             {seller.shop_description && (
               <div className="max-w-md mx-auto mt-3.5">
-                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed bg-gray-50/80 px-4 py-3 rounded-2xl border border-gray-100 italic">
+                <p
+                  className="text-xs sm:text-sm text-gray-700 leading-relaxed bg-gray-50/90 px-4 py-3 rounded-2xl border border-gray-100 italic text-left"
+                  style={{
+                    borderLeft: `3.5px solid ${themeColor}`,
+                  }}
+                >
                   "{seller.shop_description}"
                 </p>
               </div>
@@ -401,36 +424,70 @@ const SellerProfilePage: React.FC = () => {
 
             {/* CTA Buttons Row */}
             <div className="flex items-center justify-center gap-2.5 mt-4 max-w-sm mx-auto">
-              {user && user.id !== seller.id && (
-                <button
-                  type="button"
-                  onClick={handleContact}
-                  className="flex-1 h-11 px-5 rounded-2xl text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
-                  style={{
-                    backgroundColor: themeColor,
-                    boxShadow: `0 8px 20px -4px ${themeColor}50`,
-                  }}
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  <span>Contacter</span>
-                </button>
-              )}
+              {user && user.id !== seller.id ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleContact}
+                    className="flex-1 h-11 px-5 rounded-2xl text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
+                    style={{
+                      backgroundColor: themeColor,
+                      boxShadow: `0 8px 20px -4px ${themeColor}50`,
+                    }}
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>Contacter</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={handleShareShop}
-                className="flex-1 h-11 px-5 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 active:scale-95 transition-all bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm"
-              >
-                <Share2 className="w-4 h-4 text-gray-500" />
-                <span>Partager</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={handleShareShop}
+                    className="flex-1 h-11 px-5 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 active:scale-95 transition-all bg-white border text-gray-700 hover:bg-gray-50 shadow-sm"
+                    style={{ borderColor: `${themeColor}40` }}
+                  >
+                    <Share2 className="w-4 h-4" style={{ color: themeColor }} />
+                    <span>Partager</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleShareShop}
+                    className="flex-1 h-11 px-5 rounded-2xl text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
+                    style={{
+                      backgroundColor: themeColor,
+                      boxShadow: `0 8px 20px -4px ${themeColor}50`,
+                    }}
+                  >
+                    <Share2 className="w-4 h-4" />
+                    <span>Partager ma boutique</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate('/settings')}
+                    className="h-11 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all bg-white border shadow-xs"
+                    style={{
+                      borderColor: `${themeColor}45`,
+                      color: themeColor,
+                      backgroundColor: `${themeColor}0a`,
+                    }}
+                  >
+                    <Store className="w-4 h-4" style={{ color: themeColor }} />
+                    <span>Gérer</span>
+                  </button>
+                </>
+              )}
             </div>
 
             {/* 3 Compact KPI Stats Strip */}
             <div className="flex items-center justify-between mt-4 py-2 px-2.5 bg-gray-50/90 rounded-2xl border border-gray-100/90 max-w-sm mx-auto divide-x divide-gray-200/60 shadow-2xs">
               <div className="flex-1 text-center px-1">
-                <span className="block text-sm font-black text-gray-900 leading-tight">{listings.length}</span>
-                <span className="text-[10.5px] font-bold text-gray-400">articles</span>
+                <span className="block text-sm font-black leading-tight" style={{ color: themeColor }}>
+                  {listings.length}
+                </span>
+                <span className="text-[10.5px] font-bold text-gray-500">articles</span>
               </div>
               <div className="flex-1 text-center px-1">
                 <span className="block text-sm font-black text-amber-700 leading-tight">
@@ -458,8 +515,9 @@ const SellerProfilePage: React.FC = () => {
               onClick={() => setActiveTab('listings')}
               className={cn(
                 'relative flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-black transition-all rounded-xl select-none',
-                activeTab === 'listings' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'
+                activeTab === 'listings' ? 'font-black' : 'text-gray-400 hover:text-gray-700'
               )}
+              style={activeTab === 'listings' ? { color: themeColor, backgroundColor: `${themeColor}12` } : {}}
             >
               <Package className="w-4 h-4" />
               <span>Articles ({listings.length})</span>
@@ -477,8 +535,9 @@ const SellerProfilePage: React.FC = () => {
               onClick={() => setActiveTab('reviews')}
               className={cn(
                 'relative flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-black transition-all rounded-xl select-none',
-                activeTab === 'reviews' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'
+                activeTab === 'reviews' ? 'font-black' : 'text-gray-400 hover:text-gray-700'
               )}
+              style={activeTab === 'reviews' ? { color: themeColor, backgroundColor: `${themeColor}12` } : {}}
             >
               <Star className="w-4 h-4" />
               <span>Avis clients ({reviews.length})</span>
@@ -496,8 +555,9 @@ const SellerProfilePage: React.FC = () => {
               onClick={() => setActiveTab('about')}
               className={cn(
                 'relative flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-black transition-all rounded-xl select-none',
-                activeTab === 'about' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'
+                activeTab === 'about' ? 'font-black' : 'text-gray-400 hover:text-gray-700'
               )}
+              style={activeTab === 'about' ? { color: themeColor, backgroundColor: `${themeColor}12` } : {}}
             >
               <Info className="w-4 h-4" />
               <span>Garanties</span>
