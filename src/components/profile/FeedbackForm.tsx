@@ -1,25 +1,23 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
-  MessageSquare,
+  Star,
   CheckCircle2,
   Lightbulb,
-  Share2,
+  AlertCircle,
+  MessageSquare,
   Smartphone,
-  DollarSign,
-  EyeOff,
-  Frown,
   Search,
+  Truck,
+  Eye,
   ShieldCheck,
-  Clock,
+  Zap,
   ShoppingBag,
   Send,
   Sparkles,
-  Heart,
-  Zap,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '../../lib/utils';
 
 interface FeedbackFormProps {
@@ -28,7 +26,9 @@ interface FeedbackFormProps {
   onCancel?: () => void;
 }
 
-type FeedbackOptionKey =
+type FeedbackType = 'suggestion' | 'bug' | 'feature' | 'general';
+
+type TopicKey =
   | 'prefers_native_app'
   | 'pricing_too_high'
   | 'visibility_issue'
@@ -37,35 +37,43 @@ type FeedbackOptionKey =
   | 'slow_response_issue'
   | 'complex_checkout_issue';
 
-interface QuickOption {
-  id: FeedbackOptionKey;
+interface TopicOption {
+  id: TopicKey;
   label: string;
-  emoji: string;
-  icon: React.ReactNode;
+  icon: React.ComponentType<{ className?: string }>;
 }
 
-const SATISFACTIONS = [
-  { level: 5, emoji: '😍', label: 'Génial' },
-  { level: 4, emoji: '😊', label: 'Bien' },
-  { level: 3, emoji: '😐', label: 'Correct' },
-  { level: 2, emoji: '😕', label: 'Moyen' },
-  { level: 1, emoji: '😤', label: 'Déçu' },
+const FEEDBACK_TYPES: { id: FeedbackType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'general', label: 'Avis global', icon: MessageSquare },
+  { id: 'suggestion', label: 'Suggestion', icon: Sparkles },
+  { id: 'feature', label: 'Idée de fonction', icon: Lightbulb },
+  { id: 'bug', label: 'Signaler un bug', icon: AlertCircle },
 ];
 
-const QUICK_IDEAS = [
-  '🌙 Mode sombre',
-  '💬 Négociation prix',
-  '🔔 Alertes WhatsApp',
-  '⚡ Filtres quartier',
-  '🛵 Suivi livreur live',
+const TOPIC_OPTIONS: TopicOption[] = [
+  { id: 'prefers_native_app', label: 'Application mobile', icon: Smartphone },
+  { id: 'search_navigation_issue', label: 'Recherche & filtres', icon: Search },
+  { id: 'pricing_too_high', label: 'Livraison & tarifs', icon: Truck },
+  { id: 'visibility_issue', label: 'Visibilité des annonces', icon: Eye },
+  { id: 'payment_security_issue', label: 'Paiements & sécurité', icon: ShieldCheck },
+  { id: 'slow_response_issue', label: 'Fluidité & rapidité', icon: Zap },
+  { id: 'complex_checkout_issue', label: 'Processus de commande', icon: ShoppingBag },
 ];
+
+const RATING_LABELS: Record<number, string> = {
+  1: 'Très insatisfait',
+  2: 'Insatisfait',
+  3: 'Correct',
+  4: 'Satisfait',
+  5: 'Très satisfait',
+};
 
 export const FeedbackForm: React.FC<FeedbackFormProps> = ({ userId, onSuccess, onCancel }) => {
-  const [satisfaction, setSatisfaction] = useState<number | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [formData, setFormData] = useState({
-    comment: '',
+  const [rating, setRating] = useState<number | null>(null);
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
+  const [selectedType, setSelectedType] = useState<FeedbackType>('general');
+  const [comment, setComment] = useState('');
+  const [selectedTopics, setSelectedTopics] = useState<Record<TopicKey, boolean>>({
     prefers_native_app: false,
     pricing_too_high: false,
     visibility_issue: false,
@@ -74,103 +82,81 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ userId, onSuccess, o
     slow_response_issue: false,
     complex_checkout_issue: false,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const quickOptions: QuickOption[] = [
-    { id: 'prefers_native_app', label: 'App mobile', emoji: '📱', icon: <Smartphone className="w-3.5 h-3.5" /> },
-    { id: 'pricing_too_high', label: 'Tarifs livraison', emoji: '🛵', icon: <DollarSign className="w-3.5 h-3.5" /> },
-    { id: 'visibility_issue', label: 'Visibilité annonces', emoji: '👁️', icon: <EyeOff className="w-3.5 h-3.5" /> },
-    { id: 'search_navigation_issue', label: 'Recherche & filtres', emoji: '🔍', icon: <Search className="w-3.5 h-3.5" /> },
-    { id: 'payment_security_issue', label: 'Paiement sécurisé', emoji: '🔒', icon: <ShieldCheck className="w-3.5 h-3.5" /> },
-    { id: 'slow_response_issue', label: 'Rapidité / Fluidité', emoji: '⚡', icon: <Clock className="w-3.5 h-3.5" /> },
-    { id: 'complex_checkout_issue', label: 'Processus commande', emoji: '🛍️', icon: <ShoppingBag className="w-3.5 h-3.5" /> },
-  ];
-
-  const toggleOption = (name: FeedbackOptionKey) => {
-    setFormData((prev) => ({
+  const toggleTopic = (id: TopicKey) => {
+    setSelectedTopics((prev) => ({
       ...prev,
-      [name]: !prev[name],
+      [id]: !prev[id],
     }));
   };
 
-  const handleAddQuickIdea = (idea: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      comment: prev.comment ? `${prev.comment}, ${idea.replace(/^[^a-zA-Z0-9À-ÿ]+/, '')}` : idea.replace(/^[^a-zA-Z0-9À-ÿ]+/, ''),
-    }));
-  };
+  const activeRating = hoverRating ?? rating;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const hasAnyOptionSelected = quickOptions.some((opt) => formData[opt.id]);
-    if (!formData.comment.trim() && !hasAnyOptionSelected && satisfaction === null) {
-      toast.error('Choisissez une note ou partagez un commentaire.', { icon: '✨' });
+
+    const hasTopics = Object.values(selectedTopics).some(Boolean);
+    if (!comment.trim() && !hasTopics && rating === null) {
+      toast.error('Veuillez attribuer une note ou renseigner un commentaire.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const selectedLabels = quickOptions
-        .filter((opt) => formData[opt.id])
-        .map((opt) => opt.label);
+      const typeLabel = FEEDBACK_TYPES.find((t) => t.id === selectedType)?.label || 'Avis';
+      const ratingText = rating ? `[Note: ${rating}/5 - ${RATING_LABELS[rating]}]` : '';
+      const typeText = `[Type: ${typeLabel}]`;
 
-      let finalComment = formData.comment.trim();
-      if (satisfaction) {
-        const satObj = SATISFACTIONS.find((s) => s.level === satisfaction);
-        const satPrefix = `[Satisfaction: ${satObj?.emoji} ${satObj?.label}]`;
-        finalComment = finalComment ? `${satPrefix} ${finalComment}` : satPrefix;
-      }
+      const selectedTopicLabels = TOPIC_OPTIONS
+        .filter((t) => selectedTopics[t.id])
+        .map((t) => t.label);
+      const topicsText = selectedTopicLabels.length > 0 ? `[Thèmes: ${selectedTopicLabels.join(', ')}]` : '';
+
+      const prefixes = [typeText, ratingText, topicsText].filter(Boolean).join(' ');
+      const cleanComment = comment.trim();
+      const finalContent = cleanComment ? (prefixes ? `${prefixes}\n${cleanComment}` : cleanComment) : prefixes;
 
       const payload: Record<string, any> = {
         user_id: userId,
-        dislikes: finalComment,
-        prefers_native_app: formData.prefers_native_app,
-        pricing_too_high: formData.pricing_too_high,
-        visibility_issue: formData.visibility_issue,
-        search_navigation_issue: formData.search_navigation_issue,
-        payment_security_issue: formData.payment_security_issue,
-        slow_response_issue: formData.slow_response_issue,
-        complex_checkout_issue: formData.complex_checkout_issue,
-        recommended_features: finalComment,
+        dislikes: finalContent,
+        prefers_native_app: selectedTopics.prefers_native_app,
+        pricing_too_high: selectedTopics.pricing_too_high,
+        visibility_issue: selectedTopics.visibility_issue,
+        search_navigation_issue: selectedTopics.search_navigation_issue,
+        payment_security_issue: selectedTopics.payment_security_issue,
+        slow_response_issue: selectedTopics.slow_response_issue,
+        complex_checkout_issue: selectedTopics.complex_checkout_issue,
+        recommended_features: finalContent,
       };
 
       let { error } = await (supabase as any).from('user_feedbacks').insert(payload);
 
-      // Fallback in case of restricted columns in DB schema
-      if (
-        error &&
-        (error.code === 'PGRST204' ||
-          error.message?.includes('schema cache') ||
-          error.message?.includes('column'))
-      ) {
-        let combinedText = finalComment;
-        if (selectedLabels.length > 0) {
-          const tagsPrefix = `[Thèmes: ${selectedLabels.join(', ')}]`;
-          combinedText = combinedText ? `${tagsPrefix}\n${combinedText}` : tagsPrefix;
-        }
-
+      // Fallback si la table utilise le schéma initial
+      if (error && (error.code === 'PGRST204' || error.message?.includes('column'))) {
         const fallbackPayload = {
           user_id: userId,
-          dislikes: combinedText,
-          prefers_native_app: formData.prefers_native_app,
-          pricing_too_high: formData.pricing_too_high,
-          visibility_issue: formData.visibility_issue,
-          recommended_features: combinedText,
+          dislikes: finalContent,
+          prefers_native_app: selectedTopics.prefers_native_app,
+          pricing_too_high: selectedTopics.pricing_too_high,
+          visibility_issue: selectedTopics.visibility_issue,
+          recommended_features: finalContent,
         };
-
-        const fallbackResult = await (supabase as any).from('user_feedbacks').insert(fallbackPayload);
-        error = fallbackResult.error;
+        const fallbackRes = await (supabase as any).from('user_feedbacks').insert(fallbackPayload);
+        error = fallbackRes.error;
       }
 
       if (error) throw error;
 
       setIsSubmitted(true);
-      toast.success('Merci pour votre aide précieuse !', { icon: '🧡' });
+      toast.success('Votre retour a bien été transmis.');
       if (onSuccess) {
-        setTimeout(onSuccess, 1600);
+        setTimeout(onSuccess, 1500);
       }
     } catch (err: any) {
       console.error('Error submitting feedback:', err);
-      toast.error("Erreur lors de l'envoi de votre avis.");
+      toast.error("Une erreur est survenue lors de l'envoi.");
     } finally {
       setIsSubmitting(false);
     }
@@ -178,21 +164,19 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ userId, onSuccess, o
 
   if (isSubmitted) {
     return (
-      <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
+      <div className="flex flex-col items-center justify-center py-10 text-center space-y-3">
         <motion.div
-          initial={{ scale: 0, rotate: -20 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: 'spring', stiffness: 280, damping: 18 }}
-          className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-3xl flex items-center justify-center shadow-lg shadow-emerald-500/25"
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+          className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center border border-emerald-100 shadow-sm"
         >
-          <CheckCircle2 className="w-8 h-8" />
+          <CheckCircle2 className="w-7 h-7 stroke-[2.2]" />
         </motion.div>
         <div>
-          <h3 className="text-lg font-black text-gray-900">
-            Avis bien reçu !
-          </h3>
-          <p className="text-xs text-gray-500 max-w-xs mt-1.5 leading-relaxed font-medium">
-            Chaque retour est lu directement par l'équipe pour façonner l'avenir de DaloaMarket. Merci !
+          <h3 className="text-base font-bold text-gray-900">Merci pour votre retour</h3>
+          <p className="text-xs text-gray-500 max-w-xs mt-1 leading-relaxed">
+            Vos remarques sont précieuses pour nous aider à faire évoluer la plateforme.
           </p>
         </div>
       </div>
@@ -201,145 +185,142 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ userId, onSuccess, o
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Sentiment Picker */}
-      <div className="bg-gradient-to-br from-orange-50/60 to-amber-50/40 rounded-3xl p-4 border border-orange-100/70 text-center">
-        <span className="text-[11px] font-black uppercase tracking-wider text-orange-950/70 block mb-2.5">
-          Comment évaluez-vous votre expérience ?
-        </span>
-        <div className="flex justify-between items-center gap-1 max-w-xs mx-auto">
-          {SATISFACTIONS.map((item) => {
-            const isSelected = satisfaction === item.level;
+      {/* Type de retour */}
+      <div className="space-y-2">
+        <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">
+          Catégorie
+        </label>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {FEEDBACK_TYPES.map((type) => {
+            const isSelected = selectedType === type.id;
+            const Icon = type.icon;
             return (
               <button
-                key={item.level}
+                key={type.id}
                 type="button"
-                onClick={() => setSatisfaction(item.level)}
+                onClick={() => setSelectedType(type.id)}
                 className={cn(
-                  'flex flex-col items-center gap-1 p-2 rounded-2xl transition-all duration-200 active:scale-90',
+                  'flex items-center justify-center gap-2 h-10 px-3 rounded-xl text-xs font-semibold border transition-all duration-150 active:scale-[0.98]',
                   isSelected
-                    ? 'bg-white shadow-md shadow-orange-500/15 scale-110 border border-orange-200'
-                    : 'hover:bg-white/60 text-gray-400 opacity-75 hover:opacity-100'
+                    ? 'bg-orange-50/80 border-orange-500/40 text-orange-600 font-bold shadow-xs'
+                    : 'bg-white border-gray-200/80 text-gray-600 hover:border-gray-300 hover:bg-gray-50/60'
                 )}
               >
-                <span className="text-2xl select-none transform transition-transform">{item.emoji}</span>
-                <span className={cn('text-[10px] font-bold', isSelected ? 'text-orange-600 font-black' : 'text-gray-500')}>
-                  {item.label}
-                </span>
+                <Icon className={cn('w-3.5 h-3.5', isSelected ? 'text-orange-600' : 'text-gray-400')} />
+                <span>{type.label}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Selectable Topic Chips */}
+      {/* Évaluation globale par étoiles */}
+      <div className="p-4 bg-gray-50/70 border border-gray-100 rounded-2xl text-center space-y-2.5">
+        <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">
+          Note de satisfaction globale
+        </span>
+        <div className="flex items-center justify-center gap-2">
+          {[1, 2, 3, 4, 5].map((star) => {
+            const isFilled = (activeRating ?? 0) >= star;
+            return (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setRating(star)}
+                onMouseEnter={() => setHoverRating(star)}
+                onMouseLeave={() => setHoverRating(null)}
+                aria-label={`${star} étoile${star > 1 ? 's' : ''}`}
+                className="p-1 rounded-lg transition-transform hover:scale-110 active:scale-95 focus:outline-none"
+              >
+                <Star
+                  className={cn(
+                    'w-7 h-7 transition-colors duration-150',
+                    isFilled
+                      ? 'fill-amber-400 text-amber-400'
+                      : 'fill-transparent text-gray-300 hover:text-gray-400'
+                  )}
+                  strokeWidth={1.8}
+                />
+              </button>
+            );
+          })}
+        </div>
+        {activeRating && (
+          <p className="text-xs font-semibold text-gray-700 transition-opacity">
+            {RATING_LABELS[activeRating]}
+          </p>
+        )}
+      </div>
+
+      {/* Thématiques concernées */}
       <div className="space-y-2">
-        <label className="text-[11px] font-black text-gray-500 uppercase tracking-wider block">
-          Points d'amélioration ou d'intérêt
+        <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">
+          Thèmes concernés <span className="text-gray-400 font-normal lowercase">(facultatif)</span>
         </label>
         <div className="flex flex-wrap gap-1.5">
-          {quickOptions.map((opt) => {
-            const isSelected = formData[opt.id];
+          {TOPIC_OPTIONS.map((topic) => {
+            const isSelected = selectedTopics[topic.id];
+            const Icon = topic.icon;
             return (
               <button
-                key={opt.id}
+                key={topic.id}
                 type="button"
-                onClick={() => toggleOption(opt.id)}
+                onClick={() => toggleTopic(topic.id)}
                 className={cn(
-                  'inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-bold transition-all active:scale-95 whitespace-nowrap',
+                  'inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs transition-all duration-150 active:scale-[0.98]',
                   isSelected
-                    ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-sm shadow-orange-500/25 ring-2 ring-orange-500/20 font-black'
-                    : 'bg-gray-50 hover:bg-gray-100/80 text-gray-700 border border-gray-200/60'
+                    ? 'bg-gray-900 text-white font-medium border border-gray-900 shadow-xs'
+                    : 'bg-white text-gray-600 border border-gray-200/80 hover:bg-gray-50 hover:border-gray-300 font-normal'
                 )}
               >
-                <span className="text-xs">{opt.emoji}</span>
-                <span>{opt.label}</span>
+                <Icon className={cn('w-3.5 h-3.5', isSelected ? 'text-white' : 'text-gray-400')} />
+                <span>{topic.label}</span>
               </button>
             );
           })}
         </div>
-
-        {/* Tip banner for visibility */}
-        <AnimatePresence>
-          {formData.visibility_issue && (
-            <motion.div
-              initial={{ opacity: 0, height: 0, y: -4 }}
-              animate={{ opacity: 1, height: 'auto', y: 0 }}
-              exit={{ opacity: 0, height: 0, y: -4 }}
-              className="overflow-hidden"
-            >
-              <div className="mt-2.5 p-3 bg-blue-50/80 border border-blue-100 rounded-2xl flex gap-2.5 items-center">
-                <div className="w-7 h-7 bg-blue-100 rounded-xl shrink-0 text-blue-600 flex items-center justify-center font-bold text-xs">
-                  💡
-                </div>
-                <p className="text-[11px] text-blue-900 font-medium leading-snug">
-                  <strong>Astuce Vendeur :</strong> Partager votre lien de vitrine sur WhatsApp booste immédiatement vos visites !
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
-      {/* Unified Text Feedback Box */}
-      <div className="space-y-2">
-        <div className="flex justify-between items-center">
-          <label className="text-[11px] font-black text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-            <MessageSquare className="w-3.5 h-3.5 text-primary" />
-            <span>Vos remarques & suggestions</span>
+      {/* Zone de texte */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">
+            Détails & suggestions
           </label>
-          <span className="text-[10px] text-gray-400 font-bold">Facultatif</span>
-        </div>
-
-        <div className="relative">
-          <textarea
-            name="comment"
-            value={formData.comment}
-            onChange={(e) => setFormData((prev) => ({ ...prev, comment: e.target.value }))}
-            placeholder="Dites-nous ce qui vous plaît, ce qui bloque ou ce que vous aimeriez voir..."
-            rows={3}
-            className="w-full px-4 py-3 text-xs font-medium rounded-2xl border border-gray-200/90 bg-gray-50/40 text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 resize-none shadow-sm"
-          />
-        </div>
-
-        {/* Quick Suggestion Pills */}
-        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-          <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-amber-500" /> Idées :
+          <span className="text-[11px] text-gray-400 font-mono">
+            {comment.length}/500
           </span>
-          {QUICK_IDEAS.map((idea) => (
-            <button
-              key={idea}
-              type="button"
-              onClick={() => handleAddQuickIdea(idea)}
-              className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-gray-100/80 hover:bg-orange-50 hover:text-primary hover:border-orange-200 border border-transparent text-gray-600 transition-all active:scale-95"
-            >
-              {idea}
-            </button>
-          ))}
         </div>
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value.slice(0, 500))}
+          placeholder="Décrivez votre expérience, signalez un problème ou proposez une amélioration..."
+          rows={4}
+          className="w-full px-3.5 py-2.5 text-xs text-gray-900 placeholder-gray-400 bg-white border border-gray-200 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 focus:outline-none transition-all resize-none"
+        />
       </div>
 
-      {/* Action Buttons */}
+      {/* Actions */}
       <div className="flex items-center gap-2.5 pt-1">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
             disabled={isSubmitting}
-            className="flex-1 h-12 rounded-2xl border border-gray-200 text-gray-600 font-bold text-xs hover:bg-gray-50 active:scale-95 transition-all"
+            className="flex-1 h-11 rounded-xl border border-gray-200 text-gray-700 font-semibold text-xs hover:bg-gray-50 active:scale-95 transition-all disabled:opacity-50"
           >
-            Plus tard
+            Annuler
           </button>
         )}
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex-[2] h-12 rounded-2xl bg-gradient-to-r from-orange-500 via-primary to-amber-600 hover:opacity-95 text-white font-black text-xs shadow-lg shadow-orange-500/25 active:scale-95 transition-all flex items-center justify-center gap-2"
+          className="flex-[2] h-11 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-xs active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {isSubmitting ? (
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : (
-            <Send className="w-4 h-4" />
+            <Send className="w-3.5 h-3.5" />
           )}
           <span>{isSubmitting ? 'Envoi en cours...' : 'Envoyer mon avis'}</span>
         </button>
@@ -347,4 +328,3 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ userId, onSuccess, o
     </form>
   );
 };
-
