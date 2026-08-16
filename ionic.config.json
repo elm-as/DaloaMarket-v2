@@ -1,0 +1,7 @@
+{
+  "name": "DaloaMarket",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "custom"
+}
