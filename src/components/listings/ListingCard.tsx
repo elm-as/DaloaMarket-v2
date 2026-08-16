@@ -4,7 +4,7 @@ import { MapPin, Zap, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { formatPrice, getListingPath, getOptimizedImageUrl } from '../../lib/utils';
+import { formatPrice, getListingPath, getOptimizedImageUrl, FALLBACK_LISTING_IMAGE } from '../../lib/utils';
 import FavoriteButton from './FavoriteButton';
 import DiscountBadge from './DiscountBadge';
 import { useCart } from '../../context/CartContext';
@@ -77,7 +77,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, index = 0 }) => {
   const mainImageRaw =
     listing.photos && listing.photos.length > 0
       ? listing.photos[0]
-      : 'https://images.pexels.com/photos/4386321/pexels-photo-4386321.jpeg?auto=compress&cs=tinysrgb&w=320';
+      : FALLBACK_LISTING_IMAGE;
   const mainImage = getOptimizedImageUrl(mainImageRaw, 320, 75);
 
   const isBoosted =
@@ -114,6 +114,10 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, index = 0 }) => {
             loading={index < 2 ? 'eager' : 'lazy'}
             {...({ fetchpriority: index < 2 ? 'high' : undefined } as any)}
             decoding="async"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = FALLBACK_LISTING_IMAGE;
+            }}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
           />
 

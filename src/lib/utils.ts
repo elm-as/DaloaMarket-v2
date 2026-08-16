@@ -14,27 +14,35 @@ export const formatPrice = (price: number): string => {
   }).format(price);
 };
 
+export const FALLBACK_LISTING_IMAGE =
+  'https://images.pexels.com/photos/4386321/pexels-photo-4386321.jpeg?auto=compress&cs=tinysrgb&w=400';
+
 export function getOptimizedImageUrl(url: string | null | undefined, width = 400, quality = 75): string {
-  if (!url) return '';
+  if (!url) return FALLBACK_LISTING_IMAGE;
   if (url.startsWith('data:') || url.startsWith('blob:')) return url;
 
-  if (url.includes('.supabase.co/storage/v1/object/public/')) {
-    const transformed = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+  let cleanUrl = url;
+  if (cleanUrl.includes('sfqaxjvknxglgjgknkph.supabase.co')) {
+    cleanUrl = cleanUrl.replace('sfqaxjvknxglgjgknkph.supabase.co', 'wjanjnoxzizxxhtbwyqd.supabase.co');
+  }
+
+  if (cleanUrl.includes('.supabase.co/storage/v1/object/public/')) {
+    const transformed = cleanUrl.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
     const separator = transformed.includes('?') ? '&' : '?';
     return `${transformed}${separator}width=${width}&quality=${quality}&resize=contain`;
   }
 
-  if (url.includes('images.pexels.com')) {
-    const baseUrl = url.split('?')[0];
+  if (cleanUrl.includes('images.pexels.com')) {
+    const baseUrl = cleanUrl.split('?')[0];
     return `${baseUrl}?auto=compress&cs=tinysrgb&w=${width}&q=${quality}`;
   }
 
-  if (url.includes('images.unsplash.com')) {
-    const baseUrl = url.split('?')[0];
+  if (cleanUrl.includes('images.unsplash.com')) {
+    const baseUrl = cleanUrl.split('?')[0];
     return `${baseUrl}?auto=format&fit=crop&w=${width}&q=${quality}`;
   }
 
-  return url;
+  return cleanUrl;
 }
 
 export const extractUuid = (input: string): string | null => {
