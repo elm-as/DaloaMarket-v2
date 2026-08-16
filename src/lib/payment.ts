@@ -9,7 +9,9 @@
  *   4. en parallèle, Money Fusion appelle notre webhook qui met à jour la DB
  */
 
-const PAYMENT_API_URL = import.meta.env.VITE_PAYMENT_API_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '/.netlify/functions');
+const PAYMENT_API_URL =
+  import.meta.env.VITE_PAYMENT_API_URL ||
+  (import.meta.env.DEV ? 'http://localhost:3000' : 'https://daloapay.onrender.com');
 
 export type PaymentType = 'seller_badge' | 'listing_pack_10' | 'boost' | 'bump' | 'pro' | 'order' | 'credits_pack_5' | 'credits_pack_12' | 'credits_pack_30';
 
