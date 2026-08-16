@@ -18,18 +18,12 @@ export const FALLBACK_LISTING_IMAGE =
   'https://images.pexels.com/photos/4386321/pexels-photo-4386321.jpeg?auto=compress&cs=tinysrgb&w=400';
 
 export function getOptimizedImageUrl(url: string | null | undefined, width = 400, quality = 75): string {
-  if (!url) return FALLBACK_LISTING_IMAGE;
+  if (!url) return '';
   if (url.startsWith('data:') || url.startsWith('blob:')) return url;
 
   let cleanUrl = url;
   if (cleanUrl.includes('sfqaxjvknxglgjgknkph.supabase.co')) {
     cleanUrl = cleanUrl.replace('sfqaxjvknxglgjgknkph.supabase.co', 'wjanjnoxzizxxhtbwyqd.supabase.co');
-  }
-
-  if (cleanUrl.includes('.supabase.co/storage/v1/object/public/')) {
-    const transformed = cleanUrl.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
-    const separator = transformed.includes('?') ? '&' : '?';
-    return `${transformed}${separator}width=${width}&quality=${quality}&resize=contain`;
   }
 
   if (cleanUrl.includes('images.pexels.com')) {
