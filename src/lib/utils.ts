@@ -14,29 +14,21 @@ export const formatPrice = (price: number): string => {
   }).format(price);
 };
 
-export const FALLBACK_LISTING_IMAGE =
-  'https://images.pexels.com/photos/4386321/pexels-photo-4386321.jpeg?auto=compress&cs=tinysrgb&w=400';
-
 export function getOptimizedImageUrl(url: string | null | undefined, width = 400, quality = 75): string {
   if (!url) return '';
   if (url.startsWith('data:') || url.startsWith('blob:')) return url;
 
-  let cleanUrl = url;
-  if (cleanUrl.includes('sfqaxjvknxglgjgknkph.supabase.co')) {
-    cleanUrl = cleanUrl.replace('sfqaxjvknxglgjgknkph.supabase.co', 'wjanjnoxzizxxhtbwyqd.supabase.co');
-  }
-
-  if (cleanUrl.includes('images.pexels.com')) {
-    const baseUrl = cleanUrl.split('?')[0];
+  if (url.includes('images.pexels.com')) {
+    const baseUrl = url.split('?')[0];
     return `${baseUrl}?auto=compress&cs=tinysrgb&w=${width}&q=${quality}`;
   }
 
-  if (cleanUrl.includes('images.unsplash.com')) {
-    const baseUrl = cleanUrl.split('?')[0];
+  if (url.includes('images.unsplash.com')) {
+    const baseUrl = url.split('?')[0];
     return `${baseUrl}?auto=format&fit=crop&w=${width}&q=${quality}`;
   }
 
-  return cleanUrl;
+  return url;
 }
 
 export const extractUuid = (input: string): string | null => {

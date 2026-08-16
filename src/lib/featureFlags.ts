@@ -33,7 +33,7 @@ export const BETA_DISABLE_LISTING_PAYMENTS = parseBoolean(
 // En Phase0, la limite est ignorée (publication illimitée pour tous).
 export const MAX_FREE_LISTINGS = PHASE0_FREE_MODE
 	? Number.POSITIVE_INFINITY
-	: parseInteger(import.meta.env.VITE_MAX_FREE_LISTINGS, 10);
+	: parseInteger(import.meta.env.VITE_MAX_FREE_LISTINGS, 20);
 
 // --- Monétisation : visibilité & performance ---
 
