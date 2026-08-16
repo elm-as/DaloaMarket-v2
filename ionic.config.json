@@ -1,7 +1,8 @@
 {
   "name": "DaloaMarket",
+  "id": "a7abcf4f",
   "integrations": {
     "capacitor": {}
   },
-  "type": "custom"
+  "type": "react"
 }

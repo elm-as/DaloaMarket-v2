@@ -1,0 +1,10 @@
+{
+  "apps": [
+    {
+      "appId": "a7abcf4f",
+      "root": "./",
+      "dependencyInstallCommand": "npm ci",
+      "buildCommand": "npm run build"
+    }
+  ]
+}
