@@ -20,6 +20,7 @@ import { OrderTrackingHeader } from '../components/delivery/OrderTrackingHeader'
 import { CancelledBanner } from '../components/delivery/CancelledBanner';
 import { SellerSection } from '../components/delivery/SellerSection';
 import { BuyerSection } from '../components/delivery/BuyerSection';
+import { friendlyError } from '../lib/messages';
 import type { Order } from '../types/order';
 
 /* ─────────────── TYPES ─────────────── */
@@ -79,10 +80,6 @@ export function getStatusInfo(order: Order): { label: string; color: string; bgC
   if (delivery?.status === 'awaiting_pickup') return { label: 'En attente d\'un livreur', color: 'text-blue-700', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' };
   if (delivery?.status === 'accepted') return { label: 'Livreur en route', color: 'text-indigo-700', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-200' };
   return { label: 'Payée (Séquestre)', color: 'text-blue-700', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' };
-}
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
 }
 
 /* ─────────────── MAIN PAGE ─────────────── */
@@ -179,7 +176,7 @@ const OrderTrackingPage: React.FC = () => {
 
       setOrder(orderData);
     } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Impossible de charger la commande'));
+      setError(friendlyError(err, 'Impossible de charger la commande'));
     } finally {
       setLoading(false);
     }

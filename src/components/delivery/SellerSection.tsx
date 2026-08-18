@@ -7,10 +7,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { OtpPinDisplay } from '../ui/OtpPinDisplay';
 import type { Order, RpcResult } from '../../types/order';
 import toast from 'react-hot-toast';
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
-}
+import { friendlyError } from '../../lib/messages';
 
 export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = ({ order, onChanged }) => {
   const [loading, setLoading] = useState(false);
@@ -78,7 +75,7 @@ export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = 
       setEnteredBuyerOtp('');
       onChanged();
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, 'Erreur lors de la validation du code'));
+      toast.error(friendlyError(err, 'Erreur lors de la validation du code'));
     } finally {
       setLoading(false);
     }
@@ -98,7 +95,7 @@ export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = 
       setShowHandoverConfirm(false);
       onChanged();
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, 'Erreur lors de la validation'));
+      toast.error(friendlyError(err, 'Erreur lors de la validation'));
     } finally {
       setLoading(false);
     }
@@ -117,7 +114,7 @@ export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = 
       toast.success('Commande marquée comme en cours de livraison !');
       onChanged();
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, 'Erreur lors de la mise à jour'));
+      toast.error(friendlyError(err, 'Erreur lors de la mise à jour'));
     } finally {
       setLoading(false);
     }
@@ -158,7 +155,7 @@ export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = 
       toast.success('Disponibilité confirmée ! Les livreurs peuvent voir la course.');
       onChanged();
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, 'Erreur lors de la confirmation'));
+      toast.error(friendlyError(err, 'Erreur lors de la confirmation'));
     } finally {
       setLoading(false);
     }
@@ -184,7 +181,7 @@ export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = 
       toast.success('Commande annulée.');
       onChanged();
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, "Erreur lors de l'annulation"));
+      toast.error(friendlyError(err, "Erreur lors de l'annulation"));
     } finally {
       setCancelling(false);
     }

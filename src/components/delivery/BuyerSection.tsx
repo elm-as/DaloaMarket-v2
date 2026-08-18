@@ -14,10 +14,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { OtpPinDisplay } from '../ui/OtpPinDisplay';
 import type { Order } from '../../types/order';
 import toast from 'react-hot-toast';
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
-}
+import { friendlyError } from '../../lib/messages';
 
 export const BuyerSection: React.FC<{ order: Order; onChanged: () => void }> = ({ order, onChanged }) => {
   const { userProfile } = useSupabase();
@@ -94,7 +91,7 @@ export const BuyerSection: React.FC<{ order: Order; onChanged: () => void }> = (
         onChanged();
       }
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, 'Erreur lors de l\'annulation de la commande'));
+      toast.error(friendlyError(err, 'Erreur lors de l\'annulation de la commande'));
     } finally {
       setCancelLoading(false);
     }

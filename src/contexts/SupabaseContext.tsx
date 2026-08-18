@@ -179,13 +179,13 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [checkSession]);
 
   const signUp = async (email: string, password: string) => {
-    if (!isSupabaseConfigured) return { error: new Error('Supabase not configured.') };
+    if (!isSupabaseConfigured) return { error: new Error('Base de données Supabase non configurée.') };
     try { const res = await supabase.auth.signUp({ email, password }); return { error: res.error, session: res.data?.session ?? null }; }
     catch (error) { return { error }; }
   };
 
   const signIn = async (email: string, password: string) => {
-    if (!isSupabaseConfigured) return { error: new Error('Supabase not configured.') };
+    if (!isSupabaseConfigured) return { error: new Error('Base de données Supabase non configurée.') };
     try {
       const res = await supabase.auth.signInWithPassword({ email, password });
       const sessionReturned = res.data?.session ?? null;
@@ -193,7 +193,7 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         type SessionWithRefresh = Session & { refresh_token?: string };
         if (!(sessionReturned as SessionWithRefresh).refresh_token) {
           try { await supabase.auth.signOut(); } catch (err) { console.error('Error signing out invalid session:', err); }
-          return { error: new Error('Session invalide: token de rafraîchissement manquant. Veuillez confirmer votre email ou réessayer.') };
+          return { error: new Error('Session invalide : token manquant. Veuillez confirmer votre adresse email ou réessayer.') };
         }
       }
       return { error: res.error };
@@ -201,22 +201,22 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const signOut = async () => {
-    if (!isSupabaseConfigured) return { error: new Error('Supabase not configured.') };
+    if (!isSupabaseConfigured) return { error: new Error('Base de données Supabase non configurée.') };
     try { const { error } = await supabase.auth.signOut(); return { error }; }
     catch (error) { return { error }; }
   };
 
   const createUserProfile = async (profile: Omit<Database['public']['Tables']['users']['Insert'], 'id'>) => {
-    if (!isSupabaseConfigured) return { error: new Error('Supabase not configured.') };
+    if (!isSupabaseConfigured) return { error: new Error('Base de données Supabase non configurée.') };
     try {
-      if (!user) return { error: new Error('User not authenticated') };
+      if (!user) return { error: new Error('Utilisateur non authentifié.') };
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return { error: new Error('Session invalide. Veuillez vous reconnecter ou confirmer votre adresse email.') };
       type SessionWithRefresh = Session & { refresh_token?: string; expires_at?: number };
       const s = session as SessionWithRefresh;
       if (!s.refresh_token) {
         const now = Math.floor(Date.now() / 1000);
-        if ((s.expires_at ?? 0) && (s.expires_at ?? 0) <= now) return { error: new Error('Session expiree. Veuillez vous reconnecter.') };
+        if ((s.expires_at ?? 0) && (s.expires_at ?? 0) <= now) return { error: new Error('Session expirée. Veuillez vous reconnecter.') };
       }
       // Filtrer user_id qui n'existe pas dans public.users (champ fantome du type Insert)
       const cleanProfile = Object.fromEntries(Object.entries(profile).filter(([k]) => k !== 'user_id'));
@@ -228,16 +228,16 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const updateUserProfile = async (profile: Partial<Database['public']['Tables']['users']['Update']>) => {
-    if (!isSupabaseConfigured) return { error: new Error('Supabase not configured.') };
+    if (!isSupabaseConfigured) return { error: new Error('Base de données Supabase non configurée.') };
     try {
-      if (!user) return { error: new Error('User not authenticated') };
+      if (!user) return { error: new Error('Utilisateur non authentifié.') };
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return { error: new Error('Session invalide. Veuillez vous reconnecter.') };
       type SessionWithRefresh2 = Session & { refresh_token?: string; expires_at?: number };
       const s2 = session as SessionWithRefresh2;
       if (!s2.refresh_token) {
         const now = Math.floor(Date.now() / 1000);
-        if ((s2.expires_at ?? 0) && (s2.expires_at ?? 0) <= now) return { error: new Error('Session expiree.') };
+        if ((s2.expires_at ?? 0) && (s2.expires_at ?? 0) <= now) return { error: new Error('Session expirée. Veuillez vous reconnecter.') };
       }
 
       const { data: dataRaw, error: errorRaw } = await supabase
