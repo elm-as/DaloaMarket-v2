@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { useSupabase } from '../hooks/useSupabase';
 import { supabase } from '../lib/supabase';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { MAX_FREE_LISTINGS } from '../lib/featureFlags';
+import { usePhase } from '../contexts/PhaseContext';
 import { SELLER_FEE_RATE, PRO_SELLER_FEE_RATE } from '../lib/pricing';
 import { Button } from '../components/ui/Button';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -45,6 +45,7 @@ const ListingCreatePage: React.FC = () => {
   usePageTitle(isEditing ? "Modifier l'annonce" : 'Publier une annonce');
 
   const { user, userProfile, loading: authLoading } = useSupabase();
+  const { isPhase0, maxFreeListings, showMonetisation } = usePhase();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [photos, setPhotos] = useState<File[]>([]);
@@ -383,7 +384,7 @@ const ListingCreatePage: React.FC = () => {
     }
   }, [user, isPro, isEditing]);
 
-  const canCreateNew = isEditing || isPro || activeListingsCount < MAX_FREE_LISTINGS;
+  const canCreateNew = isEditing || isPro || isPhase0 || activeListingsCount < maxFreeListings;
 
   if (authLoading || loadingListing) {
     return (
@@ -480,17 +481,27 @@ const ListingCreatePage: React.FC = () => {
             <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mb-3.5 border border-amber-200 shadow-xs">
               <Star className="w-7 h-7 text-amber-500 fill-amber-500" />
             </div>
-            <h2 className="text-base font-black text-gray-900 mb-1.5">Limite d'annonces gratuites ({MAX_FREE_LISTINGS}/10)</h2>
+            <h2 className="text-base font-black text-gray-900 mb-1.5">Limite d'annonces atteinte ({activeListingsCount}/{maxFreeListings})</h2>
             <p className="text-xs text-gray-500 mb-5 leading-relaxed">
-              Votre compte Standard est limité à {MAX_FREE_LISTINGS} annonces actives. Passez au Pass Vendeur Pro pour publier sans limite !
+              Votre compte Standard est limité à {maxFreeListings} annonces actives. {showMonetisation ? 'Passez au Pass Vendeur Pro pour publier sans limite !' : 'Gérez ou supprimez vos anciennes annonces pour en publier de nouvelles.'}
             </p>
-            <Button
-              color="primary"
-              onClick={() => navigate('/devenir-pro')}
-              className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-black shadow-lg shadow-orange-500/25 active:scale-[0.98]"
-            >
-              Devenir Vendeur Pro
-            </Button>
+            {showMonetisation ? (
+              <Button
+                color="primary"
+                onClick={() => navigate('/devenir-pro')}
+                className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-black shadow-lg shadow-orange-500/25 active:scale-[0.98]"
+              >
+                Devenir Vendeur Pro
+              </Button>
+            ) : (
+              <Button
+                color="primary"
+                onClick={() => navigate('/profile')}
+                className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-black shadow-lg shadow-orange-500/25 active:scale-[0.98]"
+              >
+                Gérer mes annonces
+              </Button>
+            )}
           </div>
         </div>
       ) : (

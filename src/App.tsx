@@ -1,18 +1,22 @@
-import React, { Suspense } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { Suspense, useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
+import { Capacitor } from '@capacitor/core';
+import { PushNotifications } from '@capacitor/push-notifications';
+import { Bell } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useSupabase } from './hooks/useSupabase';
 import { AppLayout } from './components/app/AppLayout';
 import { PrivateRoute } from './components/auth/PrivateRoute';
 import { AdminRoute } from './components/auth/AdminRoute';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { ErrorBoundary } from './components/app/ErrorBoundary';
-import { CartProvider } from './context/CartContext';
+import { CartProvider } from './contexts/CartContext';
 import { MessageReadProvider } from './contexts/MessageReadContext';
 import { OrderCountProvider } from './contexts/OrderCountContext';
 import { FavoritesProvider } from './contexts/FavoritesContext';
 import { supabase } from './lib/supabase';
-import { PHASE0_FREE_MODE } from './lib/featureFlags';
+import { PhaseProvider, usePhase } from './contexts/PhaseContext';
 // Static pages (eager loads)
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
@@ -68,12 +72,77 @@ const PanierPage = React.lazy(() => import('./pages/PanierPage'));
 const MapTestPage = React.lazy(() => import('./pages/MapTestPage'));
 const ShopSettingsPage = React.lazy(() => import('./pages/ShopSettingsPage'));
 const MaintenancePage = React.lazy(() => import('./pages/MaintenancePage'));
+const MentionsLegalesPage = React.lazy(() => import('./pages/MentionsLegalesPage'));
 import { useSystemSettings } from './hooks/useSystemSettings';
 
 function AppContent() {
   const { user, userProfile, isAdmin, isProfileComplete, loading: authLoading } = useSupabase();
   const location = useLocation();
+  const navigate = useNavigate();
   const { maintenance, paymentConfig, loading: settingsLoading } = useSystemSettings();
+  const { showMonetisation } = usePhase();
+
+  // ── Enregistrement natif des Notifications Push Capacitor (Android / iOS) ──
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || !user?.id) return;
+
+    const initCapacitorPush = async () => {
+      try {
+        let perm = await PushNotifications.checkPermissions();
+        if (perm.receive === 'prompt') {
+          perm = await PushNotifications.requestPermissions();
+        }
+        if (perm.receive !== 'granted') return;
+
+        await PushNotifications.register();
+
+        PushNotifications.addListener('registration', async (token) => {
+          try {
+            await (supabase.from('push_subscriptions' as any) as any).upsert(
+              {
+                user_id: user.id,
+                platform: 'android',
+                token: token.value,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'user_id,platform' }
+            );
+          } catch (err) {
+            console.warn('[Capacitor Push] Token sync error:', err);
+          }
+        });
+
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+          toast(
+            (t) => (
+              <div className="flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 mt-0.5">
+                  <Bell className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <span className="font-extrabold text-xs text-gray-900 truncate">{notification.title}</span>
+                  <span className="text-[11px] text-gray-600 leading-tight line-clamp-2">{notification.body}</span>
+                </div>
+              </div>
+            ),
+            { duration: 6000 }
+          );
+        });
+
+        PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+          const data = action.notification.data;
+          const targetUrl = data?.url || data?.link;
+          if (targetUrl) {
+            navigate(targetUrl);
+          }
+        });
+      } catch (e) {
+        console.warn('[Capacitor Push] Init error:', e);
+      }
+    };
+
+    initCapacitorPush();
+  }, [user?.id, navigate]);
 
   if (authLoading || settingsLoading) {
     return (
@@ -185,7 +254,7 @@ function AppContent() {
             </PrivateRoute>
           } />
           <Route path="/mes-paiements" element={
-            !PHASE0_FREE_MODE ? (
+            showMonetisation ? (
             <PrivateRoute requireProfile={false}>
               <AppLayout><MesTransactionsPage /></AppLayout>
             </PrivateRoute>
@@ -207,7 +276,7 @@ function AppContent() {
             </PrivateRoute>
           } />
           <Route path="/mes-revenus" element={
-            !PHASE0_FREE_MODE ? (
+            showMonetisation ? (
             <PrivateRoute requireProfile={true}>
               <AppLayout><MesRevenusPage /></AppLayout>
             </PrivateRoute>
@@ -234,15 +303,16 @@ function AppContent() {
               <AppLayout><AffiliatedDeliverersPage /></AppLayout>
             </PrivateRoute>
           } />
+          <Route path="/livreurs-affilies" element={<Navigate to="/mes-livreurs" replace />} />
           <Route path="/devenir-pro" element={
-            !PHASE0_FREE_MODE ? (
+            showMonetisation ? (
             <PrivateRoute requireProfile={true}>
               <AppLayout><BecomeProPage /></AppLayout>
             </PrivateRoute>
             ) : <Navigate to="/" replace />
           } />
           <Route path="/acheter-pack" element={
-            !PHASE0_FREE_MODE ? (
+            showMonetisation ? (
             <PrivateRoute requireProfile={true}>
               <AppLayout><AcheterPackAnnoncesPage /></AppLayout>
             </PrivateRoute>
@@ -268,8 +338,8 @@ function AppContent() {
           <Route path="/admin/livraisons" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
           <Route path="/admin/litiges" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
 
-                    {/* Pricing — masqué en Phase0 */}
-          {!PHASE0_FREE_MODE && (
+                    {/* Pricing — masqué en Phase 0 */}
+          {showMonetisation && (
           <Route path="/pricing" element={<AppLayout><PricingPage /></AppLayout>} />
           )}
 
@@ -280,6 +350,7 @@ function AppContent() {
           <Route path="/faq" element={<AppLayout><FAQPage /></AppLayout>} />
           <Route path="/terms" element={<AppLayout><TermsPage /></AppLayout>} />
           <Route path="/privacy" element={<AppLayout><PrivacyPage /></AppLayout>} />
+          <Route path="/mentions-legales" element={<AppLayout><MentionsLegalesPage /></AppLayout>} />
           <Route path="/help" element={<AppLayout><HelpPage /></AppLayout>} />
           <Route path="/how-it-works" element={<AppLayout><HowItWorksPage /></AppLayout>} />
           <Route path="/guide-vendeur" element={<ExternalRedirect to="https://tuto.daloamarket.com" />} />
@@ -307,5 +378,5 @@ function MessageReadWrapper({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <CartProvider><ErrorBoundary><MessageReadWrapper><AppContent /></MessageReadWrapper></ErrorBoundary></CartProvider>;
+  return <CartProvider><PhaseProvider><ErrorBoundary><MessageReadWrapper><AppContent /></MessageReadWrapper></ErrorBoundary></PhaseProvider></CartProvider>;
 }

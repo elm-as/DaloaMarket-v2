@@ -1,11 +1,11 @@
-import { Shield, FileText, Users, AlertTriangle, ShoppingBag, Ban, Scale, Zap, Mail, RefreshCw, Globe, CreditCard, Package, Star, MapPin, Bike } from 'lucide-react';
+import React from 'react';
+import { Shield, Globe, Users, ShoppingBag, MapPin, Star, AlertTriangle, Package, Ban, Mail, CreditCard, Scale, RefreshCw, Zap } from 'lucide-react';
 import { useSEO } from '../hooks/useSEO';
 import { Card } from '../components/ui/Card';
-import { PHASE0_FREE_MODE } from '../lib/featureFlags';
 
 export default function TermsPage() {
-  useSEO('Conditions Générales d\'Utilisation (CGU) — DaloaMarket', {
-    description: 'Consultez les Conditions Générales d\'Utilisation (CGU) de DaloaMarket : règles de vente, droits et devoirs des utilisateurs.',
+  useSEO("Conditions Générales d'Utilisation — DaloaMarket", {
+    description: "Conditions Générales d'Utilisation de la plateforme DaloaMarket.",
     canonical: 'https://daloamarket.com/terms'
   });
 

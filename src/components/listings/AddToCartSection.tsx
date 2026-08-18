@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Minus, Plus, Trash2, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useCart } from '../../context/CartContext';
+import { useCart } from '../../contexts/CartContext';
 import { Button } from '../ui/Button';
 import type { ListingFull, ListingVariant } from '../../types/listing';
 

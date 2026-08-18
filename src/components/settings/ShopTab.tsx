@@ -7,7 +7,7 @@ import { useSupabase } from '../../hooks/useSupabase';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
 import { friendlyError } from '../../lib/messages';
-import { PHASE0_FREE_MODE } from '../../lib/featureFlags';
+import { usePhase } from '../../contexts/PhaseContext';
 import { Button } from '../ui/Button';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { LocationPicker } from '../ui/LocationPicker';
@@ -53,7 +53,8 @@ export const ShopTab: React.FC = () => {
   const isPro = userProfile?.pro_until
     ? new Date(userProfile.pro_until) > new Date()
     : false;
-  const shopUnlocked = isPro || PHASE0_FREE_MODE;
+  const { isPhase0 } = usePhase();
+  const shopUnlocked = isPro || isPhase0;
 
   useEffect(() => {
     if (userProfile) {

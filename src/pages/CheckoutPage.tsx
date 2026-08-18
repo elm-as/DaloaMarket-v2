@@ -6,7 +6,10 @@ import {
   ShoppingBag,
   Truck,
   Shield,
+  ShieldCheck,
   CreditCard,
+  Banknote,
+  Store,
   MapPin,
   Info,
   ChevronRight,
@@ -14,9 +17,10 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { useCart } from "../context/CartContext";
+import { useCart } from "../contexts/CartContext";
 import { supabase } from "../lib/supabase";
 import { useSupabase } from "../hooks/useSupabase";
+import { useSystemSettings } from "../hooks/useSystemSettings";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { isCurfewActive } from "../utils/timeConstraints";
 import { formatPrice, cn } from "../lib/utils";
@@ -57,6 +61,7 @@ const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useSupabase();
+  const { phaseConfig } = useSystemSettings();
   const { items: cartItems, clearCart, removeFromCart, updateQuantity } = useCart();
   usePageTitle("Commander");
 
@@ -323,12 +328,20 @@ const CheckoutPage: React.FC = () => {
     ? (cartItems.length > 0 && cartItems.every(item => cartSellers.get(item.listing_id)?.isPro === true))
     : (listing?.is_seller_pro ?? false);
 
+  const isCodAllowed = isSellerPro || phaseConfig.allow_cod_for_all || sellerSettings.cash_on_delivery_enabled;
+  const isPickupAllowed = isSellerPro || phaseConfig.allow_pickup_for_all;
+
   useEffect(() => {
-    if (!isSellerPro) {
-      if (deliveryMode !== 'delivery') setDeliveryMode('delivery');
-      if (paymentMethod !== 'online') setPaymentMethod('online');
+    if (!isPickupAllowed && deliveryMode === 'pickup') {
+      setDeliveryMode('delivery');
     }
-  }, [isSellerPro, deliveryMode, paymentMethod]);
+    if (!isCodAllowed && paymentMethod === 'cod') {
+      setPaymentMethod('online');
+    }
+    if (!isPickupAllowed && paymentMethod === 'cash_at_shop') {
+      setPaymentMethod('online');
+    }
+  }, [isSellerPro, isPickupAllowed, isCodAllowed, deliveryMode, paymentMethod]);
 
   const primaryCartItem = cartItems[0];
   const directSelectedVariant = !isCartMode
@@ -395,8 +408,13 @@ const CheckoutPage: React.FC = () => {
       return;
     }
 
-    if (!isSellerPro && (paymentMethod !== 'online' || deliveryMode !== 'delivery')) {
-      toast.error("Le retrait en boutique et le paiement à la livraison sont réservés aux Vendeurs Pro.");
+    if (!isPickupAllowed && deliveryMode === 'pickup') {
+      toast.error("Le retrait en boutique n'est pas disponible.");
+      return;
+    }
+
+    if (!isCodAllowed && paymentMethod === 'cod') {
+      toast.error("Le paiement à la livraison n'est pas disponible pour ce vendeur.");
       return;
     }
 
@@ -919,7 +937,7 @@ const CheckoutPage: React.FC = () => {
                 <span>Mode de réception</span>
               </div>
 
-              {isSellerPro ? (
+              {isPickupAllowed ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Option 1: Livraison */}
                   <button
@@ -1173,48 +1191,8 @@ const CheckoutPage: React.FC = () => {
                 <span>Mode de paiement</span>
               </div>
 
-              <div className={cn("grid gap-3", (isSellerPro && (deliveryMode === 'pickup' || sellerSettings.cash_on_delivery_enabled)) ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1")}>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('online')}
-                  className={cn(
-                    "p-4 rounded-2xl border-2 text-left flex flex-col justify-between transition-all active:scale-[0.98]",
-                    paymentMethod === 'online'
-                      ? "border-orange-500 bg-orange-50/40 text-orange-950 shadow-sm ring-2 ring-orange-500/10"
-                      : "border-gray-100 bg-white text-gray-700 hover:border-gray-200"
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold">Paiement Mobile Money</span>
-                    <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors", paymentMethod === 'online' ? "border-orange-500 bg-orange-500 text-white" : "border-gray-300")}>
-                      {paymentMethod === 'online' && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
-                    </div>
-                  </div>
-                  <span className="text-[11px] text-gray-500 mt-2 font-medium">Wave, Orange Money, MTN MoMo, Moov</span>
-                </button>
-
-                {isSellerPro && deliveryMode === 'pickup' && (
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('cash_at_shop')}
-                    className={cn(
-                      "p-4 rounded-2xl border-2 text-left flex flex-col justify-between transition-all active:scale-[0.98]",
-                      paymentMethod === 'cash_at_shop'
-                        ? "border-orange-500 bg-orange-50/40 text-orange-950 shadow-sm ring-2 ring-orange-500/10"
-                        : "border-gray-100 bg-white text-gray-700 hover:border-gray-200"
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-extrabold">Espèces au magasin</span>
-                      <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors", paymentMethod === 'cash_at_shop' ? "border-orange-500 bg-orange-500 text-white" : "border-gray-300")}>
-                        {paymentMethod === 'cash_at_shop' && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
-                      </div>
-                    </div>
-                    <span className="text-[11px] text-amber-700 font-extrabold mt-2">Payer directement au vendeur sur place</span>
-                  </button>
-                )}
-
-                {isSellerPro && deliveryMode === 'delivery' && sellerSettings.cash_on_delivery_enabled && (
+              <div className={cn("grid gap-3", (isPickupAllowed || isCodAllowed) ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1")}>
+                {isCodAllowed && deliveryMode === 'delivery' && (
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('cod')}
@@ -1226,25 +1204,83 @@ const CheckoutPage: React.FC = () => {
                     )}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-extrabold">Paiement à la livraison</span>
+                      <span className="text-xs font-extrabold flex items-center gap-1.5">
+                        <Banknote className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Paiement à la livraison</span>
+                      </span>
                       <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors", paymentMethod === 'cod' ? "border-orange-500 bg-orange-500 text-white" : "border-gray-300")}>
                         {paymentMethod === 'cod' && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
                       </div>
                     </div>
-                    <span className="text-[11px] text-amber-700 font-extrabold mt-2">Espèces au livreur affilié du vendeur</span>
+                    <span className="text-[11px] text-emerald-700 font-extrabold mt-2">Recommandé • Espèces ou Mobile Money au livreur</span>
                   </button>
                 )}
+
+                {isPickupAllowed && deliveryMode === 'pickup' && (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('cash_at_shop')}
+                    className={cn(
+                      "p-4 rounded-2xl border-2 text-left flex flex-col justify-between transition-all active:scale-[0.98]",
+                      paymentMethod === 'cash_at_shop'
+                        ? "border-orange-500 bg-orange-50/40 text-orange-950 shadow-sm ring-2 ring-orange-500/10"
+                        : "border-gray-100 bg-white text-gray-700 hover:border-gray-200"
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold flex items-center gap-1.5">
+                        <Store className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>Espèces au magasin</span>
+                      </span>
+                      <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors", paymentMethod === 'cash_at_shop' ? "border-orange-500 bg-orange-500 text-white" : "border-gray-300")}>
+                        {paymentMethod === 'cash_at_shop' && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
+                      </div>
+                    </div>
+                    <span className="text-[11px] text-amber-700 font-extrabold mt-2">Payer directement au vendeur sur place</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('online')}
+                  className={cn(
+                    "p-4 rounded-2xl border-2 text-left flex flex-col justify-between transition-all active:scale-[0.98]",
+                    paymentMethod === 'online'
+                      ? "border-orange-500 bg-orange-50/40 text-orange-950 shadow-sm ring-2 ring-orange-500/10"
+                      : "border-gray-100 bg-white text-gray-700 hover:border-gray-200"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold flex items-center gap-1.5">
+                      <CreditCard className="w-4 h-4 text-orange-600 shrink-0" />
+                      <span>Paiement Mobile Money Sécurisé</span>
+                    </span>
+                    <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors", paymentMethod === 'online' ? "border-orange-500 bg-orange-500 text-white" : "border-gray-300")}>
+                      {paymentMethod === 'online' && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
+                    </div>
+                  </div>
+                  <span className="text-[11px] text-gray-500 mt-2 font-medium">Wave, Orange Money, MTN MoMo, Moov</span>
+                </button>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-orange-50/60 border border-orange-100 text-xs text-orange-950 leading-relaxed font-medium">
                 {paymentMethod === 'online' && (
-                  <p>🔒 <strong>Protection Acheteur Escrow :</strong> Votre argent est sécurisé sous séquestre par MoneyFusion et vous est <strong>remboursé à 100%</strong> en cas d'annulation ou de non-livraison.</p>
+                  <p className="flex items-start gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span><strong>Protection Acheteur Escrow :</strong> Votre argent est sécurisé sous séquestre par MoneyFusion et vous est <strong>remboursé à 100%</strong> en cas d'annulation ou de non-livraison.</span>
+                  </p>
                 )}
                 {paymentMethod === 'cod' && (
-                  <p>🛵 <strong>Livreur Affilié :</strong> Cette livraison est assurée par le livreur personnel du vendeur. Remettez les espèces au livreur après vérification du colis.</p>
+                  <p className="flex items-start gap-1.5">
+                    <Truck className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
+                    <span><strong>Livreur Affilié :</strong> Cette livraison est assurée par le livreur personnel du vendeur. Remettez les espèces au livreur après vérification du colis.</span>
+                  </p>
                 )}
                 {paymentMethod === 'cash_at_shop' && (
-                  <p>🏪 <strong>Retrait en Boutique :</strong> Rendez-vous à la boutique du vendeur à Daloa pour vérifier l'article et régler sur place en espèces.</p>
+                  <p className="flex items-start gap-1.5">
+                    <Store className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <span><strong>Retrait en Boutique :</strong> Rendez-vous à la boutique du vendeur à Daloa pour vérifier l'article et régler sur place en espèces.</span>
+                  </p>
                 )}
               </div>
             </div>

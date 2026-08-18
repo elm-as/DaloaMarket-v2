@@ -18,7 +18,7 @@ import {
 } from '../lib/utils';
 import { Chip } from '../components/ui/Chip';
 import { EmptyState } from '../components/ui/EmptyState';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../contexts/CartContext';
 import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import ListingCard from '../components/listings/ListingCard';

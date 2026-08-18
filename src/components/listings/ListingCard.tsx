@@ -7,7 +7,7 @@ import { fr } from 'date-fns/locale';
 import { formatPrice, getListingPath, getOptimizedImageUrl } from '../../lib/utils';
 import FavoriteButton from './FavoriteButton';
 import DiscountBadge from './DiscountBadge';
-import { useCart } from '../../context/CartContext';
+import { useCart } from '../../contexts/CartContext';
 import { useSupabase } from '../../hooks/useSupabase';
 import toast from 'react-hot-toast';
 import { getListingStartingPrice } from '../../types/listing';

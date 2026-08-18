@@ -30,7 +30,7 @@ import { useSEO } from '../hooks/useSEO';
 import { formatPrice, interleaveBoosted, diversifySellers, CATEGORIES, cn } from '../lib/utils';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../contexts/CartContext';
 import { ErrorState } from '../components/ui/ErrorState';
 import { SectionHeader } from '../components/ui/SectionHeader';
 import ListingCard from '../components/listings/ListingCard';

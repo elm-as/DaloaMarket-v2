@@ -1,14 +1,44 @@
 import React, { useState } from 'react';
-import { ShieldAlert, Wrench, CreditCard, Save, RefreshCw, AlertTriangle, CheckCircle2, Clock, Ban, XOctagon } from 'lucide-react';
+import {
+  ShieldAlert,
+  Wrench,
+  CreditCard,
+  Save,
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Ban,
+  XOctagon,
+  Sliders,
+  Sparkles,
+  Truck,
+  Store,
+  Banknote,
+  Check,
+  Layers,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
-import { useSystemSettings } from '../../hooks/useSystemSettings';
+import { useSystemSettings, type PhaseConfig } from '../../hooks/useSystemSettings';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { AdminIpBanSection } from './AdminIpBanSection';
+import { cn } from '../../lib/utils';
 
 export function AdminSettingsTab() {
-  const { maintenance, paymentConfig, cancellationSettings, loading, refreshSettings } = useSystemSettings();
+  const {
+    maintenance,
+    paymentConfig,
+    cancellationSettings,
+    phaseConfig,
+    loading,
+    refreshSettings,
+  } = useSystemSettings();
+
+  // Local state for editing Phase Config
+  const [phaseForm, setPhaseForm] = useState<PhaseConfig | null>(null);
+  const [savingPhase, setSavingPhase] = useState(false);
 
   // Local state for editing maintenance mode
   const [maintEnabled, setMaintEnabled] = useState<boolean | null>(null);
@@ -30,7 +60,9 @@ export function AdminSettingsTab() {
   const [savingCancel, setSavingCancel] = useState(false);
   const [syncingPayouts, setSyncingPayouts] = useState(false);
 
-  // Synchronize local states with loaded values
+  // Active values
+  const activePhase = phaseForm !== null ? phaseForm : phaseConfig;
+
   const activeMaintEnabled = maintEnabled !== null ? maintEnabled : maintenance.enabled;
   const activeMaintMessage = maintMessage !== null ? maintMessage : maintenance.message;
   const activeMaintReopening = maintReopening !== null ? maintReopening : maintenance.expected_reopening || '';
@@ -42,6 +74,63 @@ export function AdminSettingsTab() {
   const activeCancelMax = cancelMax !== null ? cancelMax : (cancellationSettings?.max_consecutive_cancellations ?? 3);
   const activeCancelEnabled = cancelEnabled !== null ? cancelEnabled : (cancellationSettings?.enabled ?? true);
   const activeCancelNotice = cancelNotice !== null ? cancelNotice : (cancellationSettings?.notice ?? 'Vous avez atteint la limite de 3 annulations consécutives. Afin de limiter les frais de remboursement, veuillez contacter le support pour toute demande d\'annulation.');
+
+  // Quick Preset Handlers for Phase 0 vs Phase 1
+  const applyPresetPhase0 = () => {
+    setPhaseForm({
+      phase: 0,
+      allow_cod_for_all: true,
+      allow_pickup_for_all: true,
+      allow_affiliated_deliverers_for_all: true,
+      max_free_listings: 999999,
+      enable_boost: true,
+      enable_bump: true,
+      enable_seller_badge: true,
+      default_payment_method: 'cod',
+    });
+    toast.success('Préréglage Phase 0 (Lancement 100% libre & COD) sélectionné');
+  };
+
+  const applyPresetPhase1 = () => {
+    setPhaseForm({
+      phase: 1,
+      allow_cod_for_all: false,
+      allow_pickup_for_all: false,
+      allow_affiliated_deliverers_for_all: false,
+      max_free_listings: 20,
+      enable_boost: true,
+      enable_bump: true,
+      enable_seller_badge: true,
+      default_payment_method: 'online',
+    });
+    toast.success('Préréglage Phase 1 (Croissance & Monétisation Pro) sélectionné');
+  };
+
+  // Save Phase Settings
+  const handleSavePhaseConfig = async () => {
+    setSavingPhase(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)('update_system_setting', {
+        p_key: 'phase_config',
+        p_value: activePhase,
+      });
+
+      if (error) throw error;
+      const resData = data as any;
+      if (resData && resData.success === false) throw new Error(resData.reason || 'Erreur modification');
+
+      toast.success(
+        activePhase.phase === 0
+          ? 'Phase 0 (Lancement libre) enregistrée et active en temps réel !'
+          : 'Phase 1 (Croissance Pro) enregistrée et active en temps réel !'
+      );
+      refreshSettings();
+    } catch (err: any) {
+      toast.error(err.message || 'Erreur mise à jour configuration de phase');
+    } finally {
+      setSavingPhase(false);
+    }
+  };
 
   // Save Maintenance Settings
   const handleSaveMaintenance = async () => {
@@ -150,6 +239,166 @@ export function AdminSettingsTab() {
 
   return (
     <div className="space-y-6">
+      {/* SECTION 0 : PILOTE DE STRATÉGIE & PHASE (COMMUTATEUR TEMPS RÉEL) */}
+      <Card className="p-6 rounded-3xl border-2 border-orange-200 shadow-xl shadow-orange-500/10 bg-white">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-5 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white flex items-center justify-center shadow-md shadow-orange-500/20">
+              <Sliders className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-extrabold text-gray-900">Pilote de Stratégie Marketplace</h2>
+                <span
+                  className={cn(
+                    "text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full",
+                    activePhase.phase === 0 ? "bg-emerald-100 text-emerald-800" : "bg-orange-100 text-orange-800"
+                  )}
+                >
+                  {activePhase.phase === 0 ? 'Phase 0 : Lancement' : 'Phase 1 : Croissance'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 font-medium">Basculez les fonctionnalités en direct sans redéploiement.</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={applyPresetPhase0}
+              className={cn(
+                "px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all border flex items-center gap-1.5",
+                activePhase.phase === 0
+                  ? "bg-emerald-500 text-white border-emerald-600 shadow-sm"
+                  : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+              )}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Phase 0 (Lancement)</span>
+            </button>
+            <button
+              type="button"
+              onClick={applyPresetPhase1}
+              className={cn(
+                "px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all border flex items-center gap-1.5",
+                activePhase.phase === 1
+                  ? "bg-orange-500 text-white border-orange-600 shadow-sm"
+                  : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+              )}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Phase 1 (Croissance)</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="grid sm:grid-cols-2 gap-3.5">
+            {/* Toggle 1: Paiement à la livraison pour tous */}
+            <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-100 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                  <Banknote className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Paiement à la livraison (COD) pour tous</span>
+                </p>
+                <p className="text-[11px] text-gray-500 mt-0.5">Permet à tout vendeur (même non Pro) de proposer le règlement en espèces.</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={activePhase.allow_cod_for_all}
+                onChange={(e) =>
+                  setPhaseForm({
+                    ...activePhase,
+                    allow_cod_for_all: e.target.checked,
+                  })
+                }
+                className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 mt-0.5"
+              />
+            </div>
+
+            {/* Toggle 2: Retrait boutique pour tous */}
+            <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-100 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                  <Store className="w-4 h-4 text-orange-600 shrink-0" />
+                  <span>Retrait boutique pour tous</span>
+                </p>
+                <p className="text-[11px] text-gray-500 mt-0.5">Permet aux acheteurs de choisir le Click & Collect sans frais.</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={activePhase.allow_pickup_for_all}
+                onChange={(e) =>
+                  setPhaseForm({
+                    ...activePhase,
+                    allow_pickup_for_all: e.target.checked,
+                  })
+                }
+                className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 mt-0.5"
+              />
+            </div>
+
+            {/* Toggle 3: Livreurs Affiliés pour tous */}
+            <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-100 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                  <Truck className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>Livreurs Personnels / Affiliés pour tous</span>
+                </p>
+                <p className="text-[11px] text-gray-500 mt-0.5">Débloque la gestion de livreurs habituels pour chaque commerçant.</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={activePhase.allow_affiliated_deliverers_for_all}
+                onChange={(e) =>
+                  setPhaseForm({
+                    ...activePhase,
+                    allow_affiliated_deliverers_for_all: e.target.checked,
+                  })
+                }
+                className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 mt-0.5"
+              />
+            </div>
+
+            {/* Toggle 4: Méthode par défaut */}
+            <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-100 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4 text-gray-700 shrink-0" />
+                  <span>Paiement par défaut au Checkout</span>
+                </p>
+                <p className="text-[11px] text-gray-500 mt-0.5">Option pré-sélectionnée pour maximiser la conversion.</p>
+              </div>
+              <select
+                value={activePhase.default_payment_method}
+                onChange={(e) =>
+                  setPhaseForm({
+                    ...activePhase,
+                    default_payment_method: e.target.value as 'cod' | 'online',
+                  })
+                }
+                className="text-xs font-bold p-1.5 border border-gray-200 rounded-xl bg-white focus:outline-none"
+              >
+                <option value="cod">Paiement à la livraison (COD)</option>
+                <option value="online">Paiement en ligne sécurisé</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button
+              onClick={handleSavePhaseConfig}
+              disabled={savingPhase}
+              size="sm"
+              className="rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-extrabold shadow-md shadow-orange-500/20"
+            >
+              <Save className="w-4 h-4 mr-1.5" />
+              {savingPhase ? 'Enregistrement...' : 'Appliquer la Stratégie en Direct'}
+            </Button>
+          </div>
+        </div>
+      </Card>
+
       {/* SECTION 1 : MODE MAINTENANCE */}
       <Card className="p-6 rounded-2xl border border-gray-100 shadow-elevation-1 bg-white">
         <div className="flex items-center gap-3 pb-4 mb-4 border-b border-gray-100">
@@ -178,27 +427,27 @@ export function AdminSettingsTab() {
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1">
-              Message d'explication affiché aux visiteurs
+              Message d'information pour les utilisateurs
             </label>
             <textarea
-              rows={3}
+              rows={2}
               value={activeMaintMessage}
               onChange={(e) => setMaintMessage(e.target.value)}
               className="w-full text-xs sm:text-sm p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none"
-              placeholder="Ex: DaloaMarket est actuellement en maintenance pour une mise à jour technique..."
+              placeholder="Ex: DaloaMarket effectue une mise à jour technique. Retour prévu à 14h."
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1">
-              Heure estimée de réouverture (Optionnel)
+              Estimation d'ouverture (Texte court optionnel)
             </label>
             <input
               type="text"
               value={activeMaintReopening}
               onChange={(e) => setMaintReopening(e.target.value)}
               className="w-full text-xs sm:text-sm p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none"
-              placeholder="Ex: Aujourd'hui à 16h30"
+              placeholder="Ex: Aujourd'hui à 15h00"
             />
           </div>
 
@@ -216,89 +465,58 @@ export function AdminSettingsTab() {
         </div>
       </Card>
 
-      {/* SECTION 2 : GESTION DES PANNES PAIEMENTS */}
+      {/* SECTION 2 : ÉTAT DES PAIEMENTS & FORCE COD */}
       <Card className="p-6 rounded-2xl border border-gray-100 shadow-elevation-1 bg-white">
         <div className="flex items-center gap-3 pb-4 mb-4 border-b border-gray-100">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
             <CreditCard className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-gray-900">Statut de la Passerelle Mobile Money (MoneyFusion)</h2>
-            <p className="text-xs text-gray-500">Gérez les pannes d'opérateur, affichez des avis de retard ou désactivez les paiements en ligne.</p>
+            <h2 className="text-base font-bold text-gray-900">Passerelle de Paiement MoneyFusion</h2>
+            <p className="text-xs text-gray-500">Contrôlez l'état des paiements en ligne et activez les bandeaux d'alerte.</p>
           </div>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-2">
-              État de la passerelle Mobile Money
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <button
-                type="button"
-                onClick={() => setPayStatus('normal')}
-                className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                  activePayStatus === 'normal'
-                    ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm'
-                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>100% Opérationnel</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPayStatus('degraded')}
-                className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                  activePayStatus === 'degraded'
-                    ? 'bg-amber-50 border-amber-500 text-amber-700 shadow-sm'
-                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
-                <span>Ralentissement / Perturbé</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPayStatus('down')}
-                className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                  activePayStatus === 'down'
-                    ? 'bg-rose-50 border-rose-500 text-rose-700 shadow-sm'
-                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <ShieldAlert className="w-4 h-4 text-rose-600" />
-                <span>Panne Majeure / Crash</span>
-              </button>
-            </div>
-          </div>
-
-          <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1">
-              Message d'alerte ou de retard (Affiché aux acheteurs sur le checkout)
+              Statut du service de paiement Mobile Money
             </label>
-            <input
-              type="text"
-              value={activePayNotice}
-              onChange={(e) => setPayNotice(e.target.value)}
-              className="w-full text-xs sm:text-sm p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              placeholder="Ex: Les réseaux Orange Money et MTN enregistrent des lenteurs. Vos retraits restent sécurisés."
-            />
+            <select
+              value={activePayStatus || 'normal'}
+              onChange={(e) => setPayStatus(e.target.value as any)}
+              className="w-full text-xs sm:text-sm p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none bg-white"
+            >
+              <option value="normal">Opérationnel (Normal)</option>
+              <option value="degraded">Dégradé (Ralentissements signalés)</option>
+              <option value="down">Indisponible (Paiements en ligne coupés)</option>
+            </select>
           </div>
 
           <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200">
             <input
               type="checkbox"
-              id="disableOnline"
-              checked={activeDisableOnline}
+              id="disableOnlineToggle"
+              checked={activeDisableOnline || false}
               onChange={(e) => setDisableOnline(e.target.checked)}
-              className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+              className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500"
             />
-            <label htmlFor="disableOnline" className="text-xs font-semibold text-gray-800 cursor-pointer">
-              Désactiver temporairement les paiements Mobile Money (Mode maintenance des paiements)
+            <label htmlFor="disableOnlineToggle" className="text-xs font-semibold text-gray-800 cursor-pointer">
+              Désactiver temporairement les paiements en ligne (Force le paiement en espèces / COD uniquement)
             </label>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">
+              Bannière d'information paiement (affichée lors du checkout si renseignée)
+            </label>
+            <input
+              type="text"
+              value={activePayNotice || ''}
+              onChange={(e) => setPayNotice(e.target.value)}
+              className="w-full text-xs sm:text-sm p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none"
+              placeholder="Ex: Le réseau MTN MoMo subit des lenteurs nationales. Privilégiez Wave ou Orange."
+            />
           </div>
 
           <div className="flex justify-end">
@@ -306,47 +524,37 @@ export function AdminSettingsTab() {
               onClick={handleSavePaymentConfig}
               disabled={savingPay}
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              className="bg-orange-600 hover:bg-orange-700 text-white font-semibold"
             >
               <Save className="w-4 h-4 mr-1.5" />
-              {savingPay ? 'Enregistrement...' : 'Enregistrer Statut Paiement'}
+              {savingPay ? 'Enregistrement...' : 'Enregistrer Paramètres Paiement'}
             </Button>
           </div>
         </div>
       </Card>
 
-      {/* SECTION 3 : POLITIQUE ANTI-ABUS & FRAIS D'ANNULATION (MONEYFUSION) */}
+      {/* SECTION 3 : PARAMÈTRES ANTI-ABUS ANNULATIONS */}
       <Card className="p-6 rounded-2xl border border-gray-100 shadow-elevation-1 bg-white">
         <div className="flex items-center gap-3 pb-4 mb-4 border-b border-gray-100">
           <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
-            <XOctagon className="w-5 h-5" />
+            <ShieldAlert className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-gray-900">Politique Anti-Abus & Limite d'Annulations Acheteur</h2>
-            <p className="text-xs text-gray-500">
-              Protège la plateforme contre l'accumulation des frais MoneyFusion (3% payin + 2.5% payout lors des remboursements intégraux).
-            </p>
+            <h2 className="text-base font-bold text-gray-900">Anti-Abus Annulations Répétées</h2>
+            <p className="text-xs text-gray-500">Configurez le seuil d'annulations consécutives avant de bloquer un acheteur.</p>
           </div>
         </div>
 
         <div className="space-y-4">
-          <div className="p-3 bg-red-50/70 rounded-xl border border-red-100 text-xs text-red-800 leading-relaxed">
-            <p className="font-bold mb-1">Fonctionnement du compteur :</p>
-            <p>
-              Tant que le livreur n'a pas encore récupéré le colis, l'acheteur peut annuler directement. Cependant, chaque annulation entraîne un remboursement intégral qui coûte ~5.5% de frais à la plateforme.
-              Si un utilisateur atteint le nombre maximum d'annulations consécutives sans achat mené à son terme, ses futures annulations directes sont bloquées et nécessitent un contact avec le support.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Limite max d'annulations consécutives
+                Nombre maximum d'annulations consécutives autorisées
               </label>
               <input
                 type="number"
                 min={1}
-                max={20}
+                max={10}
                 value={activeCancelMax}
                 onChange={(e) => setCancelMax(Math.max(1, parseInt(e.target.value) || 1))}
                 className="w-full text-xs sm:text-sm p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:outline-none"
@@ -427,7 +635,6 @@ export function AdminSettingsTab() {
 
       {/* SECTION 5 : GESTION DES BANNISSEMENTS IP */}
       <AdminIpBanSection />
-
     </div>
   );
 }

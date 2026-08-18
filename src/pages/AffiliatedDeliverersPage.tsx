@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 import { useSupabase } from '../hooks/useSupabase';
+import { useSystemSettings } from '../hooks/useSystemSettings';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useSEO } from '../hooks/useSEO';
 import { Button } from '../components/ui/Button';
@@ -40,6 +41,7 @@ export default function AffiliatedDeliverersPage() {
 
   const navigate = useNavigate();
   const { user, userProfile, loading: authLoading } = useSupabase();
+  const { phaseConfig } = useSystemSettings();
 
   const [loading, setLoading] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -59,8 +61,10 @@ export default function AffiliatedDeliverersPage() {
     ? new Date(userProfile.pro_until) > new Date()
     : false;
 
+  const isAllowed = isPro || phaseConfig.allow_affiliated_deliverers_for_all;
+
   useEffect(() => {
-    if (!user || !isPro) return;
+    if (!user || !isAllowed) return;
 
     const loadData = async () => {
       setLoading(true);
@@ -80,9 +84,9 @@ export default function AffiliatedDeliverersPage() {
     };
 
     loadData();
-  }, [user, isPro]);
+  }, [user, isAllowed]);
 
-  if (authLoading || (isPro && loading)) {
+  if (authLoading || (isAllowed && loading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50/70">
         <LoadingSpinner size="lg" />
@@ -90,8 +94,8 @@ export default function AffiliatedDeliverersPage() {
     );
   }
 
-  // Non-Pro User: Upgrade CTA
-  if (!isPro) {
+  // Non-Allowed User: Upgrade CTA (in Phase 1 for non-Pro)
+  if (!isAllowed) {
     return (
       <div className="min-h-screen bg-gray-50/70 pb-20">
         {/* Header */}
@@ -270,7 +274,11 @@ export default function AffiliatedDeliverersPage() {
           </div>
 
           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-black border border-white/25 shadow-2xs">
-            <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" /> Vendeur Pro
+            {isPro ? (
+              <><Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" /> Vendeur Pro</>
+            ) : (
+              <><Sparkles className="w-3.5 h-3.5 fill-emerald-300 text-emerald-300" /> Phase de Lancement</>
+            )}
           </span>
         </div>
       </header>
@@ -339,7 +347,7 @@ export default function AffiliatedDeliverersPage() {
                     Paiement à la livraison (Cash on Delivery)
                   </p>
                   <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                    👑 Exclusif Affiliés
+                    Exclusif Affiliés
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 leading-relaxed">
@@ -574,8 +582,9 @@ export default function AffiliatedDeliverersPage() {
                       </div>
 
                       {isPending && (
-                        <p className="text-[10.5px] text-amber-700 bg-amber-50/70 px-2.5 py-1 rounded-lg border border-amber-100/80 mt-2 font-medium">
-                          ⏳ Invitation transmise · En attente de validation dans l'app DaloaDelivery
+                        <p className="text-[10.5px] text-amber-700 bg-amber-50/70 px-2.5 py-1 rounded-lg border border-amber-100/80 mt-2 font-medium flex items-center gap-1.5">
+                          <Clock size={11} className="shrink-0 text-amber-600" />
+                          <span>Invitation transmise · En attente de validation dans l'app DaloaDelivery</span>
                         </p>
                       )}
                     </motion.div>

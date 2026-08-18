@@ -8,7 +8,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { checkPaymentStatus } from '../lib/payment';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../contexts/CartContext';
 
 export default function PaymentReturnPage() {
   usePageTitle('Paiement');

@@ -5,7 +5,7 @@ import { usePageTitle } from '../hooks/usePageTitle';
 import { cn, formatShopShareText, shareWithImage } from '../lib/utils';
 import { Avatar } from '../components/profile/Avatar';
 import { ProBadge } from '../components/profile/ProBadge';
-import { PHASE0_FREE_MODE } from '../lib/featureFlags';
+import { usePhase } from '../contexts/PhaseContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -23,6 +23,8 @@ import {
   AlertTriangle,
   Share2,
   Edit3,
+  Shield,
+  Truck,
   ChevronRight,
   MessageSquare,
   Sparkles,
@@ -41,6 +43,7 @@ const ProfilePage: React.FC = () => {
   usePageTitle('Mon profil');
   const navigate = useNavigate();
   const { user, userProfile, signOut } = useSupabase();
+  const { showMonetisation } = usePhase();
 
   const [activeTab, setActiveTab] = useState<TabId>('listings');
   const [profileStats, setProfileStats] = useState({ activeCount: 0, soldCount: 0, reviewCount: 0 });
@@ -265,7 +268,7 @@ const ProfilePage: React.FC = () => {
           </div>
 
           {/* ── Balanced Action Shortcut Grid ── */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4 pt-3 border-t border-gray-100">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 pt-3 border-t border-gray-100">
             <button
               type="button"
               onClick={() => navigate('/mes-commandes')}
@@ -277,6 +280,15 @@ const ProfilePage: React.FC = () => {
 
             <button
               type="button"
+              onClick={() => navigate('/mes-livreurs')}
+              className="flex items-center justify-center gap-1.5 h-10 px-3 rounded-2xl bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-extrabold active:scale-95 transition-all"
+            >
+              <Truck className="w-3.5 h-3.5" />
+              <span>Mes Livreurs</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => navigate('/mes-statistiques')}
               className="flex items-center justify-center gap-1.5 h-10 px-3 rounded-2xl bg-gray-100 text-gray-800 hover:bg-gray-200 text-xs font-extrabold active:scale-95 transition-all"
             >
@@ -284,16 +296,16 @@ const ProfilePage: React.FC = () => {
               <span>Statistiques</span>
             </button>
 
-            {!PHASE0_FREE_MODE ? (
+            {showMonetisation ? (
               <button
                 type="button"
                 onClick={() => navigate('/mes-paiements')}
-                className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 h-10 px-3 rounded-2xl bg-gray-100 text-gray-800 hover:bg-gray-200 text-xs font-extrabold active:scale-95 transition-all"
+                className="flex items-center justify-center gap-1.5 h-10 px-3 rounded-2xl bg-gray-100 text-gray-800 hover:bg-gray-200 text-xs font-extrabold active:scale-95 transition-all"
               >
                 <CreditCard className="w-3.5 h-3.5" />
                 <span>Paiements</span>
               </button>
-            ) : isPro ? (
+            ) : (
               <button
                 type="button"
                 onClick={async () => {
@@ -313,12 +325,12 @@ const ProfilePage: React.FC = () => {
                     toast.success('Lien copié !', { duration: 4000 });
                   }
                 }}
-                className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 h-10 px-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white text-xs font-extrabold shadow-sm active:scale-95 transition-all"
+                className="flex items-center justify-center gap-1.5 h-10 px-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white text-xs font-extrabold shadow-sm active:scale-95 transition-all"
               >
                 <Share2 className="w-3.5 h-3.5" />
-                <span>Partager vitrine</span>
+                <span>Partager</span>
               </button>
-            ) : null}
+            )}
           </div>
         </div>
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { PHASE0_FREE_MODE } from '../lib/featureFlags';
 
 export interface MaintenanceConfig {
   enabled: boolean;
@@ -19,6 +20,30 @@ export interface CancellationConfig {
   enabled: boolean;
   notice: string;
 }
+
+export interface PhaseConfig {
+  phase: 0 | 1;
+  allow_cod_for_all: boolean;
+  allow_pickup_for_all: boolean;
+  allow_affiliated_deliverers_for_all: boolean;
+  max_free_listings: number;
+  enable_boost: boolean;
+  enable_bump: boolean;
+  enable_seller_badge: boolean;
+  default_payment_method: 'cod' | 'online';
+}
+
+const DEFAULT_PHASE_CONFIG: PhaseConfig = {
+  phase: PHASE0_FREE_MODE ? 0 : 1, // Défaut Phase 0 ou Phase 1
+  allow_cod_for_all: true,
+  allow_pickup_for_all: true,
+  allow_affiliated_deliverers_for_all: true,
+  max_free_listings: 999999,
+  enable_boost: true,
+  enable_bump: true,
+  enable_seller_badge: true,
+  default_payment_method: 'cod',
+};
 
 export function useSystemSettings() {
   const [maintenance, setMaintenance] = useState<MaintenanceConfig>({
@@ -40,13 +65,13 @@ export function useSystemSettings() {
     notice: 'Vous avez atteint la limite de 3 annulations consécutives. Afin de limiter les frais de remboursement, veuillez contacter le support pour toute demande d\'annulation.',
   });
 
+  const [phaseConfig, setPhaseConfig] = useState<PhaseConfig>(DEFAULT_PHASE_CONFIG);
   const [loading, setLoading] = useState(true);
 
   const fetchSettings = useCallback(async () => {
     try {
       const { data, error } = await (supabase.from as any)('system_settings').select('*');
       if (error) {
-        // Table not created yet or 404 - use default fallback settings
         return;
       }
 
@@ -58,6 +83,11 @@ export function useSystemSettings() {
             setPaymentConfig(row.value as PaymentConfig);
           } else if (row.key === 'cancellation_settings') {
             setCancellationSettings(row.value as CancellationConfig);
+          } else if (row.key === 'phase_config') {
+            setPhaseConfig({
+              ...DEFAULT_PHASE_CONFIG,
+              ...(row.value as Partial<PhaseConfig>),
+            });
           }
         });
       }
@@ -94,6 +124,7 @@ export function useSystemSettings() {
     maintenance,
     paymentConfig,
     cancellationSettings,
+    phaseConfig,
     loading,
     refreshSettings: fetchSettings,
   };

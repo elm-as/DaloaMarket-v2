@@ -4,10 +4,11 @@ import { Store, Share2, Truck, Sparkles, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatShopShareText, shareWithImage } from '../../lib/utils';
 import { Card } from '../ui/Card';
-import { PHASE0_FREE_MODE } from '../../lib/featureFlags';
+import { usePhase } from '../../contexts/PhaseContext';
 
 export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) => {
   const navigate = useNavigate();
+  const { isPhase0 } = usePhase();
   const isPro = userProfile?.pro_until ? new Date(userProfile.pro_until) > new Date() : false;
 
   const handleShareShop = async () => {
@@ -26,7 +27,7 @@ export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) 
 
   return (
     <div className="space-y-4">
-      {!isPro && !PHASE0_FREE_MODE ? (
+      {!isPro && !isPhase0 ? (
         <Card elevation={2} padding="md" className="rounded-3xl text-center border border-gray-100 shadow-lg shadow-gray-200/50 p-6">
           <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center mx-auto mb-3">
             <Store className="w-7 h-7" />
@@ -118,15 +119,6 @@ export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) 
                 <span>Partager ma boutique</span>
               </button>
             )}
-
-            <button
-              type="button"
-              onClick={() => navigate('/mes-livreurs')}
-              className="sm:col-span-2 flex items-center justify-center gap-2 h-11 rounded-2xl bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-bold shadow-2xs active:scale-95 transition-all"
-            >
-              <Truck className="w-4 h-4 text-blue-500" />
-              <span>Mes livreurs affiliés & Logistique</span>
-            </button>
           </div>
         </>
       )}

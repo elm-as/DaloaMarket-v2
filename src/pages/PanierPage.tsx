@@ -11,7 +11,7 @@ import {
   Truck,
   Lock,
 } from "lucide-react";
-import { useCart } from "../context/CartContext";
+import { useCart } from "../contexts/CartContext";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { formatPrice, cn } from "../lib/utils";
 import { supabase } from "../lib/supabase";

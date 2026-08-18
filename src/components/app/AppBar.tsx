@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useSupabase } from '../../hooks/useSupabase';
 import { useMessageRead } from '../../contexts/MessageReadContext';
 import { useOrderCount } from '../../contexts/OrderCountContext';
-import { useCart } from '../../context/CartContext';
+import { useCart } from '../../contexts/CartContext';
 import Avatar from '../profile/Avatar';
 
 const AppBar: React.FC = () => {

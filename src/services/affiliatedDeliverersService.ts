@@ -64,19 +64,10 @@ export const affiliatedDeliverersService = {
     cashOnDelivery: boolean
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      const { data, error } = await (supabase as any).rpc('update_seller_delivery_settings', {
-        p_home_delivery: homeDelivery,
-        p_cash_on_delivery: cashOnDelivery,
-      });
-
-      if (!error) {
-        return (data as any) || { success: true };
-      }
-
-      // Fallback par upsert direct si la RPC n'est pas encore en cache PostgREST
       const { data: userRes } = await supabase.auth.getUser();
       if (!userRes?.user) return { success: false, message: 'Non connecté' };
 
+      // 1. Enregistrement direct via table Supabase (fonctionne pour tous les vendeurs en Phase 0)
       const { error: upsertErr } = await (supabase as any)
         .from('seller_delivery_settings')
         .upsert({
@@ -84,10 +75,23 @@ export const affiliatedDeliverersService = {
           home_delivery_enabled: homeDelivery,
           cash_on_delivery_enabled: cashOnDelivery,
           updated_at: new Date().toISOString(),
-        });
+        }, { onConflict: 'seller_id' });
 
-      if (upsertErr) throw upsertErr;
-      return { success: true, message: 'Paramètres enregistrés' };
+      if (!upsertErr) {
+        return { success: true, message: 'Paramètres enregistrés' };
+      }
+
+      // 2. Fallback via RPC Supabase
+      const { data, error } = await (supabase as any).rpc('update_seller_delivery_settings', {
+        p_home_delivery: homeDelivery,
+        p_cash_on_delivery: cashOnDelivery,
+      });
+
+      if (!error && (data as any)?.success !== false) {
+        return (data as any) || { success: true };
+      }
+
+      throw upsertErr || error || new Error((data as any)?.message || 'Erreur lors de la mise à jour');
     } catch (err: any) {
       console.error('updateSellerDeliverySettings error:', err);
       return { success: false, message: err.message || 'Erreur lors de la mise à jour' };
@@ -141,12 +145,47 @@ export const affiliatedDeliverersService = {
    */
   async inviteDelivererByPhone(phone: string): Promise<{ success: boolean; message?: string }> {
     try {
+      const { data: userRes } = await supabase.auth.getUser();
+      if (!userRes?.user) return { success: false, message: 'Non connecté' };
+
+      const cleanPhone = phone.replace(/\D/g, '');
+
+      // 1. Recherche du coursier dans delivery_persons
+      const { data: drivers } = await (supabase as any)
+        .from('delivery_persons')
+        .select('id, name, phone')
+        .or(`phone.eq.${phone},phone.ilike.%${cleanPhone.slice(-8)}%`)
+        .limit(1);
+
+      if (drivers && drivers.length > 0) {
+        const driver = drivers[0];
+        const { error: affErr } = await (supabase as any)
+          .from('seller_delivery_affiliations')
+          .upsert({
+            seller_id: userRes.user.id,
+            delivery_person_id: driver.id,
+            status: 'active',
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'seller_id,delivery_person_id' });
+
+        if (!affErr) {
+          return { success: true, message: `Livreur ${driver.name} ajouté avec succès !` };
+        }
+      }
+
+      // 2. Fallback via RPC Supabase
       const { data, error } = await (supabase as any).rpc('invite_delivery_driver_by_phone', {
         p_phone: phone,
       });
 
-      if (error) throw error;
-      return (data as any) || { success: false, message: 'Aucune réponse du serveur' };
+      if (!error && (data as any)?.success !== false) {
+        return (data as any) || { success: true };
+      }
+
+      return {
+        success: false,
+        message: (data as any)?.message || 'Aucun compte livreur DaloaDelivery trouvé avec ce numéro.',
+      };
     } catch (err: any) {
       console.error('inviteDelivererByPhone error:', err);
       return { success: false, message: err.message || 'Erreur lors de l\'invitation' };

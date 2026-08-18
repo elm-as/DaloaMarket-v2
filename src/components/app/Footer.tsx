@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { usePhase } from '../../contexts/PhaseContext';
 
 interface FooterLinkItem {
   label: string;
@@ -12,55 +13,60 @@ interface FooterSection {
   links: FooterLinkItem[];
 }
 
-const FOOTER_LINKS: FooterSection[] = [
-  {
-    title: 'DaloaMarket',
-    links: [
-      { label: 'Accueil', path: '/' },
-      { label: 'Rechercher', path: '/search' },
-      { label: 'Comment ça marche', path: '/how-it-works' },
-      { label: 'Devenir vendeur Pro', path: '/devenir-pro' },
-    ],
-  },
-  {
-    title: 'Compte',
-    links: [
-      { label: 'Mon profil', path: '/profile' },
-      { label: 'Mes commandes', path: '/mes-commandes' },
-      { label: 'Messages', path: '/messages' },
-      { label: 'Paramètres', path: '/settings' },
-    ],
-  },
-  {
-    title: 'Informations',
-    links: [
-      { label: 'À propos', path: '/about' },
-      { label: 'FAQ', path: '/faq' },
-      { label: 'Aide & Support', path: '/help' },
-      { label: 'Tarifs & Packs', path: '/pricing' },
-    ],
-  },
-  {
-    title: 'Écosystème Daloa',
-    links: [
-      { label: '🏍️ DaloaDelivery', path: 'https://delivery.daloamarket.com', external: true },
-      { label: '💡 Centre Tutoriels', path: 'https://tuto.daloamarket.com', external: true },
-      { label: '📖 Documentation & API', path: 'https://docs.daloamarket.com', external: true },
-      { label: '🟢 Statut Système', path: 'https://status.daloamarket.ci', external: true },
-    ],
-  },
-  {
-    title: 'Légal',
-    links: [
-      { label: "Conditions d'utilisation", path: '/terms' },
-      { label: 'Confidentialité', path: '/privacy' },
-      { label: 'Mentions légales', path: '/mentions-legales' },
-    ],
-  },
-];
-
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
+  const { showMonetisation } = usePhase();
+
+  const footerSections = useMemo<FooterSection[]>(() => [
+    {
+      title: 'DaloaMarket',
+      links: [
+        { label: 'Accueil', path: '/' },
+        { label: 'Rechercher', path: '/search' },
+        { label: 'Comment ça marche', path: '/how-it-works' },
+        showMonetisation
+          ? { label: 'Devenir vendeur Pro', path: '/devenir-pro' }
+          : { label: 'Publier une annonce', path: '/create-listing' },
+      ],
+    },
+    {
+      title: 'Compte',
+      links: [
+        { label: 'Mon profil', path: '/profile' },
+        { label: 'Mes commandes', path: '/mes-commandes' },
+        { label: 'Messages', path: '/messages' },
+        { label: 'Paramètres', path: '/settings' },
+      ],
+    },
+    {
+      title: 'Informations',
+      links: [
+        { label: 'À propos', path: '/about' },
+        { label: 'FAQ', path: '/faq' },
+        { label: 'Aide & Support', path: '/help' },
+        showMonetisation
+          ? { label: 'Tarifs & Packs', path: '/pricing' }
+          : { label: 'Sécurité & Escrow', path: '/how-it-works' },
+      ],
+    },
+    {
+      title: 'Écosystème Daloa',
+      links: [
+        { label: '🏍️ DaloaDelivery', path: 'https://delivery.daloamarket.com', external: true },
+        { label: '💡 Centre Tutoriels', path: 'https://tuto.daloamarket.com', external: true },
+        { label: '📖 Documentation & API', path: 'https://docs.daloamarket.com', external: true },
+        { label: '🟢 Statut Système', path: 'https://status.daloamarket.com', external: true },
+      ],
+    },
+    {
+      title: 'Légal',
+      links: [
+        { label: "Conditions d'utilisation", path: '/terms' },
+        { label: 'Confidentialité', path: '/privacy' },
+        { label: 'Mentions légales', path: '/mentions-legales' },
+      ],
+    },
+  ], [showMonetisation]);
 
   return (
     <footer
@@ -72,7 +78,7 @@ const Footer: React.FC = () => {
         style={{ maxWidth: 'var(--container-max-width)' }}
       >
         <div className="grid grid-cols-5 gap-6">
-          {FOOTER_LINKS.map((section) => (
+          {footerSections.map((section) => (
             <div key={section.title}>
               <h3
                 className="text-sm font-bold mb-4"
