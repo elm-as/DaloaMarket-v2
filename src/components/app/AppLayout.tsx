@@ -12,6 +12,7 @@ import {
 import AppBar from './AppBar';
 import BottomNavBar from './BottomNavBar';
 import InstallPrompt from '../ui/InstallPrompt';
+import { WelcomeScreenModal } from '../home/WelcomeScreenModal';
 import Footer from './Footer';
 
 interface AppLayoutProps {
@@ -113,6 +114,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       {!hideBottomNav && <BottomNavBar />}
 
       <InstallPrompt />
+      <WelcomeScreenModal />
     </div>
   );
 };
