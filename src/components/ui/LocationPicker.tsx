@@ -10,6 +10,49 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
+const customPinIcon = L.divIcon({
+  html: `
+    <div style="position: relative; width: 38px; height: 46px; display: flex; align-items: center; justify-content: center;">
+      <div style="
+        position: absolute;
+        bottom: 2px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 16px;
+        height: 6px;
+        background: rgba(0,0,0,0.28);
+        border-radius: 50%;
+        filter: blur(1.5px);
+      "></div>
+      <div style="
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #FF8A00, #FF5500);
+        border: 3px solid #FFFFFF;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        box-shadow: 0 6px 16px rgba(255, 85, 0, 0.45);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s ease;
+      ">
+        <div style="
+          width: 10px;
+          height: 10px;
+          background: #FFFFFF;
+          border-radius: 50%;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        "></div>
+      </div>
+    </div>
+  `,
+  className: 'custom-location-pin',
+  iconSize: [38, 46],
+  iconAnchor: [19, 44],
+  popupAnchor: [0, -42],
+});
+
 interface LocationPickerProps {
   initialLat?: number;
   initialLng?: number;
@@ -69,11 +112,17 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
       attributionControl: false,
     });
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
+    // Style CARTO Voyager moderne (haute résolution Retina)
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+      maxZoom: 20,
+      subdomains: 'abcd',
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
     }).addTo(map);
 
-    const marker = L.marker([lat, lng], { draggable: !readOnly }).addTo(map);
+    const marker = L.marker([lat, lng], {
+      draggable: !readOnly,
+      icon: customPinIcon,
+    }).addTo(map);
 
     if (!readOnly) {
       map.on("click", (e: L.LeafletMouseEvent) => {

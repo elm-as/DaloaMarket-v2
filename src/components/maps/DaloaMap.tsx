@@ -22,29 +22,44 @@ interface DaloaMapProps {
   height?: string;
 }
 
-function createMarkerIcon(color: string, symbol: string): L.DivIcon {
+function createMarkerIcon(gradient: string, symbol: string, shadowColor: string): L.DivIcon {
   return L.divIcon({
-    html: `<div style="
-      background:${color};
-      width:32px;height:32px;
-      border-radius:50%;
-      display:flex;align-items:center;justify-content:center;
-      box-shadow:0 2px 8px rgba(0,0,0,0.35);
-      border:3px solid white;
-      color:white;
-      font-weight:700;
-      font-size:14px;
-      font-family:system-ui,-apple-system,sans-serif;
-    ">${symbol}</div>`,
-    className: '',
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
+    html: `
+      <div style="position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
+        <div style="
+          position: absolute;
+          inset: -3px;
+          border-radius: 50%;
+          background: ${shadowColor};
+          opacity: 0.45;
+          filter: blur(4px);
+        "></div>
+        <div style="
+          position: relative;
+          background: ${gradient};
+          width: 34px; height: 34px;
+          border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+          border: 2.5px solid #FFFFFF;
+          color: #FFFFFF;
+          font-weight: 800;
+          font-size: 13px;
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+          letter-spacing: -0.02em;
+        ">${symbol}</div>
+      </div>
+    `,
+    className: 'custom-daloa-marker',
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -20],
   });
 }
 
-const SELLER_ICON = createMarkerIcon('#FF7F00', 'V');
-const BUYER_ICON = createMarkerIcon('#2563EB', 'A');
-const COURIER_ICON = createMarkerIcon('#10B981', 'L');
+const SELLER_ICON = createMarkerIcon('linear-gradient(135deg, #FF8A00, #FF5500)', '🏪', 'rgba(255, 85, 0, 0.6)');
+const BUYER_ICON = createMarkerIcon('linear-gradient(135deg, #3B82F6, #1D4ED8)', '📍', 'rgba(37, 99, 235, 0.6)');
+const COURIER_ICON = createMarkerIcon('linear-gradient(135deg, #10B981, #059669)', '🛵', 'rgba(16, 185, 129, 0.6)');
 
 export default function DaloaMap({
   sellerPosition,
@@ -72,8 +87,11 @@ export default function DaloaMap({
       zoomControl: true,
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
+    // Style CARTO Voyager haute résolution
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom: 20,
+      subdomains: 'abcd',
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
     }).addTo(map);
 
     mapRef.current = map;
