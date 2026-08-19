@@ -233,6 +233,7 @@ function AppContent() {
             </PrivateRoute>
           } />
           <Route path="/profil" element={<Navigate to="/profile" replace />} />
+          <Route path="/shop/:sellerId" element={<AppLayout><SellerProfilePage /></AppLayout>} />
           <Route path="/b/:sellerId" element={<AppLayout><SellerProfilePage /></AppLayout>} />
           <Route path="/seller/:sellerId" element={<AppLayout><SellerProfilePage /></AppLayout>} />
           <Route path="/profile/seller/:sellerId" element={<AppLayout><SellerProfilePage /></AppLayout>} />

@@ -37,11 +37,11 @@ export function calculateDeliveryFee(distanceKm: number): number {
   return baseFee + extraFee;
 }
 
-export function calculateOrder(price: number, distanceKm: number, isProSeller: boolean = false) {
+export function calculateOrder(price: number, distanceKm: number, isProSeller: boolean = false, sellerFeeOverride?: number | null) {
   const delivery = calculateDeliveryFee(distanceKm);
   
   const buyerFee = Math.round(price * BUYER_FEE_RATE);
-  const sellerFeeRate = isProSeller ? PRO_SELLER_FEE_RATE : SELLER_FEE_RATE;
+  const sellerFeeRate = sellerFeeOverride != null ? sellerFeeOverride : (isProSeller ? PRO_SELLER_FEE_RATE : SELLER_FEE_RATE);
   const sellerFee = Math.round(price * sellerFeeRate);
   const driverFee = Math.round(delivery * DRIVER_FEE_RATE);
 

@@ -22,6 +22,9 @@ export interface PhaseContextValue {
   enableBoost: boolean;
   enableBump: boolean;
   enableSellerBadge: boolean;
+
+  /** Override du taux de commission vendeur (null = défaut delivery.ts, 0 = gratuit Phase 0) */
+  sellerFeeOverride: number | null;
 }
 
 const PhaseContext = createContext<PhaseContextValue | null>(null);
@@ -44,6 +47,7 @@ export function PhaseProvider({ children }: { children: React.ReactNode }) {
       enableBoost: phaseConfig.enable_boost,
       enableBump: phaseConfig.enable_bump,
       enableSellerBadge: isPhase0 ? false : phaseConfig.enable_seller_badge,
+      sellerFeeOverride: phaseConfig.seller_fee_override ?? (isPhase0 ? 0 : null),
     };
   }, [phaseConfig]);
 

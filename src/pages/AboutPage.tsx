@@ -32,7 +32,7 @@ export default function AboutPage() {
     },
     sameAs: [
       'https://delivery.daloamarket.com',
-      'https://docs.daloamarket.ci'
+      'https://docs.daloamarket.com'
     ]
   };
 

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Store, Share2, Truck, Sparkles, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { formatShopShareText, shareWithImage } from '../../lib/utils';
+import { formatShopShareText, shareWithImage, getSellerPath } from '../../lib/utils';
+import { supabase } from '../../lib/supabase';
 import { Card } from '../ui/Card';
 import { usePhase } from '../../contexts/PhaseContext';
 
@@ -10,6 +11,20 @@ export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) 
   const navigate = useNavigate();
   const { isPhase0 } = usePhase();
   const isPro = userProfile?.pro_until ? new Date(userProfile.pro_until) > new Date() : false;
+  const [listingCount, setListingCount] = useState(0);
+
+  // Compter les annonces actives pour le texte de partage
+  useEffect(() => {
+    if (!userProfile?.id) return;
+    supabase
+      .from('listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userProfile.id)
+      .eq('status', 'active')
+      .then(({ count }) => {
+        setListingCount(count || 0);
+      });
+  }, [userProfile?.id]);
 
   const handleShareShop = async () => {
     if (!userProfile?.id) return;
@@ -17,6 +32,9 @@ export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) 
       id: userProfile.id,
       shop_name: userProfile.shop_name,
       full_name: userProfile.full_name,
+      shop_slug: userProfile.shop_slug || null,
+      district: userProfile.district || null,
+      listing_count: listingCount,
     });
     const imageUrl = userProfile.shop_logo_url || userProfile.shop_banner_url || userProfile.avatar_url || null;
     const res = await shareWithImage(title, text, imageUrl);
@@ -24,6 +42,10 @@ export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) 
       toast.success('Lien et texte de votre boutique copiés !', { duration: 4000 });
     }
   };
+
+  const shopUrl = userProfile?.id
+    ? `daloamarket.com${getSellerPath(userProfile.id, userProfile.shop_slug || null)}`
+    : '';
 
   return (
     <div className="space-y-4">
@@ -94,6 +116,12 @@ export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) 
                 ) : (
                   <p className="text-xs text-gray-400 mt-0.5 italic">Aucune description configurée</p>
                 )}
+                {/* Afficher l'URL de la boutique */}
+                {shopUrl && (
+                  <p className="text-[10px] font-bold text-orange-500 mt-1 truncate">
+                    🔗 {shopUrl}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -109,16 +137,14 @@ export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) 
               <span>Personnaliser ma vitrine</span>
             </button>
 
-            {isPro && (
-              <button
-                type="button"
-                onClick={handleShareShop}
-                className="flex items-center justify-center gap-2 h-11 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white text-xs font-extrabold shadow-md shadow-orange-500/20 active:scale-95 transition-all"
-              >
-                <Share2 className="w-4 h-4" />
-                <span>Partager ma boutique</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleShareShop}
+              className="flex items-center justify-center gap-2 h-11 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white text-xs font-extrabold shadow-md shadow-orange-500/20 active:scale-95 transition-all"
+            >
+              <Share2 className="w-4 h-4" />
+              <span>Partager ma boutique</span>
+            </button>
           </div>
         </>
       )}

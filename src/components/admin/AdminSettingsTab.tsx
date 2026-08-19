@@ -87,6 +87,7 @@ export function AdminSettingsTab() {
       enable_bump: true,
       enable_seller_badge: true,
       default_payment_method: 'cod',
+      seller_fee_override: 0,
     });
     toast.success('Préréglage Phase 0 (Lancement 100% libre & COD) sélectionné');
   };
@@ -102,6 +103,7 @@ export function AdminSettingsTab() {
       enable_bump: true,
       enable_seller_badge: true,
       default_payment_method: 'online',
+      seller_fee_override: null,
     });
     toast.success('Préréglage Phase 1 (Croissance & Monétisation Pro) sélectionné');
   };

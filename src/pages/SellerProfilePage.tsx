@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useSupabase } from '../hooks/useSupabase';
 import { supabase } from '../lib/supabase';
-import { cn, formatDate, extractUuid, formatShopShareText, shareWithImage } from '../lib/utils';
+import { cn, formatDate, extractUuid, formatShopShareText, shareWithImage, getSellerPath } from '../lib/utils';
 import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -42,6 +42,7 @@ interface SellerProfile {
   shop_banner_url: string | null;
   shop_logo_url: string | null;
   shop_theme_color: string | null;
+  shop_slug: string | null;
 }
 
 interface SellerListing {
@@ -97,7 +98,7 @@ const SellerProfilePage: React.FC = () => {
         description:
           seller.shop_description ||
           `Boutique de ${seller.full_name || 'vendeur'} sur DaloaMarket à Daloa`,
-        url: `https://daloamarket.com/seller/${seller.id}`,
+        url: `https://daloamarket.com${getSellerPath(seller.id, seller.shop_slug)}`,
         image:
           seller.shop_logo_url ||
           seller.shop_banner_url ||
@@ -129,7 +130,7 @@ const SellerProfilePage: React.FC = () => {
       seller?.shop_description ||
       `Boutique officielle de ${shopTitle} à Daloa. Vente en ligne et de proximité.`,
     ogImage: seller?.shop_logo_url || seller?.shop_banner_url || seller?.avatar_url || undefined,
-    canonical: seller ? `https://daloamarket.com/seller/${seller.id}` : undefined,
+    canonical: seller ? `https://daloamarket.com${getSellerPath(seller.id, seller.shop_slug)}` : undefined,
     jsonLd: storeSchema,
   });
 
@@ -147,17 +148,29 @@ const SellerProfilePage: React.FC = () => {
         const { data } = await supabase.from('users').select('*').eq('id', targetUuid).maybeSingle();
         sellerData = data as any;
       } else if (sellerId) {
-        const { data: shopMatch } = await supabase
+        // Essayer d'abord par shop_slug (URLs lisibles /shop/mon-slug)
+        const { data: slugMatch } = await supabase
           .from('users')
           .select('*')
-          .ilike('shop_name', sellerId)
+          .eq('shop_slug' as any, sellerId)
           .maybeSingle();
-        if (shopMatch) {
-          sellerData = shopMatch as any;
+        if (slugMatch) {
+          sellerData = slugMatch as any;
         } else {
-          const { data: usersList } = await supabase.from('users').select('*').limit(100);
-          if (usersList) {
-            sellerData = (usersList.find((u: any) => u.id.startsWith(sellerId)) as any) || null;
+          // Fallback par shop_name
+          const { data: shopMatch } = await supabase
+            .from('users')
+            .select('*')
+            .ilike('shop_name', sellerId)
+            .maybeSingle();
+          if (shopMatch) {
+            sellerData = shopMatch as any;
+          } else {
+            // Fallback par short-id (8 premiers chars de l'UUID)
+            const { data: usersList } = await supabase.from('users').select('*').limit(100);
+            if (usersList) {
+              sellerData = (usersList.find((u: any) => u.id.startsWith(sellerId)) as any) || null;
+            }
           }
         }
       }
@@ -217,7 +230,11 @@ const SellerProfilePage: React.FC = () => {
 
   const handleShareShop = async () => {
     if (!seller) return;
-    const { title, text } = formatShopShareText(seller);
+    const { title, text } = formatShopShareText({
+      ...seller,
+      listing_count: listings.length,
+      cash_on_delivery: deliverySettings?.cash_on_delivery_enabled || false,
+    });
     const imageUrl = seller.shop_logo_url || seller.shop_banner_url || seller.avatar_url || null;
     const res = await shareWithImage(title, text, imageUrl);
     if (res.copied) {

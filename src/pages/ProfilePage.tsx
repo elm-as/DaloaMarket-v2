@@ -314,6 +314,8 @@ const ProfilePage: React.FC = () => {
                     id: currentUserId,
                     shop_name: (userProfile as any)?.shop_name,
                     full_name: userProfile?.full_name,
+                    shop_slug: (userProfile as any)?.shop_slug || null,
+                    district: (userProfile as any)?.district || null,
                   });
                   const imageUrl =
                     (userProfile as any)?.shop_logo_url ||

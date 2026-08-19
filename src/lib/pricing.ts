@@ -18,8 +18,8 @@ export const SELLER_BADGE_YEARLY_PRICE = 25000;
 export const LISTING_PACK_PRICE = 500;
 export const PACK_PRO_PRICE = 2500;
 
-export function calculateOrderPricing(productPrice: number, distanceKm: number = 0, isProSeller: boolean = false) {
-  return calculateOrder(productPrice, distanceKm, isProSeller);
+export function calculateOrderPricing(productPrice: number, distanceKm: number = 0, isProSeller: boolean = false, sellerFeeOverride?: number | null) {
+  return calculateOrder(productPrice, distanceKm, isProSeller, sellerFeeOverride);
 }
 
 export { haversineDistance, calculateDeliveryFee, calculateOrder };

@@ -31,6 +31,8 @@ export interface PhaseConfig {
   enable_bump: boolean;
   enable_seller_badge: boolean;
   default_payment_method: 'cod' | 'online';
+  /** Override du taux commission vendeur (null = utiliser le défaut de delivery.ts) */
+  seller_fee_override: number | null;
 }
 
 const DEFAULT_PHASE_CONFIG: PhaseConfig = {
@@ -43,6 +45,7 @@ const DEFAULT_PHASE_CONFIG: PhaseConfig = {
   enable_bump: true,
   enable_seller_badge: true,
   default_payment_method: 'cod',
+  seller_fee_override: PHASE0_FREE_MODE ? 0 : null, // 0% commission en Phase 0
 };
 
 export function useSystemSettings() {

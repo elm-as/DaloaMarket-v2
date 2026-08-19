@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CheckCircle, Zap } from 'lucide-react';
+import { X, CheckCircle, Zap, Share2, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '../../ui/Button';
-import { ENABLE_BOOST, BOOST_PRICE, BOOST_DURATION_DAYS } from '../../../lib/featureFlags';
-import { formatPrice, getListingPath } from '../../../lib/utils';
+import { BOOST_PRICE, BOOST_DURATION_DAYS } from '../../../lib/featureFlags';
+import { formatPrice, getListingPath, formatListingShareText, openWhatsAppShare, shareWithImage } from '../../../lib/utils';
 import { useSupabase } from '../../../hooks/useSupabase';
+import { usePhase } from '../../../contexts/PhaseContext';
 import { initiatePayment } from '../../../lib/payment';
 
 interface ListingSuccessModalProps {
@@ -14,6 +15,11 @@ interface ListingSuccessModalProps {
   onClose: () => void;
   isEditing: boolean;
   createdListingId: string | null;
+  /** Pour enrichir le texte de partage */
+  listingTitle?: string;
+  listingPrice?: number;
+  listingDistrict?: string;
+  listingPhoto?: string | null;
 }
 
 export const ListingSuccessModal: React.FC<ListingSuccessModalProps> = ({
@@ -21,15 +27,45 @@ export const ListingSuccessModal: React.FC<ListingSuccessModalProps> = ({
   onClose,
   isEditing,
   createdListingId,
+  listingTitle,
+  listingPrice,
+  listingDistrict,
+  listingPhoto,
 }) => {
   const navigate = useNavigate();
   const { user, userProfile } = useSupabase();
+  const { enableBoost } = usePhase();
   const [loadingBoost, setLoadingBoost] = useState(false);
 
   const handleClose = () => {
     onClose();
     if (createdListingId) {
       navigate(getListingPath(createdListingId));
+    }
+  };
+
+  const handleShareWhatsApp = () => {
+    if (!createdListingId || !listingTitle || listingPrice == null) return;
+    const { text } = formatListingShareText({
+      id: createdListingId,
+      title: listingTitle,
+      price: listingPrice,
+      district: listingDistrict,
+    });
+    openWhatsAppShare(text);
+  };
+
+  const handleShareGeneric = async () => {
+    if (!createdListingId || !listingTitle || listingPrice == null) return;
+    const { title, text } = formatListingShareText({
+      id: createdListingId,
+      title: listingTitle,
+      price: listingPrice,
+      district: listingDistrict,
+    });
+    const res = await shareWithImage(title, text, listingPhoto);
+    if (res.copied) {
+      toast.success('Lien et description copiés ! Collez dans votre statut WhatsApp ou sur Facebook.', { duration: 5000 });
     }
   };
 
@@ -79,26 +115,56 @@ export const ListingSuccessModal: React.FC<ListingSuccessModalProps> = ({
                 <h2 className="text-xl font-bold mb-1" style={{ color: 'var(--color-on-surface)' }}>
                   Annonce {isEditing ? 'modifiée' : 'publiée'} !
                 </h2>
-                <p className="text-sm mb-6" style={{ color: 'var(--color-on-surface-variant)' }}>
+                <p className="text-sm mb-5" style={{ color: 'var(--color-on-surface-variant)' }}>
                   {isEditing ? 'Vos modifications ont été enregistrées.' : 'Votre annonce est maintenant en ligne.'}
                 </p>
               </motion.div>
 
-              {/* Boost upsell */}
-              {ENABLE_BOOST && !isEditing && createdListingId && (
+              {/* ── CTA de partage WhatsApp (Levier A — le plus important) ── */}
+              {!isEditing && createdListingId && listingTitle && (
+                <motion.div
+                  className="space-y-2.5 mb-5"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 }}
+                >
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    📲 Partagez pour vendre plus vite
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleShareWhatsApp}
+                    className="w-full h-12 rounded-2xl bg-[#25D366] hover:bg-[#20BA5C] text-white font-extrabold text-sm flex items-center justify-center gap-2.5 shadow-lg shadow-green-500/25 active:scale-95 transition-all"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    Partager sur WhatsApp
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleShareGeneric}
+                    className="w-full h-10 rounded-2xl bg-gray-50 border border-gray-200 text-gray-700 font-bold text-xs flex items-center justify-center gap-2 hover:bg-gray-100 active:scale-95 transition-all"
+                  >
+                    <Share2 className="w-4 h-4 text-orange-500" />
+                    Partager ailleurs (Facebook, copier le lien…)
+                  </button>
+                </motion.div>
+              )}
+
+              {/* Boost upsell — utilise usePhase() au lieu du flag statique */}
+              {enableBoost && !isEditing && createdListingId && (
                 <motion.div
                   className="rounded-2xl p-4 mb-5 text-left border-2"
                   style={{ borderColor: 'var(--color-primary-100)', background: 'var(--color-primary-50)' }}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
+                  transition={{ delay: 0.35 }}
                 >
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--gradient-primary)' }}>
                       <Zap className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-sm font-bold mb-0.5" style={{ color: 'var(--color-on-surface)' }}>Boost votre annonce</h3>
+                      <h3 className="text-sm font-bold mb-0.5" style={{ color: 'var(--color-on-surface)' }}>Boostez votre annonce</h3>
                       <p className="text-xs leading-relaxed mb-2.5" style={{ color: 'var(--color-on-surface-variant)' }}>
                         Apparaît en tête des résultats pendant {BOOST_DURATION_DAYS} jours pour seulement {formatPrice(BOOST_PRICE)}.
                       </p>

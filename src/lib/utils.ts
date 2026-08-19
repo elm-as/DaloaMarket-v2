@@ -43,8 +43,9 @@ export const getListingPath = (id: string, _title?: string): string => {
   return `/l/${shortId}`;
 };
 
-export const getSellerPath = (sellerId: string): string => {
+export const getSellerPath = (sellerId: string, shopSlug?: string | null): string => {
   if (!sellerId) return '/';
+  if (shopSlug) return `/shop/${shopSlug}`;
   const shortId = sellerId.length >= 8 ? sellerId.slice(0, 8) : sellerId;
   return `/b/${shortId}`;
 };
@@ -55,10 +56,12 @@ export const getListingShareUrl = (id: string): string => {
   return `${typeof window !== 'undefined' ? window.location.origin : 'https://daloamarket.com'}/l/${shortId}`;
 };
 
-export const getSellerShareUrl = (sellerId: string): string => {
-  if (!sellerId) return typeof window !== 'undefined' ? window.location.origin : 'https://daloamarket.com';
+export const getSellerShareUrl = (sellerId: string, shopSlug?: string | null): string => {
+  const base = typeof window !== 'undefined' ? window.location.origin : 'https://daloamarket.com';
+  if (!sellerId) return base;
+  if (shopSlug) return `${base}/shop/${shopSlug}`;
   const shortId = sellerId.length >= 8 ? sellerId.slice(0, 8) : sellerId;
-  return `${typeof window !== 'undefined' ? window.location.origin : 'https://daloamarket.com'}/b/${shortId}`;
+  return `${base}/b/${shortId}`;
 };
 
 export const formatListingShareText = (listing: { id: string; title: string; price: number; district?: string }) => {
@@ -73,10 +76,30 @@ export const formatListingShareText = (listing: { id: string; title: string; pri
   };
 };
 
-export const formatShopShareText = (shop: { id: string; shop_name?: string | null; full_name?: string | null }) => {
-  const url = getSellerShareUrl(shop.id);
+export interface ShopShareInfo {
+  id: string;
+  shop_name?: string | null;
+  full_name?: string | null;
+  shop_slug?: string | null;
+  district?: string | null;
+  listing_count?: number;
+  cash_on_delivery?: boolean;
+}
+
+export const formatShopShareText = (shop: ShopShareInfo) => {
+  const url = getSellerShareUrl(shop.id, shop.shop_slug);
   const shopTitle = shop.shop_name || shop.full_name || 'Boutique DaloaMarket';
-  const text = `🏪 *${shopTitle}*\n⭐ Découvrir cette boutique sur DaloaMarket\n\n👉 Visiter la boutique :\n${url}`;
+  const parts: string[] = [`🏪 *${shopTitle}* — Boutique à Daloa`];
+
+  const meta: string[] = [];
+  if (shop.listing_count != null && shop.listing_count > 0) meta.push(`📦 ${shop.listing_count} article${shop.listing_count > 1 ? 's' : ''} en ligne`);
+  if (shop.district) meta.push(`📍 ${shop.district} (Daloa)`);
+  if (shop.cash_on_delivery) meta.push('💳 Paiement à la livraison accepté');
+  if (meta.length > 0) parts.push(meta.join(' • '));
+
+  parts.push(`\n👉 Voir ma boutique :\n${url}`);
+
+  const text = parts.join('\n');
   return {
     title: shopTitle,
     text,

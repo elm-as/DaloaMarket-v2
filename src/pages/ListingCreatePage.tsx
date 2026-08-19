@@ -691,6 +691,10 @@ const ListingCreatePage: React.FC = () => {
         onClose={() => setShowSuccessModal(false)}
         isEditing={isEditing}
         createdListingId={createdListingId}
+        listingTitle={watchTitle}
+        listingPrice={parseInt(watch('price') || '0', 10)}
+        listingDistrict={watch('district')}
+        listingPhoto={existingPhotos[0] || null}
       />
     </motion.div>
   );
