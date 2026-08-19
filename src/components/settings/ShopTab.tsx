@@ -162,6 +162,7 @@ export const ShopTab: React.FC = () => {
         <LocationPicker
           initialLat={shopLatitude}
           initialLng={shopLongitude}
+          userType="seller"
           onLocationChange={(lat, lng) => {
             setShopLatitude(lat);
             setShopLongitude(lng);

@@ -1038,6 +1038,7 @@ const CheckoutPage: React.FC = () => {
                 <LocationPicker
                   initialLat={deliveryLatitude}
                   initialLng={deliveryLongitude}
+                  userType="buyer"
                   onLocationChange={(lat, lng) => {
                     setDeliveryLatitude(lat);
                     setDeliveryLongitude(lng);
@@ -1045,10 +1046,6 @@ const CheckoutPage: React.FC = () => {
                   placeholder="Cliquez sur la carte pour affiner la position"
                   className="w-full h-56 bg-gray-100"
                 />
-                <div className="absolute top-3 left-3 z-[400] bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-md flex items-center gap-2 pointer-events-none border border-white/40">
-                  <MapPin className="h-3.5 w-3.5 text-orange-600" />
-                  <span className="text-[11px] font-extrabold text-gray-800">Point de livraison Daloa</span>
-                </div>
               </div>
 
               {/* Textarea */}

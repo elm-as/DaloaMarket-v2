@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { MapPin, Navigation } from "lucide-react";
+import { MapPin, Navigation, Store, Truck, CheckCircle2, X, AlertCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -61,6 +63,7 @@ interface LocationPickerProps {
   readOnly?: boolean;
   zoom?: number;
   className?: string;
+  userType?: 'seller' | 'buyer';
 }
 
 const LocationPicker: React.FC<LocationPickerProps> = ({
@@ -71,6 +74,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   readOnly = false,
   zoom = 14,
   className,
+  userType = 'buyer',
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -79,6 +83,10 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   const [lng, setLng] = useState(initialLng ?? -6.4502);
   const [locating, setLocating] = useState(false);
   const [mapReady, setMapReady] = useState(false);
+
+  // État de la modal de confirmation
+  const [pendingCoords, setPendingCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   useEffect(() => {
     if (initialLat != null && initialLng != null) {
@@ -153,31 +161,73 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   }, []);
 
   const handleLocateMe = () => {
-    if (!navigator.geolocation || !mapRef.current) return;
+    if (!navigator.geolocation) {
+      toast.error("La géolocalisation n'est pas supportée par votre navigateur.");
+      return;
+    }
+
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
-        mapRef.current?.setView([latitude, longitude], zoom);
-        markerRef.current?.setLatLng([latitude, longitude]);
-        setLat(latitude);
-        setLng(longitude);
-        onLocationChange(latitude, longitude);
         setLocating(false);
+        // Ouvrir la pop-up de confirmation avec les coordonnées capturées
+        setPendingCoords({ lat: latitude, lng: longitude });
+        setShowConfirmModal(true);
       },
-      () => {
+      (err) => {
         setLocating(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          toast.error("Accès GPS refusé. Activez la localisation dans les paramètres de votre navigateur.");
+        } else {
+          toast.error("Impossible de récupérer votre position GPS.");
+        }
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
     );
   };
 
+  const handleConfirmLocation = () => {
+    if (!pendingCoords) return;
+    const { lat: newLat, lng: newLng } = pendingCoords;
+
+    setLat(newLat);
+    setLng(newLng);
+    if (mapRef.current && markerRef.current) {
+      mapRef.current.setView([newLat, newLng], zoom);
+      markerRef.current.setLatLng([newLat, newLng]);
+    }
+    onLocationChange(newLat, newLng);
+    setShowConfirmModal(false);
+    setPendingCoords(null);
+
+    if (userType === 'seller') {
+      toast.success("Emplacement de votre boutique mis à jour !", { icon: "🏪", duration: 4000 });
+    } else {
+      toast.success("Point de livraison défini avec succès !", { icon: "📍", duration: 4000 });
+    }
+  };
+
+  const handleCancelLocation = () => {
+    setShowConfirmModal(false);
+    setPendingCoords(null);
+  };
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 relative">
       <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-lg shadow-gray-200/50">
         <div className="absolute left-3 top-3 z-[400] flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-extrabold text-gray-800 shadow-sm backdrop-blur pointer-events-none">
-          <MapPin className="h-3.5 w-3.5 text-orange-500" />
-          Votre point de livraison
+          {userType === 'seller' ? (
+            <>
+              <Store className="h-3.5 w-3.5 text-orange-500" />
+              Emplacement de votre boutique
+            </>
+          ) : (
+            <>
+              <MapPin className="h-3.5 w-3.5 text-orange-500" />
+              Votre point de livraison
+            </>
+          )}
         </div>
         <div
           ref={containerRef}
@@ -191,11 +241,12 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
             disabled={locating}
             className="absolute bottom-3 right-3 z-[400] flex min-h-10 items-center gap-2 rounded-2xl border border-gray-100 bg-white/95 px-3.5 py-2 text-xs font-extrabold text-gray-900 shadow-lg backdrop-blur-md transition-all hover:bg-white active:scale-95 disabled:opacity-50"
           >
-            <Navigation className="w-3.5 h-3.5 text-orange-500 fill-orange-500" />
-            {locating ? "Localisation en cours..." : "Ma position GPS"}
+            <Navigation className={`w-3.5 h-3.5 text-orange-500 fill-orange-500 ${locating ? 'animate-spin' : ''}`} />
+            {locating ? "Recherche satellite..." : "Ma position GPS"}
           </button>
         )}
       </div>
+
       <div className="flex items-start justify-between gap-3 px-1 text-[11px] font-medium text-gray-500">
         <span className="flex shrink-0 items-center gap-1 font-bold text-gray-700">
           <MapPin className="h-3.5 w-3.5 text-orange-500" />
@@ -203,9 +254,121 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
         </span>
         <span className="text-[11px] text-gray-400">{placeholder}</span>
       </div>
+
+      {/* ── MODALE DE CONFIRMATION DE POSITION GPS ── */}
+      <AnimatePresence>
+        {showConfirmModal && pendingCoords && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleCancelLocation}
+            />
+
+            {/* Modal Card */}
+            <motion.div
+              className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-gray-100 overflow-hidden text-center z-10"
+              initial={{ opacity: 0, scale: 0.92, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+            >
+              {/* Bouton fermeture */}
+              <button
+                type="button"
+                onClick={handleCancelLocation}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors"
+                aria-label="Fermer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Icône animée */}
+              <div className="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg mb-4 bg-gradient-to-tr from-orange-500 to-amber-500 text-white shadow-orange-500/25">
+                {userType === 'seller' ? (
+                  <Store className="w-7 h-7" />
+                ) : (
+                  <Truck className="w-7 h-7" />
+                )}
+              </div>
+
+              {/* Titre & Message adaptés */}
+              {userType === 'seller' ? (
+                <>
+                  <h3 className="text-lg font-black text-gray-900 mb-2 leading-tight">
+                    Définir l'emplacement de votre boutique ?
+                  </h3>
+                  <p className="text-xs text-gray-600 leading-relaxed mb-4">
+                    Vous êtes sur le point d'enregistrer votre position GPS actuelle comme l'adresse officielle de votre boutique à Daloa.
+                  </p>
+                  <div className="bg-orange-50/80 border border-orange-200/70 rounded-2xl p-3 text-left mb-5 space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-orange-900">
+                      <AlertCircle className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+                      <span>Impact sur vos ventes :</span>
+                    </div>
+                    <p className="text-[11px] text-orange-800 leading-tight pl-5">
+                      Les frais de livraison et les trajets des coursiers DaloaDelivery seront automatiquement calculés à partir de cet endroit.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-black text-gray-900 mb-2 leading-tight">
+                    Confirmer ce lieu de livraison ?
+                  </h3>
+                  <p className="text-xs text-gray-600 leading-relaxed mb-4">
+                    Votre position GPS actuelle sera utilisée comme repère exact pour la livraison de votre commande à Daloa.
+                  </p>
+                  <div className="bg-blue-50/80 border border-blue-200/70 rounded-2xl p-3 text-left mb-5 space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-blue-900">
+                      <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>Précision pour le livreur :</span>
+                    </div>
+                    <p className="text-[11px] text-blue-800 leading-tight pl-5">
+                      Assurez-vous d'être présent à cet emplacement ou complétez le champ texte avec vos repères de quartier.
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* Badge coordonnées */}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 border border-gray-200 text-[11px] font-bold text-gray-700 mb-6">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>GPS : {pendingCoords.lat.toFixed(5)}, {pendingCoords.lng.toFixed(5)}</span>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={handleConfirmLocation}
+                  className="w-full h-11 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-extrabold text-xs shadow-md shadow-orange-500/25 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>
+                    {userType === 'seller' ? "Confirmer la position de ma boutique" : "Confirmer mon adresse de livraison"}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCancelLocation}
+                  className="w-full h-10 rounded-2xl bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-bold text-xs active:scale-95 transition-all"
+                >
+                  Annuler
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
 export { LocationPicker };
 export default LocationPicker;
+
