@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { MapPin, Navigation, Store, Truck, CheckCircle2, X, AlertCircle } from "lucide-react";
+import { MapPin, Navigation, Store, Truck, CheckCircle2, X, AlertCircle, Layers, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
+import { useSupabase } from "../../hooks/useSupabase";
+import { isLocationInDaloa, getDistanceFromDaloaCenterKm, DALOA_CENTER_COORDS } from "../../lib/utils";
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -22,7 +24,7 @@ const customPinIcon = L.divIcon({
         transform: translateX(-50%);
         width: 16px;
         height: 6px;
-        background: rgba(0,0,0,0.28);
+        background: rgba(0,0,0,0.32);
         border-radius: 50%;
         filter: blur(1.5px);
       "></div>
@@ -55,6 +57,10 @@ const customPinIcon = L.divIcon({
   popupAnchor: [0, -42],
 });
 
+// Tile Layer URLs
+const TILE_URL_STREET = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+const TILE_URL_SATELLITE = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+
 interface LocationPickerProps {
   initialLat?: number;
   initialLng?: number;
@@ -76,13 +82,19 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   className,
   userType = 'buyer',
 }) => {
+  const { userProfile, isAdmin } = useSupabase();
+  const isSuperOrAdmin = isAdmin || userProfile?.role === 'superadmin' || userProfile?.role === 'admin';
+
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
-  const [lat, setLat] = useState(initialLat ?? 6.8774);
-  const [lng, setLng] = useState(initialLng ?? -6.4502);
+  
+  const [lat, setLat] = useState(initialLat ?? DALOA_CENTER_COORDS.lat);
+  const [lng, setLng] = useState(initialLng ?? DALOA_CENTER_COORDS.lng);
   const [locating, setLocating] = useState(false);
   const [mapReady, setMapReady] = useState(false);
+  const [mapMode, setMapMode] = useState<'street' | 'satellite'>('street');
 
   // État de la modal de confirmation
   const [pendingCoords, setPendingCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -111,21 +123,24 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     }
   }, [mapReady]);
 
+  // Initialisation de la carte
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = L.map(containerRef.current, {
       center: [lat, lng],
       zoom,
-      zoomControl: true,
+      zoomControl: false, // On garde les contrôles propres
       attributionControl: false,
     });
 
-    // Style CARTO Voyager moderne (haute résolution Retina)
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+    // Style par défaut : CARTO Voyager
+    const initialLayer = L.tileLayer(TILE_URL_STREET, {
       maxZoom: 20,
       subdomains: 'abcd',
       attribution: '&copy; OpenStreetMap &copy; CARTO',
     }).addTo(map);
+
+    tileLayerRef.current = initialLayer;
 
     const marker = L.marker([lat, lng], {
       draggable: !readOnly,
@@ -135,6 +150,13 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     if (!readOnly) {
       map.on("click", (e: L.LeafletMouseEvent) => {
         const { lat: newLat, lng: newLng } = e.latlng;
+        
+        // Pour les vendeurs, vérifier si le point cliqué est dans Daloa (sauf si admin)
+        if (userType === 'seller' && !isLocationInDaloa(newLat, newLng) && !isSuperOrAdmin) {
+          toast.error("Veuillez sélectionner un emplacement situé à Daloa (Côte d'Ivoire).", { icon: "🚫" });
+          return;
+        }
+
         marker.setLatLng([newLat, newLng]);
         setLat(newLat);
         setLng(newLng);
@@ -143,6 +165,12 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
 
       marker.on("dragend", () => {
         const pos = marker.getLatLng();
+        if (userType === 'seller' && !isLocationInDaloa(pos.lat, pos.lng) && !isSuperOrAdmin) {
+          toast.error("Emplacement hors de Daloa. DaloaMarket est réservé aux vendeurs locaux.", { icon: "🚫" });
+          // Replacer au dernier point valide
+          marker.setLatLng([lat, lng]);
+          return;
+        }
         setLat(pos.lat);
         setLng(pos.lng);
         onLocationChange(pos.lat, pos.lng);
@@ -157,8 +185,35 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
       map.remove();
       mapRef.current = null;
       markerRef.current = null;
+      tileLayerRef.current = null;
     };
   }, []);
+
+  // Bascule Mode Plan (Voyager) / Satellite HD (Esri)
+  const toggleMapMode = () => {
+    if (!mapRef.current) return;
+    const newMode = mapMode === 'street' ? 'satellite' : 'street';
+    setMapMode(newMode);
+
+    if (tileLayerRef.current) {
+      mapRef.current.removeLayer(tileLayerRef.current);
+    }
+
+    if (newMode === 'satellite') {
+      tileLayerRef.current = L.tileLayer(TILE_URL_SATELLITE, {
+        maxZoom: 19,
+        attribution: '&copy; Esri &copy; Maxar, Earthstar Geographics',
+      }).addTo(mapRef.current);
+      toast("Mode Satellite HD activé", { icon: "🛰️", duration: 2500 });
+    } else {
+      tileLayerRef.current = L.tileLayer(TILE_URL_STREET, {
+        maxZoom: 20,
+        subdomains: 'abcd',
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+      }).addTo(mapRef.current);
+      toast("Mode Plan Street activé", { icon: "🗺️", duration: 2500 });
+    }
+  };
 
   const handleLocateMe = () => {
     if (!navigator.geolocation) {
@@ -171,7 +226,6 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
       (pos) => {
         const { latitude, longitude } = pos.coords;
         setLocating(false);
-        // Ouvrir la pop-up de confirmation avec les coordonnées capturées
         setPendingCoords({ lat: latitude, lng: longitude });
         setShowConfirmModal(true);
       },
@@ -191,6 +245,14 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     if (!pendingCoords) return;
     const { lat: newLat, lng: newLng } = pendingCoords;
 
+    const inDaloa = isLocationInDaloa(newLat, newLng);
+
+    // Blocage pour les non-admins si vendeur hors Daloa
+    if (userType === 'seller' && !inDaloa && !isSuperOrAdmin) {
+      toast.error("Impossible d'enregistrer une boutique en dehors de Daloa.", { icon: "🚫" });
+      return;
+    }
+
     setLat(newLat);
     setLng(newLng);
     if (mapRef.current && markerRef.current) {
@@ -202,7 +264,11 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     setPendingCoords(null);
 
     if (userType === 'seller') {
-      toast.success("Emplacement de votre boutique mis à jour !", { icon: "🏪", duration: 4000 });
+      if (isSuperOrAdmin && !inDaloa) {
+        toast.success("Position enregistrée (Mode Admin / Test hors-Daloa)", { icon: "👑", duration: 4000 });
+      } else {
+        toast.success("Emplacement de votre boutique mis à jour !", { icon: "🏪", duration: 4000 });
+      }
     } else {
       toast.success("Point de livraison défini avec succès !", { icon: "📍", duration: 4000 });
     }
@@ -213,27 +279,48 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     setPendingCoords(null);
   };
 
+  // Calcul du diagnostic géographique pour la modale
+  const isPendingInDaloa = pendingCoords ? isLocationInDaloa(pendingCoords.lat, pendingCoords.lng) : true;
+  const distanceFromCenter = pendingCoords ? getDistanceFromDaloaCenterKm(pendingCoords.lat, pendingCoords.lng) : 0;
+  const isBlocked = userType === 'seller' && !isPendingInDaloa && !isSuperOrAdmin;
+
   return (
     <div className="space-y-2 relative">
       <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-lg shadow-gray-200/50">
-        <div className="absolute left-3 top-3 z-[400] flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-extrabold text-gray-800 shadow-sm backdrop-blur pointer-events-none">
+        {/* Badge en haut à gauche */}
+        <div className="absolute left-3 top-3 z-[400] flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-extrabold text-gray-800 shadow-sm backdrop-blur pointer-events-none border border-gray-100">
           {userType === 'seller' ? (
             <>
               <Store className="h-3.5 w-3.5 text-orange-500" />
-              Emplacement de votre boutique
+              Emplacement boutique Daloa
             </>
           ) : (
             <>
               <MapPin className="h-3.5 w-3.5 text-orange-500" />
-              Votre point de livraison
+              Point de livraison Daloa
             </>
           )}
         </div>
+
+        {/* Bouton de bascule Mode Satellite / Plan en haut à droite */}
+        <button
+          type="button"
+          onClick={toggleMapMode}
+          className="absolute right-3 top-3 z-[400] flex items-center gap-1.5 rounded-2xl bg-white/95 px-3 py-1.5 text-[11px] font-extrabold text-gray-800 shadow-md backdrop-blur border border-gray-100 hover:bg-white active:scale-95 transition-all"
+          title="Changer de vue cartographique"
+        >
+          <Layers className="w-3.5 h-3.5 text-orange-500" />
+          <span>{mapMode === 'street' ? '🛰️ Satellite' : '🗺️ Plan'}</span>
+        </button>
+
+        {/* Conteneur de la carte */}
         <div
           ref={containerRef}
           className={className || "w-full h-56 bg-gray-100"}
           style={{ zIndex: 0 }}
         />
+
+        {/* Bouton GPS Me localiser en bas à droite */}
         {!readOnly && (
           <button
             type="button"
@@ -247,6 +334,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
         )}
       </div>
 
+      {/* Coordonnées & aide sous la carte */}
       <div className="flex items-start justify-between gap-3 px-1 text-[11px] font-medium text-gray-500">
         <span className="flex shrink-0 items-center gap-1 font-bold text-gray-700">
           <MapPin className="h-3.5 w-3.5 text-orange-500" />
@@ -255,7 +343,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
         <span className="text-[11px] text-gray-400">{placeholder}</span>
       </div>
 
-      {/* ── MODALE DE CONFIRMATION DE POSITION GPS ── */}
+      {/* ── MODALE DE CONFIRMATION DE POSITION GPS + GEOFENCING ── */}
       <AnimatePresence>
         {showConfirmModal && pendingCoords && (
           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
@@ -286,31 +374,69 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
                 <X className="w-4 h-4" />
               </button>
 
-              {/* Icône animée */}
-              <div className="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg mb-4 bg-gradient-to-tr from-orange-500 to-amber-500 text-white shadow-orange-500/25">
-                {userType === 'seller' ? (
+              {/* Icône principale */}
+              <div className={`mx-auto w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg mb-4 text-white ${
+                isBlocked
+                  ? 'bg-gradient-to-tr from-red-500 to-rose-600 shadow-red-500/25'
+                  : 'bg-gradient-to-tr from-orange-500 to-amber-500 shadow-orange-500/25'
+              }`}>
+                {isBlocked ? (
+                  <AlertCircle className="w-7 h-7" />
+                ) : userType === 'seller' ? (
                   <Store className="w-7 h-7" />
                 ) : (
                   <Truck className="w-7 h-7" />
                 )}
               </div>
 
-              {/* Titre & Message adaptés */}
-              {userType === 'seller' ? (
+              {/* Titre & Message selon le cas */}
+              {isBlocked ? (
+                <>
+                  <h3 className="text-lg font-black text-gray-900 mb-2 leading-tight">
+                    Position hors de Daloa
+                  </h3>
+                  <p className="text-xs text-gray-600 leading-relaxed mb-4">
+                    Votre position GPS actuelle est située à environ <strong>{Math.round(distanceFromCenter)} km</strong> de Daloa.
+                  </p>
+                  <div className="bg-red-50 border border-red-200 rounded-2xl p-3.5 text-left mb-5 space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-red-900">
+                      <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                      <span>Règle de proximité DaloaMarket :</span>
+                    </div>
+                    <p className="text-[11px] text-red-800 leading-tight">
+                      DaloaMarket est une marketplace locale 100% dédiée à la ville de Daloa. Seuls les commerçants et artisans physiquement basés à Daloa peuvent ouvrir une boutique.
+                    </p>
+                  </div>
+                </>
+              ) : userType === 'seller' ? (
                 <>
                   <h3 className="text-lg font-black text-gray-900 mb-2 leading-tight">
                     Définir l'emplacement de votre boutique ?
                   </h3>
                   <p className="text-xs text-gray-600 leading-relaxed mb-4">
-                    Vous êtes sur le point d'enregistrer votre position GPS actuelle comme l'adresse officielle de votre boutique à Daloa.
+                    Vous êtes sur le point d'enregistrer votre position GPS comme l'adresse officielle de votre boutique à Daloa.
                   </p>
+                  
+                  {/* Badge Admin bypass si applicable */}
+                  {isSuperOrAdmin && !isPendingInDaloa && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-2xl p-3 text-left mb-4 flex items-start gap-2 text-purple-900 text-[11px]">
+                      <ShieldCheck className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-extrabold">Mode Fondateur / Admin actif</p>
+                        <p className="text-purple-700 leading-tight">
+                          Position détectée hors Daloa ({Math.round(distanceFromCenter)} km), exception accordée pour vos tests.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="bg-orange-50/80 border border-orange-200/70 rounded-2xl p-3 text-left mb-5 space-y-1.5">
                     <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-orange-900">
                       <AlertCircle className="w-3.5 h-3.5 text-orange-600 shrink-0" />
                       <span>Impact sur vos ventes :</span>
                     </div>
                     <p className="text-[11px] text-orange-800 leading-tight pl-5">
-                      Les frais de livraison et les trajets des coursiers DaloaDelivery seront automatiquement calculés à partir de cet endroit.
+                      Les frais de livraison et les trajets des coursiers DaloaDelivery seront calculés à partir de cet endroit.
                     </p>
                   </div>
                 </>
@@ -336,29 +462,31 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
 
               {/* Badge coordonnées */}
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 border border-gray-200 text-[11px] font-bold text-gray-700 mb-6">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className={`w-2 h-2 rounded-full ${isPendingInDaloa ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
                 <span>GPS : {pendingCoords.lat.toFixed(5)}, {pendingCoords.lng.toFixed(5)}</span>
               </div>
 
               {/* Actions */}
               <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={handleConfirmLocation}
-                  className="w-full h-11 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-extrabold text-xs shadow-md shadow-orange-500/25 flex items-center justify-center gap-2 active:scale-95 transition-all"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>
-                    {userType === 'seller' ? "Confirmer la position de ma boutique" : "Confirmer mon adresse de livraison"}
-                  </span>
-                </button>
+                {!isBlocked ? (
+                  <button
+                    type="button"
+                    onClick={handleConfirmLocation}
+                    className="w-full h-11 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-extrabold text-xs shadow-md shadow-orange-500/25 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>
+                      {userType === 'seller' ? "Confirmer la position de ma boutique" : "Confirmer mon adresse de livraison"}
+                    </span>
+                  </button>
+                ) : null}
 
                 <button
                   type="button"
                   onClick={handleCancelLocation}
                   className="w-full h-10 rounded-2xl bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-bold text-xs active:scale-95 transition-all"
                 >
-                  Annuler
+                  {isBlocked ? "Fermer" : "Annuler"}
                 </button>
               </div>
             </motion.div>
@@ -371,4 +499,5 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
 
 export { LocationPicker };
 export default LocationPicker;
+
 

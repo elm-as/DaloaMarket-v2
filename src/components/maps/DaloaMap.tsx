@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { Layers } from 'lucide-react';
 
 const DALOA_CENTER: [number, number] = [6.8773, -6.4502];
 const DALOA_BOUNDS: [[number, number], [number, number]] = [
@@ -61,6 +62,9 @@ const SELLER_ICON = createMarkerIcon('linear-gradient(135deg, #FF8A00, #FF5500)'
 const BUYER_ICON = createMarkerIcon('linear-gradient(135deg, #3B82F6, #1D4ED8)', '📍', 'rgba(37, 99, 235, 0.6)');
 const COURIER_ICON = createMarkerIcon('linear-gradient(135deg, #10B981, #059669)', '🛵', 'rgba(16, 185, 129, 0.6)');
 
+const TILE_URL_STREET = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+const TILE_URL_SATELLITE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+
 export default function DaloaMap({
   sellerPosition,
   buyerPosition,
@@ -71,9 +75,11 @@ export default function DaloaMap({
 }: DaloaMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const routeLayerRef = useRef<L.Polyline | null>(null);
   const courierMarkerRef = useRef<L.Marker | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+  const [mapMode, setMapMode] = useState<'street' | 'satellite'>('street');
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -84,23 +90,48 @@ export default function DaloaMap({
       minZoom: 13,
       maxBounds: L.latLngBounds(DALOA_BOUNDS[0], DALOA_BOUNDS[1]),
       maxBoundsViscosity: 1.0,
-      zoomControl: true,
+      zoomControl: false,
     });
 
     // Style CARTO Voyager haute résolution
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    const initialLayer = L.tileLayer(TILE_URL_STREET, {
       maxZoom: 20,
       subdomains: 'abcd',
       attribution: '&copy; OpenStreetMap &copy; CARTO',
     }).addTo(map);
 
+    tileLayerRef.current = initialLayer;
     mapRef.current = map;
 
     return () => {
       map.remove();
       mapRef.current = null;
+      tileLayerRef.current = null;
     };
   }, []);
+
+  const toggleMapMode = () => {
+    if (!mapRef.current) return;
+    const newMode = mapMode === 'street' ? 'satellite' : 'street';
+    setMapMode(newMode);
+
+    if (tileLayerRef.current) {
+      mapRef.current.removeLayer(tileLayerRef.current);
+    }
+
+    if (newMode === 'satellite') {
+      tileLayerRef.current = L.tileLayer(TILE_URL_SATELLITE, {
+        maxZoom: 19,
+        attribution: '&copy; Esri &copy; Maxar, Earthstar Geographics',
+      }).addTo(mapRef.current);
+    } else {
+      tileLayerRef.current = L.tileLayer(TILE_URL_STREET, {
+        maxZoom: 20,
+        subdomains: 'abcd',
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+      }).addTo(mapRef.current);
+    }
+  };
 
   useEffect(() => {
     const map = mapRef.current;
@@ -204,6 +235,15 @@ export default function DaloaMap({
         <div className="pointer-events-none absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-bold text-gray-700 shadow-sm backdrop-blur">
           Vendeur · Vous · Livreur
         </div>
+        <button
+          type="button"
+          onClick={toggleMapMode}
+          className="absolute right-3 top-3 z-[400] flex items-center gap-1.5 rounded-2xl bg-white/95 px-3 py-1.5 text-[11px] font-extrabold text-gray-800 shadow-md backdrop-blur border border-gray-100 hover:bg-white active:scale-95 transition-all"
+          title="Changer de vue cartographique"
+        >
+          <Layers className="w-3.5 h-3.5 text-orange-500" />
+          <span>{mapMode === 'street' ? '🛰️ Satellite' : '🗺️ Plan'}</span>
+        </button>
       </div>
       {routeInfo && (
         <div className="flex items-center justify-center gap-4 mt-2 px-4 py-2.5 bg-white/90 backdrop-blur rounded-xl text-sm">

@@ -37,6 +37,37 @@ export const extractUuid = (input: string): string | null => {
   return match ? match[0] : null;
 };
 
+/** Coordonnées centrales de la ville de Daloa */
+export const DALOA_CENTER_COORDS = { lat: 6.8773, lng: -6.4502 };
+
+/** Rayon de couverture géographique officiel pour Daloa (en km) */
+export const DALOA_GEOFENCE_RADIUS_KM = 18;
+
+/**
+ * Calcule la distance en km entre 2 points GPS (formule de Haversine)
+ */
+export function getDistanceFromDaloaCenterKm(lat: number, lng: number): number {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return 9999;
+  const R = 6371;
+  const dLat = ((lat - DALOA_CENTER_COORDS.lat) * Math.PI) / 180;
+  const dLon = ((lng - DALOA_CENTER_COORDS.lng) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((DALOA_CENTER_COORDS.lat * Math.PI) / 180) *
+      Math.cos((lat * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * Vérifie si des coordonnées GPS se situent dans le périmètre de Daloa
+ */
+export function isLocationInDaloa(lat: number, lng: number, maxRadiusKm = DALOA_GEOFENCE_RADIUS_KM): boolean {
+  return getDistanceFromDaloaCenterKm(lat, lng) <= maxRadiusKm;
+}
+
 export const getListingPath = (id: string, _title?: string): string => {
   if (!id) return '/';
   const shortId = id.length >= 8 ? id.slice(0, 8) : id;
