@@ -76,7 +76,7 @@ const MentionsLegalesPage = React.lazy(() => import('./pages/MentionsLegalesPage
 import { useSystemSettings } from './hooks/useSystemSettings';
 
 function AppContent() {
-  const { user, userProfile, isAdmin, isProfileComplete, loading: authLoading } = useSupabase();
+  const { user, userProfile, isAdmin, isProfileComplete, profileHydrated, loading: authLoading } = useSupabase();
   const location = useLocation();
   const navigate = useNavigate();
   const { maintenance, paymentConfig, loading: settingsLoading } = useSystemSettings();
@@ -159,6 +159,32 @@ function AppContent() {
   }
   if (!userProfile?.banned && isBannedPath) {
     return <Navigate to="/" replace />;
+  }
+
+  // ── Force la complétion du profil dès la 1ère connexion ──
+  // Les users connectés sans profil complet sont redirigés vers /complete-profile
+  // quelle que soit la page sur laquelle ils arrivent.
+  const profileExemptPaths = [
+    '/complete-profile',
+    '/banned',
+    '/login',
+    '/register',
+    '/email-confirmed',
+    '/mentions-legales',
+    '/privacy',
+  ];
+  const isProfileExempt =
+    profileExemptPaths.includes(location.pathname) ||
+    location.pathname.startsWith('/auth/');
+
+
+  if (
+    user &&
+    profileHydrated &&
+    !isProfileComplete &&
+    !isProfileExempt
+  ) {
+    return <Navigate to="/complete-profile" state={{ from: location }} replace />;
   }
 
   // Handle Maintenance Mode
