@@ -35,6 +35,7 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { SectionHeader } from '../components/ui/SectionHeader';
 import ListingCard from '../components/listings/ListingCard';
 import ListingCardSkeleton from '../components/listings/ListingCardSkeleton';
+import { PersonalizedWelcomeGreeting } from '../components/home/PersonalizedWelcomeGreeting';
 
 const CATEGORY_STYLE: Record<string, { icon: React.ReactNode; bg: string; border: string; emoji: string }> = {
   fashion: { icon: <Shirt className="h-4 w-4" />, bg: 'bg-pink-50 text-pink-600', border: 'border-pink-200', emoji: '👗' },
@@ -270,6 +271,9 @@ const HomePage: React.FC = () => {
         <div className="pointer-events-none absolute -bottom-14 -left-8 w-36 h-36 rounded-full bg-black/10 blur-xl" />
 
         <div className="relative z-10 mx-auto max-w-2xl lg:max-w-5xl">
+          {/* Message d'accueil personnalisé & chaleureux */}
+          <PersonalizedWelcomeGreeting />
+
           <div className="lg:flex lg:items-center lg:justify-between lg:gap-12">
             <div className="flex-1 text-left">
               {/* Badge Local */}

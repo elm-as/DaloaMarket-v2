@@ -97,7 +97,7 @@ export default function CompleteProfilePage() {
       <div className="bg-gradient-to-br from-orange-500 to-amber-600 px-4 pt-12 pb-24 rounded-b-[40px] shadow-sm relative overflow-hidden flex-shrink-0">
         <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
-        
+
         <div className="relative z-10 flex flex-col items-center text-center">
           {googleMeta?.avatar_url || googleMeta?.picture ? (
             <img
@@ -181,16 +181,16 @@ export default function CompleteProfilePage() {
 
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2 pl-1">
-                Commune / District
+                Quartier
               </label>
               <select
-                {...register('district', { required: 'La commune est requise' })}
+                {...register('district', { required: 'Le quartier est requise' })}
                 className={cn(
                   'w-full px-4 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-colors font-medium text-sm',
                   errors.district && 'ring-1 ring-red-500'
                 )}
               >
-                <option value="">Selectionnez votre commune</option>
+                <option value="">Selectionnez votre quartier</option>
                 {DISTRICTS.map((d) => (
                   <option key={d} value={d}>{d}</option>
                 ))}

@@ -287,26 +287,11 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   return (
     <div className="space-y-2 relative">
       <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-lg shadow-gray-200/50">
-        {/* Badge en haut à gauche */}
-        <div className="absolute left-3 top-3 z-[400] flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-extrabold text-gray-800 shadow-sm backdrop-blur pointer-events-none border border-gray-100">
-          {userType === 'seller' ? (
-            <>
-              <Store className="h-3.5 w-3.5 text-orange-500" />
-              Emplacement boutique Daloa
-            </>
-          ) : (
-            <>
-              <MapPin className="h-3.5 w-3.5 text-orange-500" />
-              Point de livraison Daloa
-            </>
-          )}
-        </div>
-
         {/* Bouton de bascule Mode Satellite / Plan en haut à droite */}
         <button
           type="button"
           onClick={toggleMapMode}
-          className="absolute right-3 top-3 z-[400] flex items-center gap-1.5 rounded-2xl bg-white/95 px-3 py-1.5 text-[11px] font-extrabold text-gray-800 shadow-md backdrop-blur border border-gray-100 hover:bg-white active:scale-95 transition-all"
+          className="absolute right-3 top-3 z-[1000] pointer-events-auto flex items-center gap-1.5 rounded-2xl bg-white/95 px-3 py-1.5 text-[11px] font-extrabold text-gray-800 shadow-md backdrop-blur border border-gray-100 hover:bg-white active:scale-95 transition-all"
           title="Changer de vue cartographique"
         >
           <Layers className="w-3.5 h-3.5 text-orange-500" />
@@ -326,7 +311,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
             type="button"
             onClick={handleLocateMe}
             disabled={locating}
-            className="absolute bottom-3 right-3 z-[400] flex min-h-10 items-center gap-2 rounded-2xl border border-gray-100 bg-white/95 px-3.5 py-2 text-xs font-extrabold text-gray-900 shadow-lg backdrop-blur-md transition-all hover:bg-white active:scale-95 disabled:opacity-50"
+            className="absolute bottom-3 right-3 z-[1000] pointer-events-auto flex min-h-10 items-center gap-2 rounded-2xl border border-gray-100 bg-white/95 px-3.5 py-2 text-xs font-extrabold text-gray-900 shadow-lg backdrop-blur-md transition-all hover:bg-white active:scale-95 disabled:opacity-50"
           >
             <Navigation className={`w-3.5 h-3.5 text-orange-500 fill-orange-500 ${locating ? 'animate-spin' : ''}`} />
             {locating ? "Recherche satellite..." : "Ma position GPS"}

@@ -32,6 +32,7 @@ export interface Database {
           payout_network: string | null
           payout_number: string | null
           shop_name: string | null
+          shop_slug: string | null
           shop_description: string | null
           shop_theme_color: string | null
           shop_banner_url: string | null
@@ -66,6 +67,7 @@ export interface Database {
           payout_network?: string | null
           payout_number?: string | null
           shop_name?: string | null
+          shop_slug?: string | null
           shop_description?: string | null
           shop_theme_color?: string | null
           shop_banner_url?: string | null
@@ -98,6 +100,7 @@ export interface Database {
           payout_network?: string | null
           payout_number?: string | null
           shop_name?: string | null
+          shop_slug?: string | null
           shop_description?: string | null
           shop_theme_color?: string | null
           shop_banner_url?: string | null
