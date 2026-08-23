@@ -24,8 +24,8 @@ const TABS = [
   { key: 'livraisons', label: 'Livraisons & Litiges', icon: Truck, paths: ['/admin/livraisons', '/admin/litiges'] },
   { key: 'settings', label: 'Configuration & Urgences', icon: Sliders, paths: ['/admin/settings'] },
   { key: 'notifications', label: 'Notifications', icon: Bell, paths: ['/admin/notifications'] },
-  { key: 'annonces', label: 'Annonces', icon: FileText, paths: [] },
-  { key: 'utilisateurs', label: 'Utilisateurs', icon: Users, paths: [] },
+  { key: 'annonces', label: 'Annonces', icon: FileText, paths: ['/admin/listings'] },
+  { key: 'utilisateurs', label: 'Utilisateurs', icon: Users, paths: ['/admin/users'] },
 ];
 
 export default function AdminDashboardPage() {
@@ -52,6 +52,8 @@ export default function AdminDashboardPage() {
     else if (tabKey === 'livraisons') navigate('/admin/livraisons');
     else if (tabKey === 'settings') navigate('/admin/settings');
     else if (tabKey === 'notifications') navigate('/admin/notifications');
+    else if (tabKey === 'annonces') navigate('/admin/listings');
+    else if (tabKey === 'utilisateurs') navigate('/admin/users');
     else navigate(`/admin`, { state: { activeTab: tabKey } });
   };
 

@@ -46,3 +46,17 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </React.StrictMode>
 );
+
+// Register Service Worker for Push Notifications & PWA Cache
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/service-worker.js')
+      .then((reg) => {
+        console.log('[SW] ✅ Service Worker enregistré, scope:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('[SW] ❌ Échec enregistrement Service Worker:', err);
+      });
+  });
+}

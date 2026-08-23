@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Ban, X, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -31,7 +32,7 @@ export const BanUserModal: React.FC<BanUserModalProps> = ({
   const [banIpAlso, setBanIpAlso] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,18 +48,18 @@ export const BanUserModal: React.FC<BanUserModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-2xl p-6 max-w-md w-full shadow-2xl relative"
+          className="bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-3xl p-6 max-w-md w-full shadow-2xl relative"
         >
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)]"
+            className="absolute top-4 right-4 text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)] p-1 rounded-full hover:bg-gray-100 transition-colors"
           >
             <X size={20} />
           </button>
@@ -151,6 +152,9 @@ export const BanUserModal: React.FC<BanUserModalProps> = ({
           </form>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
+
+export default BanUserModal;

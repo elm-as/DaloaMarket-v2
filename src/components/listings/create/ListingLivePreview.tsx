@@ -1,8 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Sparkles, ShoppingBag, ShieldCheck, Eye } from 'lucide-react';
-import { formatPrice } from '../../../lib/utils';
-import { CATEGORIES } from '../../../lib/utils';
+import { MapPin, ShoppingBag, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { formatPrice, CATEGORIES, CONDITIONS } from '../../../lib/utils';
 
 interface ListingLivePreviewProps {
   title: string;
@@ -49,27 +48,17 @@ export const ListingLivePreview: React.FC<ListingLivePreviewProps> = ({
   const priceNum = parseInt(price, 10);
   const origPriceNum = parseInt(originalPrice || '', 10);
   const categoryObj = CATEGORIES.find((c) => c.id === category);
+  const conditionObj = CONDITIONS.find((c) => c.id === condition);
 
   return (
-    <div className="space-y-3">
-      {/* HEADER */}
-      <div className="flex items-center gap-2.5 px-1">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-orange-50 dark:bg-orange-950/30 text-[#FF7F00]">
-          <Eye className="h-4 w-4" />
-        </div>
-        <div>
-          <h2 className="text-sm font-bold text-gray-900">Aperçu en direct</h2>
-          <p className="text-[11px] text-gray-500">Vérifiez le rendu final de votre annonce</p>
-        </div>
-      </div>
-
-      {/* MOCKUP CARD */}
+    <div className="space-y-3 select-none">
+      {/* ── CARD MOCKUP ── */}
       <motion.div
-        className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 max-w-xs mx-auto relative group"
+        className="bg-white rounded-3xl overflow-hidden shadow-md shadow-gray-100 border border-gray-100/90 relative"
         layout
       >
-        {/* Image Preview Container */}
-        <div className="relative aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
+        {/* Photo Area */}
+        <div className="relative aspect-[4/3] bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
           {imagePreviewUrl ? (
             <img
               src={imagePreviewUrl}
@@ -78,74 +67,74 @@ export const ListingLivePreview: React.FC<ListingLivePreviewProps> = ({
             />
           ) : (
             <div className="flex flex-col items-center justify-center text-gray-300 p-4 text-center">
-              <ShoppingBag className="w-10 h-10 mb-1.5 stroke-[1.5]" />
-              <p className="text-[10px] font-semibold text-gray-400">Aucune photo principale</p>
+              <div className="w-12 h-12 rounded-2xl bg-gray-200/50 flex items-center justify-center mb-2 text-gray-400">
+                <ShoppingBag className="w-6 h-6 stroke-[1.5]" />
+              </div>
+              <p className="text-[11px] font-bold text-gray-400">Aperçu photo</p>
             </div>
           )}
 
           {/* Badges Overlay */}
-          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
+          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10">
             {discountPercent > 0 && (
-              <span className="bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm">
+              <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-lg shadow-sm">
                 -{discountPercent}%
               </span>
             )}
-            {condition && (
-              <span className="bg-black/60 backdrop-blur-md text-white text-[9px] font-bold px-1.5 py-0.5 rounded capitalize">
-                {condition === 'new' ? 'Neuf' : condition === 'like_new' ? 'Comme neuf' : condition === 'good' ? 'Bon état' : 'Occasion'}
+            {conditionObj && (
+              <span className="bg-black/65 backdrop-blur-md text-white text-[10px] font-extrabold px-2 py-0.5 rounded-lg shadow-xs">
+                {conditionObj.label}
               </span>
             )}
           </div>
 
-          {/* Category Badge Right */}
+          {/* Category Chip */}
           {categoryObj && (
-            <div className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-md text-gray-800 text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+            <div className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-md text-gray-800 text-[10px] font-black px-2 py-0.5 rounded-lg shadow-xs border border-white/50">
               {categoryObj.label}
             </div>
           )}
         </div>
 
-        {/* Info Content */}
-        <div className="p-3 space-y-1.5">
-          {/* Seller Tag */}
-          <div className="flex items-center gap-1">
-            <span className="text-[10px] font-semibold text-gray-400 truncate">{sellerName}</span>
-            {isPro && (
-              <span className="inline-flex items-center gap-0.5 bg-amber-500 text-white text-[8px] font-black px-1.5 py-0.2 rounded-full">
-                <ShieldCheck className="w-2 h-2" /> PRO
+        {/* Content Info Area */}
+        <div className="p-3.5 space-y-2">
+          {/* Price Row */}
+          <div className="flex items-baseline gap-2">
+            <span className="text-base font-black text-orange-600">
+              {!isNaN(priceNum) && priceNum > 0 ? formatPrice(priceNum) : '0 FCFA'}
+            </span>
+            {!isNaN(origPriceNum) && origPriceNum > priceNum && priceNum > 0 && (
+              <span className="text-xs text-gray-400 line-through font-semibold">
+                {formatPrice(origPriceNum)}
               </span>
             )}
           </div>
 
           {/* Title */}
-          <h3 className="font-bold text-xs text-gray-800 line-clamp-2 leading-tight">
-            {title || 'Titre de votre produit ou service'}
-          </h3>
+          <h4 className="text-xs font-black text-gray-900 line-clamp-1">
+            {title.trim() || 'Titre de votre annonce'}
+          </h4>
 
-          {/* Price & Location */}
-          <div className="flex items-end justify-between pt-1">
-            <div>
-              <div className="flex items-baseline gap-1">
-                <span className="font-black text-sm text-[#FF7F00]">
-                  {!isNaN(priceNum) && priceNum > 0 ? formatPrice(priceNum) : '0 FCFA'}
-                </span>
-                {!isNaN(origPriceNum) && origPriceNum > priceNum && priceNum > 0 && (
-                  <span className="text-[10px] text-gray-400 line-through">
-                    {formatPrice(origPriceNum)}
-                  </span>
-                )}
-              </div>
+          {/* Footer details */}
+          <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[10px] font-semibold text-gray-500">
+            <div className="flex items-center gap-1 truncate text-gray-600">
+              <MapPin className="w-3 h-3 text-orange-500 shrink-0" />
+              <span className="truncate">{district || 'Daloa'}</span>
             </div>
 
-            {district && (
-              <div className="flex items-center gap-0.5 text-[9px] font-bold text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded">
-                <MapPin className="w-2.5 h-2.5 text-gray-400 shrink-0" />
-                <span className="truncate max-w-[70px]">{district}</span>
-              </div>
-            )}
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-gray-800 font-bold">{sellerName}</span>
+              {isPro && (
+                <span className="w-3.5 h-3.5 rounded-full bg-orange-500 text-white flex items-center justify-center text-[8px] font-black">
+                  ✓
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </motion.div>
     </div>
   );
 };
+
+export default ListingLivePreview;

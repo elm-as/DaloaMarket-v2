@@ -1,4 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -46,13 +47,15 @@ export const Modal: React.FC<ModalProps> = ({
     };
   }, [isOpen, handleKeyDown]);
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100]">
+        <div className="fixed inset-0 z-[99999] flex flex-col justify-end sm:justify-center">
           {/* Backdrop */}
           <motion.div
-            className="absolute inset-0 bg-black/50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -61,9 +64,9 @@ export const Modal: React.FC<ModalProps> = ({
           />
 
           {resolvedVariant === 'bottom-sheet' ? (
-            /* Bottom Sheet */
+            /* Bottom Sheet (Mobile) */
             <motion.div
-              className="absolute bottom-0 left-0 right-0 bg-[var(--color-surface)] rounded-t-[var(--radius-xl)] max-h-[90vh] overflow-y-auto flex flex-col"
+              className="relative z-10 w-full bg-[var(--color-surface)] rounded-t-[28px] max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl pb-[calc(20px+env(safe-area-inset-bottom,0px))]"
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
@@ -72,48 +75,46 @@ export const Modal: React.FC<ModalProps> = ({
                 damping: 30,
                 stiffness: 300,
               }}
+              onClick={(e) => e.stopPropagation()}
             >
               {/* Drag handle */}
               <div className="flex justify-center pt-3 pb-1">
-                <div className="w-10 h-1 rounded-full bg-gray-300" />
+                <div className="w-10 h-1.5 rounded-full bg-gray-300" />
               </div>
 
               {/* Header */}
               {title && (
-                <div className="flex items-center justify-between px-5 py-3">
-                  <h2 className="text-[18px] font-bold text-[var(--color-on-surface)]">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+                  <h2 className="text-[18px] font-extrabold text-[var(--color-on-surface)]">
                     {title}
                   </h2>
                   <button
                     onClick={onClose}
-                    className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[var(--radius-full)] hover:bg-gray-100 active:scale-[0.97] transition-all duration-[var(--motion-fast)]"
+                    className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-full hover:bg-gray-100 active:scale-[0.97] transition-all"
                     aria-label="Fermer"
                   >
-                    <X className="w-5 h-5 text-[var(--color-on-surface-variant)]" />
+                    <X className="w-5 h-5 text-gray-500" />
                   </button>
                 </div>
               )}
 
               {/* Content */}
-              <div className={cn('px-5 pb-8', !title && 'pt-4')}>
+              <div className={cn('px-5 pt-4 pb-2', !title && 'pt-4')}>
                 {children}
               </div>
-
-              {/* Safe area bottom */}
-              <div className="pb-[var(--safe-area-bottom)]" />
             </motion.div>
           ) : (
-            /* Centered Dialog */
-            <div className="absolute inset-0 flex items-center justify-center p-6">
+            /* Centered Dialog (Desktop) */
+            <div className="relative z-10 w-full flex items-center justify-center p-4 my-auto">
               <motion.div
                 className={cn(
                   'w-full',
                   sizeClass,
-                  'bg-[var(--color-surface)] rounded-[var(--radius-xl)] shadow-[var(--elevation-4)] overflow-hidden flex flex-col',
+                  'bg-[var(--color-surface)] rounded-3xl shadow-2xl overflow-hidden flex flex-col',
                 )}
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                initial={{ opacity: 0, scale: 0.92, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                exit={{ opacity: 0, scale: 0.92, y: 20 }}
                 transition={{
                   type: 'spring',
                   damping: 25,
@@ -124,15 +125,15 @@ export const Modal: React.FC<ModalProps> = ({
                 {/* Header */}
                 {title && (
                   <div className="flex items-center justify-between px-6 pt-6 pb-2">
-                    <h2 className="text-[18px] font-bold text-[var(--color-on-surface)]">
+                    <h2 className="text-[18px] font-extrabold text-[var(--color-on-surface)]">
                       {title}
                     </h2>
                     <button
                       onClick={onClose}
-                      className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[var(--radius-full)] hover:bg-gray-100 active:scale-[0.97] transition-all duration-[var(--motion-fast)]"
+                      className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-full hover:bg-gray-100 active:scale-[0.97] transition-all"
                       aria-label="Fermer"
                     >
-                      <X className="w-5 h-5 text-[var(--color-on-surface-variant)]" />
+                      <X className="w-5 h-5 text-gray-500" />
                     </button>
                   </div>
                 )}
@@ -146,6 +147,7 @@ export const Modal: React.FC<ModalProps> = ({
           )}
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

@@ -1,26 +1,38 @@
-# DaloaMarket — Marketplace de proximité à Daloa
+# DaloaMarket — Marketplace Locale & Écosystème Numérique à Daloa
 
-> DaloaMarket (daloamarket.com) est la première marketplace locale de proximité dédiée à la ville de Daloa et sa région (Côte d'Ivoire).
+> DaloaMarket (https://daloamarket.com) est la première plateforme de commerce de proximité et de livraison géolocalisée dédiée à la ville de Daloa et à la région du Haut-Sassandra (Côte d'Ivoire).
 
-## Informations sur le Fondateur
-- **Fondateur & Créateur** : Elmas (ElmasCore / @elm-as)
-- **Année de création** : 2025
-- **Société / Éditeur** : ElmasCore (ELMAS)
-- **GitHub** : https://github.com/elm-as
-- **Contact** : support@daloamarket.com
-- **Site principal** : https://daloamarket.com
+## Équipe Fondatrice & Direction
+- **Elmas** (OULOBO Elmas Tresor / ElmasCore / Elmas.solutions) : Fondateur, Concepteur Produit & Lead Développeur.
+- **Armand J.** : Co-fondateur, Responsable de la Communication, des Partenariats et du Déploiement Terrain à Daloa.
+- **Diomandé (alias DNPH)** : Co-fondateur, Responsable de la Communication Digitale, des Médias et de la Stratégie d'Acquisition.
 
-## Présentation de l'Écosystème
-DaloaMarket fait partie d'un écosystème numérique complet développé par **Elmas** pour dynamiser le commerce et la livraison locale en Côte d'Ivoire.
+## Informations sur le Projet
+- **Année de lancement** : 2025 - 2026
+- **Éditeur & Conception** : ElmasCore / Équipe DaloaMarket
+- **Pays & Ville** : Daloa, Côte d'Ivoire (CI)
+- **Site officiel** : https://daloamarket.com
+- **Documentation complète pour IA** : https://daloamarket.com/llms-full.txt
+- **Contact général** : contact@daloamarket.com
+- **Support & WhatsApp** : +225 07 88 00 08 31
 
-L'écosystème comprend :
-1. **DaloaMarket** (https://daloamarket.com) : Plateforme d'achat et de vente d'articles neufs et d'occasion entre particuliers et vendeurs professionnels à Daloa.
-2. **DaloaDelivery** (https://delivery.daloamarket.com) : Réseau logistique et annuaire de livreurs professionnels certifiés pour des livraisons rapides à Daloa.
-3. **DaloaPay** : Microservice de paiement sécurisé avec séquestre (escrow) garantissant des transactions fiables via Mobile Money.
-4. **Centre d'Aide & Tutoriels** (https://tuto.daloamarket.com) : Documentation et vidéos explicatives pour acheteurs, vendeurs et livreurs.
+## Écosystème & Services
+1. **DaloaMarket** (https://daloamarket.com) : Marketplace d'achat et de vente locale entre particuliers et commerçants professionnels à Daloa.
+2. **DaloaDelivery** (https://delivery.daloamarket.com) : Réseau logistique et annuaire de coursiers motorisés certifiés pour des livraisons en moins de 45 minutes à Daloa.
+3. **DaloaPay & Escrow** : Système de paiement sécurisé avec séquestre bloquant les fonds jusqu'à validation de la livraison par code OTP et géolocalisation.
+4. **Packs & Boutiques Pros** : Abonnements pour commerçants de Daloa permettant la création de boutiques en ligne personnalisées.
 
-## Fonctionnalités clés
-- **Paiement Escrow sécurisé** : Protection des transactions jusqu'à confirmation de livraison par OTP et géolocalisation.
-- **Boutiques Vendeurs** : Espaces personnalisés pour les commerçants de Daloa.
-- **Livraison géolocalisée** : Intégration en temps réel avec DaloaDelivery.
-- **PWA & Mobile Ready** : Utilisable sur navigateur web, Android et iOS.
+## Catégories Populaires d'Annonces
+- **Téléphones & Tablettes** : iPhone, Samsung Galaxy, Xiaomi, Tecno, Infinix, accessoires.
+- **Électronique & Informatique** : PC portables, télévisions, sonorisation, consoles.
+- **Véhicules & Motos** : Motos Jakarta, scooters, voitures d'occasion, pièces détachées.
+- **Mode & Beauté** : Vêtements, chaussures, mèches, parfums, maroquinerie.
+- **Maison & Électroménager** : Réfrigérateurs, ventilateurs, meubles de salon, matelas.
+- **Agro-Alimentaire & Terroir** : Produits frais locaux du marché de Daloa.
+
+## Quartiers Desservis à Daloa
+Abattoir, Balouzon, Bribouo, Commerce, Garage, Gbeuliville, Huberson, Kennedy 1 & 2, Kirman, Labia, Lobia, Marais, Soleil, Tazibou 1 & 2, Zakoua, Zepreguhe.
+
+## Moyens de Paiement Acceptés
+- **Mobile Money 100% sécurisé** : Wave Côte d'Ivoire, Orange Money CI, MTN Mobile Money (MoMo), Moov Money (Flooz).
+- **Paiement à la livraison (Cash on Delivery / Espèces)**.

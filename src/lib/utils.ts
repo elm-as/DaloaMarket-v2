@@ -95,6 +95,43 @@ export const getSellerShareUrl = (sellerId: string, shopSlug?: string | null): s
   return `${base}/b/${shortId}`;
 };
 
+/**
+ * Nettoie et formate un numéro de téléphone pour WhatsApp (format international sans +, sans espaces, avec indicatif +225 CI)
+ * Ex: 0701020304 -> 2250701020304
+ * Ex: +225 07 01 02 03 04 -> 2250701020304
+ * Ex: 00225 0701020304 -> 2250701020304
+ * Ex: 2250701020304 -> 2250701020304
+ */
+export const formatWhatsAppPhone = (phone?: string | null): string => {
+  if (!phone) return '';
+  // Supprimer tout sauf les chiffres
+  let digits = phone.replace(/\D/g, '');
+
+  // Supprimer le préfixe 00 (ex: 00225...)
+  if (digits.startsWith('00')) {
+    digits = digits.slice(2);
+  }
+
+  // Si le numéro commence déjà par 225
+  if (digits.startsWith('225')) {
+    return digits;
+  }
+
+  // Numéro local ivoirien (10 chiffres commençant par 0, ou 8 chiffres legacy)
+  // Ex: 0701020304 -> 2250701020304
+  if (digits.startsWith('0')) {
+    return `225${digits}`;
+  }
+
+  // Numéro à 8, 9 ou 10 chiffres sans 0 ni indicatif
+  if (digits.length >= 8 && digits.length <= 10) {
+    return `225${digits}`;
+  }
+
+  // Autre indicatif international ou fallback
+  return digits;
+};
+
 export const formatListingShareText = (listing: { id: string; title: string; price: number; district?: string }) => {
   const url = getListingShareUrl(listing.id);
   const formattedPrice = formatPrice(listing.price);
@@ -337,8 +374,8 @@ export const CATEGORIES = [
 
 export const CONDITIONS = [
   { id: 'new', label: 'Neuf' },
-  { id: 'like_new', label: 'Très bon état' },
-  { id: 'good', label: 'Bon état' },
+  { id: 'like_new', label: 'Quasi Neuf' },
+  { id: 'good', label: 'Occasion (Bon état)' },
   { id: 'used', label: 'Usagé' },
 ];
 

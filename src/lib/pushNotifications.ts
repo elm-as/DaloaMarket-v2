@@ -1,8 +1,10 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
+const VAPID_PUBLIC_KEY =
+  import.meta.env.VITE_VAPID_PUBLIC_KEY ||
+  'BCU8msD00uw2OYTKGZ_U-d-2cp2SPo7iQzkapnEP9hVsKzPf_eAZduYOqmmzGz58b0k-zT-Z3ogsymll11ZfRx4';
 
-const PUSH_API_URL = import.meta.env.VITE_PAYMENT_API_URL || 'https://daloapay.onrender.com';
+const PUSH_API_URL = import.meta.env.VITE_PAYMENT_API_URL || 'https://api.daloamarket.com';
 
 /**
  * Convert a base64url string to a Uint8Array (needed for applicationServerKey).
@@ -57,17 +59,29 @@ export async function getExistingSubscription(): Promise<PushSubscription | null
  * Returns the PushSubscription on success, or null on failure.
  */
 export async function subscribeToPush(userId: string): Promise<PushSubscription | null> {
-  if (!isPushSupported() || !VAPID_PUBLIC_KEY || !isSupabaseConfigured) {
+  console.log('[Push] 🔄 subscribeToPush requested for user:', userId);
+
+  if (!isPushSupported()) {
+    console.warn('[Push] ❌ Web push is not supported in this environment');
+    return null;
+  }
+
+  if (!isSupabaseConfigured) {
+    console.warn('[Push] ❌ Supabase client is not configured');
     return null;
   }
 
   try {
     const permission = await Notification.requestPermission();
+    console.log('[Push] 🔑 Permission status:', permission);
+
     if (permission !== 'granted') {
+      console.warn('[Push] ⚠️ Notification permission not granted');
       return null;
     }
 
     const registration = await navigator.serviceWorker.ready;
+    console.log('[Push] 📦 ServiceWorker registration ready');
 
     // Check for existing subscription first
     let subscription = await registration.pushManager.getSubscription();
@@ -118,25 +132,29 @@ export async function subscribeToPush(userId: string): Promise<PushSubscription 
     const keys_p256dh = subscriptionJSON.keys?.p256dh || '';
     const keys_auth = subscriptionJSON.keys?.auth || '';
 
-    // Persist to Supabase (upsert to handle re-subscriptions)
-    const { error } = await (supabase.from('push_subscriptions' as any) as any)
-      .upsert(
-        {
-          user_id: userId,
-          endpoint,
-          keys_p256dh,
-          keys_auth,
-          user_agent: navigator.userAgent,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,endpoint' }
-      );
+    console.log('[Push] 📤 Envoi du token au serveur Railway /push/register...');
 
-    if (error) {
-      console.error('[Push] Failed to save subscription:', error);
+    // Envoyer le token au serveur Railway (qui utilise service_role pour bypass RLS)
+    const registerResponse = await fetch(`${PUSH_API_URL}/push/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: userId,
+        endpoint,
+        keys_p256dh,
+        keys_auth,
+        user_agent: navigator.userAgent,
+      }),
+    });
+
+    const registerResult = await registerResponse.json().catch(() => ({ success: false, message: 'Réponse invalide du serveur' }));
+
+    if (!registerResponse.ok || !registerResult.success) {
+      console.error('[Push] ❌ Échec enregistrement sur le serveur:', registerResult.message || registerResponse.status);
       return null;
     }
 
+    console.log('[Push] ✅ Token push enregistré avec succès sur le serveur pour user', userId);
     return subscription;
   } catch (err) {
     console.error('[Push] Subscription failed:', err);

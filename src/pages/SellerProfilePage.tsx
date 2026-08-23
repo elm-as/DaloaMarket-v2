@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useSupabase } from '../hooks/useSupabase';
 import { supabase } from '../lib/supabase';
-import { cn, formatDate, extractUuid, formatShopShareText, shareWithImage, getSellerPath } from '../lib/utils';
+import { cn, formatDate, extractUuid, formatShopShareText, shareWithImage, getSellerPath, getSellerShareUrl, formatWhatsAppPhone } from '../lib/utils';
 import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { Avatar } from '../components/profile/Avatar';
 import { ListingCard } from '../components/listings/ListingCard';
+import WhatsAppIcon from '../components/ui/WhatsAppIcon';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -24,6 +25,7 @@ import {
   Info,
   CheckCircle2,
   HandCoins,
+  Phone,
 } from 'lucide-react';
 import { useSEO } from '../hooks/useSEO';
 import { affiliatedDeliverersService, type SellerDeliverySettings } from '../services/affiliatedDeliverersService';
@@ -71,18 +73,31 @@ interface Review {
   } | null;
 }
 
+interface CachedSeller {
+  seller: SellerProfile;
+  listings: SellerListing[];
+  reviews: Review[];
+  deliverySettings: SellerDeliverySettings | null;
+  timestamp: number;
+}
+
 type TabType = 'listings' | 'reviews' | 'about';
+
+const sellerProfileCache = new Map<string, CachedSeller>();
+const SELLER_CACHE_TTL_MS = 2 * 60 * 1000;
 
 const SellerProfilePage: React.FC = () => {
   const { sellerId } = useParams<{ sellerId: string }>();
   const navigate = useNavigate();
   const { user } = useSupabase();
 
-  const [seller, setSeller] = useState<SellerProfile | null>(null);
-  const [listings, setListings] = useState<SellerListing[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [deliverySettings, setDeliverySettings] = useState<SellerDeliverySettings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cached = sellerId ? sellerProfileCache.get(sellerId) : undefined;
+
+  const [seller, setSeller] = useState<SellerProfile | null>(() => cached?.seller || null);
+  const [listings, setListings] = useState<SellerListing[]>(() => cached?.listings || []);
+  const [reviews, setReviews] = useState<Review[]>(() => cached?.reviews || []);
+  const [deliverySettings, setDeliverySettings] = useState<SellerDeliverySettings | null>(() => cached?.deliverySettings || null);
+  const [loading, setLoading] = useState(() => !cached);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('listings');
 
@@ -137,7 +152,20 @@ const SellerProfilePage: React.FC = () => {
   const fetchSellerData = useCallback(async () => {
     if (!sellerId) return;
 
-    setLoading(true);
+    const cachedData = sellerProfileCache.get(sellerId);
+    const isFresh = cachedData && (Date.now() - cachedData.timestamp < SELLER_CACHE_TTL_MS);
+
+    if (cachedData) {
+      setSeller(cachedData.seller);
+      setListings(cachedData.listings);
+      setReviews(cachedData.reviews);
+      setDeliverySettings(cachedData.deliverySettings);
+      setLoading(false);
+      if (isFresh) return;
+    } else {
+      setLoading(true);
+    }
+
     setError(null);
 
     try {
@@ -167,23 +195,53 @@ const SellerProfilePage: React.FC = () => {
             sellerData = shopMatch as any;
           } else {
             // Fallback par short-id (8 premiers chars de l'UUID)
-            const { data: usersList } = await supabase.from('users').select('*').limit(100);
-            if (usersList) {
-              sellerData = (usersList.find((u: any) => u.id.startsWith(sellerId)) as any) || null;
+            const cleanPrefix = (sellerId.split('-').pop() || sellerId).toLowerCase().replace(/[^a-f0-9]/g, '');
+            if (cleanPrefix && cleanPrefix.length >= 4) {
+              const minRaw = cleanPrefix.padEnd(32, '0');
+              const maxRaw = cleanPrefix.padEnd(32, 'f');
+              const minUuid = `${minRaw.slice(0, 8)}-${minRaw.slice(8, 12)}-${minRaw.slice(12, 16)}-${minRaw.slice(16, 20)}-${minRaw.slice(20, 32)}`;
+              const maxUuid = `${maxRaw.slice(0, 8)}-${maxRaw.slice(8, 12)}-${maxRaw.slice(12, 16)}-${maxRaw.slice(16, 20)}-${maxRaw.slice(20, 32)}`;
+
+              const { data: rangeSeller } = await supabase
+                .from('users')
+                .select('*')
+                .gte('id', minUuid)
+                .lte('id', maxUuid)
+                .limit(1)
+                .maybeSingle();
+
+              if (rangeSeller) {
+                sellerData = rangeSeller as any;
+              } else {
+                try {
+                  const { data: rpcSellers } = await (supabase.rpc as any)(
+                    'get_seller_by_short_id',
+                    { p_id: cleanPrefix }
+                  );
+                  const rpcItems = (rpcSellers as any[]) || [];
+                  if (rpcItems.length > 0) {
+                    sellerData = rpcItems[0] as any;
+                  }
+                } catch (e) {
+                  console.warn('[SellerProfile] RPC fallback failed:', e);
+                }
+              }
             }
           }
         }
       }
 
       if (!sellerData) throw new Error('Vendeur introuvable');
-      setSeller(sellerData as unknown as SellerProfile);
+      const finalSeller = sellerData as unknown as SellerProfile;
+      setSeller(finalSeller);
 
       const targetUserId = sellerData.id;
 
       // Fetch delivery settings (Cash on delivery, etc.)
+      let finalDeliverySettings: SellerDeliverySettings | null = null;
       try {
-        const delivSettings = await affiliatedDeliverersService.getSellerDeliverySettings(targetUserId);
-        setDeliverySettings(delivSettings);
+        finalDeliverySettings = await affiliatedDeliverersService.getSellerDeliverySettings(targetUserId);
+        setDeliverySettings(finalDeliverySettings);
       } catch (e) {
         console.warn('Could not fetch delivery settings:', e);
       }
@@ -196,7 +254,8 @@ const SellerProfilePage: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (listingsError) throw listingsError;
-      setListings((listingsData || []) as unknown as SellerListing[]);
+      const finalListings = (listingsData || []) as unknown as SellerListing[];
+      setListings(finalListings);
 
       const { data: reviewsData, error: reviewsError } = await supabase
         .from('reviews')
@@ -205,10 +264,22 @@ const SellerProfilePage: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (reviewsError) throw reviewsError;
-      setReviews((reviewsData || []) as unknown as Review[]);
+      const finalReviews = (reviewsData || []) as unknown as Review[];
+      setReviews(finalReviews);
+
+      // Save to cache
+      sellerProfileCache.set(sellerId, {
+        seller: finalSeller,
+        listings: finalListings,
+        reviews: finalReviews,
+        deliverySettings: finalDeliverySettings,
+        timestamp: Date.now(),
+      });
     } catch (err) {
       console.error('Error fetching seller data:', err);
-      setError('Impossible de charger le profil du vendeur.');
+      if (!cachedData) {
+        setError('Impossible de charger le profil du vendeur.');
+      }
     } finally {
       setLoading(false);
     }
@@ -459,6 +530,22 @@ const SellerProfilePage: React.FC = () => {
                     <MessageSquare className="w-4 h-4" />
                     <span>Contacter</span>
                   </button>
+
+                  {/* WhatsApp contact button — Phase 0 fallback (Icon only with official SVG) */}
+                  {seller.phone && (
+                    <a
+                      href={`https://wa.me/${formatWhatsAppPhone(seller.phone)}?text=${encodeURIComponent(
+                        `Bonjour, j'ai vu votre boutique "${shopTitle}" sur DaloaMarket et j'aimerais avoir des informations sur vos articles 🛒\n${getSellerShareUrl(seller.id, seller.shop_slug)}`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-10 sm:w-11 h-10 sm:h-11 flex-shrink-0 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center active:scale-95 transition-all shadow-xs shadow-emerald-500/25"
+                      title="Contacter sur WhatsApp"
+                      aria-label="Contacter sur WhatsApp"
+                    >
+                      <WhatsAppIcon size={20} className="w-5 h-5" />
+                    </a>
+                  )}
 
                   <button
                     type="button"

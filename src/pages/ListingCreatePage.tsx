@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, AlertTriangle, ArrowRight, CheckCircle2, Star } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, ArrowRight, CheckCircle2, Star, RotateCcw, Sparkles } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 
@@ -14,6 +14,7 @@ import { Button } from '../components/ui/Button';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { getListingPath } from '../lib/utils';
 import type { ListingVariant } from '../types/listing';
+import { listingDraftService } from '../services/listingDraftService';
 
 import { ListingStepper } from '../components/listings/create/ListingStepper';
 import { ListingLivePreview } from '../components/listings/create/ListingLivePreview';
@@ -45,7 +46,7 @@ const ListingCreatePage: React.FC = () => {
   usePageTitle(isEditing ? "Modifier l'annonce" : 'Publier une annonce');
 
   const { user, userProfile, loading: authLoading } = useSupabase();
-  const { isPhase0, maxFreeListings, showMonetisation } = usePhase();
+  const { isPhase0, maxFreeListings, showMonetisation, sellerFeeOverride } = usePhase();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [photos, setPhotos] = useState<File[]>([]);
@@ -55,6 +56,7 @@ const ListingCreatePage: React.FC = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdListingId, setCreatedListingId] = useState<string | null>(null);
   const [variants, setVariants] = useState<ListingVariant[]>([]);
+  const [isDraftRestored, setIsDraftRestored] = useState(false);
 
   const {
     register,
@@ -89,9 +91,82 @@ const ListingCreatePage: React.FC = () => {
   const origPriceNum = parseInt(watchOriginalPrice, 10);
   const discountPercent = (origPriceNum > priceNum && priceNum > 0) ? Math.round(((origPriceNum - priceNum) / origPriceNum) * 100) : 0;
   const isPro = userProfile?.pro_until ? new Date(userProfile.pro_until) > new Date() : false;
-  const currentSellerFeeRate = isPro ? PRO_SELLER_FEE_RATE : SELLER_FEE_RATE;
+  const defaultSellerFeeRate = isPro ? PRO_SELLER_FEE_RATE : SELLER_FEE_RATE;
+  const currentSellerFeeRate = sellerFeeOverride !== null && sellerFeeOverride !== undefined
+    ? sellerFeeOverride
+    : (isPhase0 ? 0 : defaultSellerFeeRate);
   const sellerFee = !isNaN(priceNum) ? Math.round(priceNum * currentSellerFeeRate) : 0;
   const netPayout = !isNaN(priceNum) ? priceNum - sellerFee : 0;
+
+  // 1. Restauration intelligente du brouillon local
+  useEffect(() => {
+    if (editId) return;
+    const draft = listingDraftService.getDraft();
+    if (draft) {
+      reset(draft.values);
+      if (draft.variants && Array.isArray(draft.variants)) {
+        setVariants(draft.variants);
+      }
+      if (draft.step && draft.step >= 1 && draft.step <= 3) {
+        setCurrentStep(draft.step);
+      }
+      const savedPhotos = listingDraftService.getStoredPhotos();
+      if (savedPhotos.length > 0) {
+        setPhotos(savedPhotos);
+      }
+      setIsDraftRestored(true);
+    }
+  }, [editId, reset]);
+
+  // 2. Sauvegarde automatique du brouillon en arrière-plan
+  useEffect(() => {
+    if (isEditing || !user) return;
+    const timer = setTimeout(() => {
+      const formValues = watch();
+      listingDraftService.saveDraft(currentStep, formValues, variants);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [
+    watchTitle,
+    watchPrice,
+    watchOriginalPrice,
+    watchDescription,
+    watchCategory,
+    watchCondition,
+    watchDistrict,
+    watch('phone'),
+    watch('stock'),
+    variants,
+    currentStep,
+    isEditing,
+    user,
+  ]);
+
+  // 3. Sauvegarde automatique des photos
+  useEffect(() => {
+    if (isEditing || !user) return;
+    listingDraftService.savePhotos(photos);
+  }, [photos, isEditing, user]);
+
+  const handleResetDraft = () => {
+    listingDraftService.clearDraft();
+    reset({
+      title: '',
+      price: '',
+      description: '',
+      category: '',
+      condition: '',
+      district: userProfile?.district || '',
+      phone: userProfile?.phone || '',
+      stock: '1',
+      original_price: '',
+    });
+    setVariants([]);
+    setPhotos([]);
+    setCurrentStep(1);
+    setIsDraftRestored(false);
+    toast.success('Brouillon effacé avec succès.');
+  };
 
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
@@ -113,7 +188,7 @@ const ListingCreatePage: React.FC = () => {
 
   // Pre-fill phone from profile
   useEffect(() => {
-    if (userProfile?.phone) {
+    if (userProfile?.phone && !watch('phone')) {
       setValue('phone', userProfile.phone);
     }
     if (userProfile?.district && !watchDistrict) {
@@ -358,6 +433,9 @@ const ListingCreatePage: React.FC = () => {
 
         if (createError) throw createError;
 
+        listingDraftService.clearDraft();
+        setIsDraftRestored(false);
+
         setCreatedListingId(newListing.id);
         setShowSuccessModal(true);
       }
@@ -403,42 +481,40 @@ const ListingCreatePage: React.FC = () => {
 
   return (
     <motion.div
-      className="min-h-screen bg-gray-50/60 pb-safe pb-28 overflow-x-hidden w-full max-w-full"
+      className="min-h-screen bg-gray-50/70 pb-safe pb-28 overflow-x-hidden w-full max-w-full"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.25 }}
     >
-      {/* ── HERO BANNER (THEME SIGNATURE DALOAMARKET) ── */}
-      <header className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-orange-500 to-amber-600 px-4 sm:px-6 pt-6 pb-12 rounded-b-[36px] shadow-lg shadow-orange-500/15">
-        <div className="absolute -top-12 -right-10 w-36 h-36 rounded-full bg-white/10 pointer-events-none" />
-        <div className="absolute -bottom-14 -left-8 w-32 h-32 rounded-full bg-white/10 pointer-events-none" />
-        <div className="relative max-w-6xl mx-auto flex items-center justify-between">
+      {/* ── STICKY MODERN TOP-BAR ── */}
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 px-4 py-3 shadow-2xs">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="w-10 h-10 inline-flex items-center justify-center rounded-2xl bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white active:scale-95 transition-all shadow-xs"
+              className="w-9 h-9 inline-flex items-center justify-center rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 active:scale-95 transition-all shadow-2xs"
               aria-label="Retour"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4" />
             </button>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-100">
-                Espace Vendeur · Daloa
-              </p>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+              <h1 className="text-sm sm:text-base font-black tracking-tight text-gray-900 leading-tight">
                 {isEditing ? "Modifier l'annonce" : "Publier une annonce"}
               </h1>
+              <p className="text-[10px] font-bold text-orange-600">
+                Étape {currentStep} sur 3 · {currentStep === 1 ? 'Photos & Type' : currentStep === 2 ? 'Prix & Stock' : 'Contact & Publication'}
+              </p>
             </div>
           </div>
-          <span className="inline-flex rounded-full bg-white/20 backdrop-blur-md px-3.5 py-1 text-xs font-black text-white border border-white/25 shadow-2xs">
+          <span className="inline-flex rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-extrabold text-orange-700 border border-orange-200/60 shadow-2xs">
             {isEditing ? "Édition" : "Gratuit"}
           </span>
         </div>
       </header>
 
       {!hasPayoutInfo ? (
-        <div className="relative z-10 -mt-6 px-4 max-w-lg mx-auto">
+        <div className="px-4 py-8 max-w-lg mx-auto">
           <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-xl shadow-gray-200/50 flex flex-col items-center text-center">
             <div className="w-14 h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mb-3.5 shadow-xs">
               <AlertTriangle className="w-7 h-7" />
@@ -457,7 +533,7 @@ const ListingCreatePage: React.FC = () => {
           </div>
         </div>
       ) : !hasShopLocation ? (
-        <div className="relative z-10 -mt-6 px-4 max-w-lg mx-auto">
+        <div className="px-4 py-8 max-w-lg mx-auto">
           <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-xl shadow-gray-200/50 flex flex-col items-center text-center">
             <div className="w-14 h-14 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mb-3.5 shadow-xs">
               <AlertTriangle className="w-7 h-7" />
@@ -476,7 +552,7 @@ const ListingCreatePage: React.FC = () => {
           </div>
         </div>
       ) : !canCreateNew ? (
-        <div className="relative z-10 -mt-6 px-4 max-w-lg mx-auto">
+        <div className="px-4 py-8 max-w-lg mx-auto">
           <div className="bg-white rounded-3xl p-6 border border-amber-100 shadow-xl shadow-amber-100/50 flex flex-col items-center text-center">
             <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mb-3.5 border border-amber-200 shadow-xs">
               <Star className="w-7 h-7 text-amber-500 fill-amber-500" />
@@ -506,20 +582,37 @@ const ListingCreatePage: React.FC = () => {
         </div>
       ) : (
       <>
-        {/* ── STEPPER FLOATING CARD ── */}
-        <div className="relative z-10 -mt-6 max-w-lg mx-auto px-4 w-full">
-          <div className="bg-white rounded-3xl p-2.5 sm:p-3 border border-gray-100/90 shadow-xl shadow-gray-200/50">
+        {/* ── STEPPER & DRAFT BAR (COMPACT CONTAINER) ── */}
+        <div className="max-w-6xl mx-auto px-4 lg:px-6 pt-3 pb-1 space-y-2">
+          <div className="bg-white rounded-2xl p-2 sm:p-2.5 border border-gray-100 shadow-xs">
             <ListingStepper currentStep={currentStep} onStepClick={(step) => setCurrentStep(step)} />
           </div>
+
+          {/* DRAFT NOTIFICATION BADGE */}
+          {isDraftRestored && !isEditing && (
+            <div className="flex items-center justify-between px-3.5 py-1.5 rounded-xl bg-amber-50/90 border border-amber-200/70 text-xs font-semibold text-amber-900 shadow-2xs">
+              <span className="flex items-center gap-1.5 truncate">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+                Brouillon restauré
+              </span>
+              <button
+                type="button"
+                onClick={handleResetDraft}
+                className="text-amber-700 hover:text-red-600 font-bold underline text-[11px] ml-2 flex-shrink-0 active:scale-95 transition-all cursor-pointer"
+              >
+                Recommencer de zéro
+              </button>
+            </div>
+          )}
         </div>
 
         {/* DESKTOP SPLIT-SCREEN LAYOUT */}
-        <div className="max-w-6xl mx-auto px-4 lg:px-6 py-2 lg:grid lg:grid-cols-[1fr_420px] lg:gap-8 lg:items-start">
+        <div className="max-w-6xl mx-auto px-4 lg:px-6 py-2 lg:grid lg:grid-cols-[1fr_380px] lg:gap-6 lg:items-start">
           {/* LEFT COLUMN: FORM */}
           <div>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <AnimatePresence mode="wait">
-                {/* ── STEP 1: Photos, Titre, Catégorie & État ── */}
+                {/* ── STEP 1: Photos, Titre, Catégorie & État (Unified Card) ── */}
                 {currentStep === 1 && (
                   <motion.div
                     key="step1"
@@ -527,7 +620,7 @@ const ListingCreatePage: React.FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.2 }}
-                    className="space-y-4"
+                    className="bg-white rounded-3xl p-4 sm:p-5 border border-gray-100 shadow-sm space-y-4"
                   >
                     <ListingPhotosSection
                       photos={photos}
@@ -537,11 +630,15 @@ const ListingCreatePage: React.FC = () => {
                       isEditing={isEditing}
                     />
 
+                    <div className="h-px bg-gray-100" />
+
                     <ListingGeneralInfoSection
                       register={register}
                       errors={errors}
                       mode="title_only"
                     />
+
+                    <div className="h-px bg-gray-100" />
 
                     <ListingDetailsSection
                       register={register}
@@ -553,7 +650,7 @@ const ListingCreatePage: React.FC = () => {
                   </motion.div>
                 )}
 
-                {/* ── STEP 2: Prix, Promo & Déclinaisons (Couleurs & Tailles) ── */}
+                {/* ── STEP 2: Prix, Promo & Déclinaisons (Unified Card) ── */}
                 {currentStep === 2 && (
                   <motion.div
                     key="step2"
@@ -561,7 +658,7 @@ const ListingCreatePage: React.FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.2 }}
-                    className="space-y-4"
+                    className="bg-white rounded-3xl p-4 sm:p-5 border border-gray-100 shadow-sm space-y-4"
                   >
                     <ListingPricingSection
                       register={register}
@@ -570,6 +667,7 @@ const ListingCreatePage: React.FC = () => {
                       sellerFee={sellerFee}
                       discountPercent={discountPercent}
                       netPayout={netPayout}
+                      sellerFeeRate={currentSellerFeeRate}
                       isPro={isPro}
                       variants={variants}
                       onVariantsChange={(nextVariants) => {
@@ -582,7 +680,7 @@ const ListingCreatePage: React.FC = () => {
                   </motion.div>
                 )}
 
-                {/* ── STEP 3: Description, Quartier Daloa & Contact (Publication directe) ── */}
+                {/* ── STEP 3: Description & Logistique (Unified Card) ── */}
                 {currentStep === 3 && (
                   <motion.div
                     key="step3"
@@ -590,37 +688,39 @@ const ListingCreatePage: React.FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.2 }}
-                    className="space-y-4"
+                    className="bg-white rounded-3xl p-4 sm:p-5 border border-gray-100 shadow-sm space-y-4"
                   >
                     <ListingGeneralInfoSection
                       register={register}
                       errors={errors}
                       watchDescription={watchDescription}
+                      setValue={setValue}
                       mode="description_only"
                     />
 
-                    {/* Logistique & Contact */}
+                    <div className="h-px bg-gray-100" />
+
                     <ListingLogisticsSection register={register} errors={errors} />
                   </motion.div>
                 )}
               </AnimatePresence>
 
               {/* Spacer for bottom sticky navigation on mobile */}
-              <div className="h-28 lg:h-8" />
+              <div className="h-24 lg:h-6" />
             </form>
           </div>
 
           {/* RIGHT COLUMN: PERMANENT DESKTOP LIVE PREVIEW */}
-          <div className="hidden lg:block lg:sticky lg:top-20 space-y-4">
+          <div className="hidden lg:block lg:sticky lg:top-20 space-y-3">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-sm font-black text-gray-900 flex items-center gap-2">
+              <h3 className="text-xs font-black text-gray-900 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Aperçu en direct pour les acheteurs
+                Aperçu en direct
               </h3>
-              <span className="text-xs text-gray-400 font-bold">Temps réel</span>
+              <span className="text-[11px] text-gray-400 font-bold">Temps réel</span>
             </div>
 
-            <div className="bg-white rounded-3xl p-4 shadow-md shadow-gray-100 border border-gray-100">
+            <div className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100">
               <ListingLivePreview
                 title={watchTitle}
                 price={watchPrice}
@@ -640,15 +740,15 @@ const ListingCreatePage: React.FC = () => {
 
         {/* ─── BOTTOM STICKY NAVIGATION ─── */}
         <div
-          className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100/90 px-4 py-3 z-40 shadow-[0_-4px_24px_rgba(0,0,0,0.06)]"
-          style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 12px), 12px)' }}
+          className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100/90 px-4 py-2.5 z-40 shadow-[0_-4px_24px_rgba(0,0,0,0.06)]"
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 10px), 10px)' }}
         >
           <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
             {currentStep > 1 ? (
               <button
                 type="button"
                 onClick={handlePrevStep}
-                className="h-12 px-5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-black text-xs sm:text-sm active:scale-95 transition-all flex items-center justify-center shrink-0 border border-gray-200/50"
+                className="h-11 px-4 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-black text-xs active:scale-95 transition-all flex items-center justify-center shrink-0 border border-gray-200/50 cursor-pointer"
               >
                 Précédent
               </button>
@@ -658,9 +758,9 @@ const ListingCreatePage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleNextStep}
-                className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-orange-500 via-orange-500 to-amber-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 active:scale-95 transition-all"
+                className="flex-1 h-11 rounded-2xl bg-gradient-to-r from-orange-500 via-orange-500 to-amber-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-orange-500/25 active:scale-95 transition-all cursor-pointer"
               >
-                <span>Suivant</span>
+                <span>Étape suivante</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             ) : (
@@ -668,14 +768,14 @@ const ListingCreatePage: React.FC = () => {
                 type="button"
                 disabled={submitting || (!isEditing && !canCreateNew)}
                 onClick={handleSubmit(onSubmit)}
-                className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 active:scale-95 transition-all disabled:opacity-50"
+                className="flex-1 h-11 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
               >
                 {submitting ? (
                   <LoadingSpinner size="sm" className="text-white" />
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>{isEditing ? 'Enregistrer les modifications' : 'Publier mon annonce'}</span>
+                    <span>{isEditing ? 'Enregistrer' : 'Publier mon annonce'}</span>
                   </>
                 )}
               </button>

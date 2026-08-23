@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Star, MessageCircle, ChevronRight, Store } from 'lucide-react';
-import { formatDate } from '../../../lib/utils';
+import { formatDate, getSellerPath, getListingShareUrl, formatWhatsAppPhone } from '../../../lib/utils';
 import Avatar from '../../profile/Avatar';
+import WhatsAppIcon from '../../ui/WhatsAppIcon';
 import type { ListingFull } from '../../../types/listing';
 
 interface SellerCardProps {
@@ -18,10 +19,11 @@ const SellerCard: React.FC<SellerCardProps> = ({ listing, isPro, currentUserId, 
   const memberSince = listing.users?.created_at ? formatDate(listing.users.created_at) : '';
   const isOwnListing = listing.user_id === currentUserId;
   const shopName = isPro && listing.users?.shop_name ? listing.users.shop_name : (listing.users?.full_name || 'Vendeur');
+  const sellerPath = getSellerPath(listing.user_id, (listing.users as any)?.shop_slug);
 
   return (
     <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-xl shadow-gray-200/50 border border-gray-100/90 space-y-4">
-      <Link to={`/seller/${listing.user_id}`} className="flex items-center gap-3.5 no-underline group">
+      <Link to={sellerPath} className="flex items-center gap-3.5 no-underline group">
         <div className="relative flex-shrink-0">
           <Avatar
             src={isPro && listing.users?.shop_logo_url ? listing.users.shop_logo_url : listing.users?.avatar_url}
@@ -82,7 +84,23 @@ const SellerCard: React.FC<SellerCardProps> = ({ listing, isPro, currentUserId, 
           </button>
         )}
 
-        <Link to={`/seller/${listing.user_id}`} className="flex-1">
+        {/* WhatsApp Icon Button — Compact icon-only with official SVG */}
+        {!isOwnListing && listing.users?.phone && (
+          <a
+            href={`https://wa.me/${formatWhatsAppPhone(listing.users.phone)}?text=${encodeURIComponent(
+              `Bonjour, je suis intéressé(e) par votre article "${listing.title}" sur DaloaMarket 🛒\n${getListingShareUrl(listing.id)}`
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-10 h-10 flex-shrink-0 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center active:scale-95 transition-all shadow-xs shadow-emerald-500/25"
+            title="Contacter sur WhatsApp"
+            aria-label="Contacter sur WhatsApp"
+          >
+            <WhatsAppIcon size={20} className="w-5 h-5" />
+          </a>
+        )}
+
+        <Link to={sellerPath} className="flex-1">
           <button
             type="button"
             className="w-full h-10 rounded-2xl bg-orange-50 hover:bg-orange-100 text-orange-600 font-black text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all border border-orange-200/60"

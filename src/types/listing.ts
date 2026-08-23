@@ -79,4 +79,6 @@ export interface SimilarListing {
   listing_user_id: string;
   original_price: number | null;
   variants?: ListingVariant[];
+  similarityPercent?: number;
+  matchReason?: string;
 }

@@ -30,11 +30,12 @@ import { useSEO } from '../hooks/useSEO';
 import { formatPrice, interleaveBoosted, diversifySellers, CATEGORIES, cn } from '../lib/utils';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
-import { useCart } from '../contexts/CartContext';
 import { ErrorState } from '../components/ui/ErrorState';
+import { useCart } from '../contexts/CartContext';
 import { SectionHeader } from '../components/ui/SectionHeader';
 import ListingCard from '../components/listings/ListingCard';
 import ListingCardSkeleton from '../components/listings/ListingCardSkeleton';
+import { userBehaviorService } from '../services/userBehaviorService';
 
 const CATEGORY_STYLE: Record<string, { icon: React.ReactNode; bg: string; border: string; emoji: string }> = {
   fashion: { icon: <Shirt className="h-4 w-4" />, bg: 'bg-pink-50 text-pink-600', border: 'border-pink-200', emoji: '👗' },
@@ -92,6 +93,15 @@ interface ListingCardMapped {
   variants?: { id: string; label: string; price: number | null; stock: number; active?: boolean }[];
 }
 
+interface CachedFeed {
+  listings: ListingData[];
+  timestamp: number;
+}
+
+// Module-level cache to ensure instantaneous rendering and pixel-perfect scroll restoration when returning to Home
+const homeFeedCache = new Map<string, CachedFeed>();
+const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes fresh cache
+
 const HomePage: React.FC = () => {
   useSEO('Accueil', {
     description: "Achetez et vendez à Daloa (Côte d'Ivoire) en toute simplicité sur DaloaMarket. Publiez des annonces gratuitement et trouvez des bonnes affaires locales près de chez vous.",
@@ -101,9 +111,12 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { user, userProfile } = useSupabase();
 
-  const [listings, setListings] = useState<ListingData[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [loading, setLoading] = useState(true);
+  const [listings, setListings] = useState<ListingData[]>(() => {
+    const cached = homeFeedCache.get('all');
+    return cached?.listings || [];
+  });
+  const [loading, setLoading] = useState(() => !homeFeedCache.has('all'));
   const [error, setError] = useState<string | null>(null);
   const [showLocationWarning, setShowLocationWarning] = useState(false);
 
@@ -151,7 +164,19 @@ const HomePage: React.FC = () => {
       return;
     }
 
-    setLoading(true);
+    const cached = homeFeedCache.get(cat);
+    const isCacheFresh = cached && (Date.now() - cached.timestamp < CACHE_TTL_MS);
+
+    if (cached) {
+      // Instantly serve from cache
+      setListings(cached.listings);
+      setLoading(false);
+      // If cache is still fresh, no need to refetch right now
+      if (isCacheFresh) return;
+    } else {
+      setLoading(true);
+    }
+
     setError(null);
     try {
       if (cat === 'all') {
@@ -181,7 +206,9 @@ const HomePage: React.FC = () => {
 
         const diversifiedListings = diversifySellers(filteredRaw, 2);
         const combined = [...boostedListings, ...diversifiedListings].slice(0, 24);
-        setListings(interleaveBoosted(combined));
+        const finalList = interleaveBoosted(combined);
+        homeFeedCache.set(cat, { listings: finalList, timestamp: Date.now() });
+        setListings(finalList);
       } else {
         // Mode catégorie ciblée : interroger la base avec tous les synonymes
         const synonyms = CATEGORY_SYNONYMS[cat] || [cat];
@@ -194,12 +221,16 @@ const HomePage: React.FC = () => {
           .limit(30);
 
         if (fetchError) throw fetchError;
-        setListings((data || []) as unknown as ListingData[]);
+        const finalList = (data || []) as unknown as ListingData[];
+        homeFeedCache.set(cat, { listings: finalList, timestamp: Date.now() });
+        setListings(finalList);
       }
     } catch (err: unknown) {
       console.error('HomePage fetch error:', err);
       const message = err instanceof Error ? err.message : (isSupabaseConfigured ? 'Impossible de charger les annonces' : 'Base de données non configurée');
-      setError(message);
+      if (!cached) {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -232,15 +263,16 @@ const HomePage: React.FC = () => {
     cart_qty: cartQtyByListingId[l.id] || 0,
   });
 
+  // Calcul des recommandations personnalisées IA Machine Learning
+  const personalizedRecommendations = useMemo(() => {
+    if (selectedCategory !== 'all' || listings.length === 0) return [];
+    return userBehaviorService.getPersonalizedRecommendations(listings, { limit: 4, minScore: 20 });
+  }, [listings, selectedCategory]);
+
   const currentCategoryObj = CATEGORIES.find((cat) => cat.id === selectedCategory);
 
   return (
-    <motion.div
-      className="min-h-screen bg-gray-50/70"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-    >
+    <div className="min-h-screen bg-gray-50/70">
       {showLocationWarning && (
         <div className="mx-4 mt-4 flex items-center justify-between gap-3 rounded-2xl border border-orange-100 bg-white px-4 py-3 shadow-sm shadow-orange-100/60">
           <div className="flex min-w-0 items-start gap-3">
@@ -472,6 +504,29 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
+      {/* SECTION RECOMMANDATIONS PERSONNALISÉES */}
+      {selectedCategory === 'all' && personalizedRecommendations.length > 0 && !loading && (
+        <section className="pt-2 pb-2">
+          <div className="px-4 lg:px-8 max-w-5xl mx-auto">
+            <SectionHeader title="Pour vous" />
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mt-1.5">
+              {personalizedRecommendations.map((rec, idx) => (
+                <ListingCard
+                  key={`rec-${rec.item.id}`}
+                  listing={{
+                    ...mapToListingCard(rec.item as ListingData),
+                    similarityPercent: rec.similarityPercent,
+                    matchReason: rec.matchReason,
+                  }}
+                  index={idx}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* LISTINGS FEED */}
       <section className="pb-8 pt-1">
         <div className="px-4 lg:px-8 max-w-5xl mx-auto">
@@ -566,7 +621,7 @@ const HomePage: React.FC = () => {
           </div>
         </div>
       </section>
-    </motion.div>
+    </div>
   );
 };
 

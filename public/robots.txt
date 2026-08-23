@@ -1,8 +1,7 @@
 # robots.txt — DaloaMarket
 # https://daloamarket.com
-# Généré le 2026-07-02
 
-# ── Crawlers autorisés (Google, Bing, Yandex, etc.) ──
+# ── 1. Crawlers Web Généraux (Google, Bing, Yahoo, Yandex, etc.) ──
 User-agent: *
 Crawl-delay: 1
 
@@ -24,10 +23,13 @@ Allow: /sports-loisirs
 Allow: /livres
 Allow: /alimentaire
 Allow: /listings/
+Allow: /l/
 Allow: /become-pro
 Allow: /seller-guide
 Allow: /seller/
 Allow: /explore
+Allow: /llms.txt
+Allow: /llms-full.txt
 
 # Pages privées / authentification
 Disallow: /login
@@ -38,7 +40,7 @@ Disallow: /banned
 Disallow: /profile
 Disallow: /settings
 
-# Pages vendeur / transaction (non pertinentes pour le SEO)
+# Pages transactionnelles / backoffice (non pertinentes pour l'indexation publique)
 Disallow: /mes-statistiques
 Disallow: /mes-paiements
 Disallow: /mes-revenus
@@ -49,8 +51,6 @@ Disallow: /claim-listing
 Disallow: /acheter-pack
 Disallow: /acheter-credits
 Disallow: /paiement-annonce/
-
-# Paiement / admin / API
 Disallow: /checkout/
 Disallow: /payment/
 Disallow: /suivi/
@@ -58,18 +58,23 @@ Disallow: /admin
 Disallow: /api/
 Disallow: /panier
 
-# Fichiers internes
+# Fichiers et dossiers internes
 Disallow: /src/
 Disallow: /node_modules/
 Disallow: /@vite/
 Disallow: /@react-refresh
 Disallow: /@id/
 
-# ── Googlebot ──
+# ── 2. Googlebot (Google Search & Shopping) ──
 User-agent: Googlebot
 Allow: /
 Allow: /listings/
+Allow: /l/
+Allow: /c/
+Allow: /search
 Allow: /profile/seller/
+Allow: /llms.txt
+Allow: /llms-full.txt
 Disallow: /login
 Disallow: /register
 Disallow: /auth/
@@ -78,8 +83,24 @@ Disallow: /api/
 Disallow: /payment/
 Disallow: /checkout/
 
-# ── GPTBot (OpenAI) ──
+# ── 3. Google Gemini & AI Overviews (Google-Extended) ──
+User-agent: Google-Extended
+Allow: /
+Allow: /listings/
+Allow: /l/
+Allow: /c/
+Allow: /about
+Allow: /how-it-works
+Allow: /faq
+Allow: /llms.txt
+Allow: /llms-full.txt
+Disallow: /admin
+Disallow: /api/
+Disallow: /auth/
+
+# ── 4. OpenAI (ChatGPT Live Browsing & GPTBot Indexing) ──
 User-agent: GPTBot
+User-agent: ChatGPT-User
 Allow: /
 Allow: /about
 Allow: /how-it-works
@@ -88,8 +109,11 @@ Allow: /help
 Allow: /terms
 Allow: /privacy
 Allow: /search
+Allow: /c/
 Allow: /listings/
+Allow: /l/
 Allow: /llms.txt
+Allow: /llms-full.txt
 Disallow: /login
 Disallow: /register
 Disallow: /auth/
@@ -98,32 +122,74 @@ Disallow: /api/
 Disallow: /profile
 Disallow: /payment/
 
-# ── anthropic-ai / Claude ──
+# ── 5. Perplexity AI (PerplexityBot) ──
+User-agent: PerplexityBot
+Allow: /
+Allow: /about
+Allow: /how-it-works
+Allow: /faq
+Allow: /search
+Allow: /c/
+Allow: /listings/
+Allow: /l/
+Allow: /llms.txt
+Allow: /llms-full.txt
+Disallow: /admin
+Disallow: /api/
+Disallow: /auth/
+Disallow: /payment/
+
+# ── 6. Anthropic Claude (ClaudeBot & anthropic-ai) ──
+User-agent: ClaudeBot
 User-agent: anthropic-ai
 Allow: /
-Allow: /llms.txt
 Allow: /about
+Allow: /how-it-works
 Allow: /faq
+Allow: /search
+Allow: /c/
+Allow: /listings/
+Allow: /l/
+Allow: /llms.txt
+Allow: /llms-full.txt
+Disallow: /admin
+Disallow: /api/
+Disallow: /auth/
+Disallow: /payment/
+
+# ── 7. Apple Intelligence (Applebot & Applebot-Extended) ──
+User-agent: Applebot
+User-agent: Applebot-Extended
+Allow: /
+Allow: /listings/
+Allow: /l/
+Allow: /c/
+Allow: /llms.txt
+Allow: /llms-full.txt
 Disallow: /admin
 Disallow: /api/
 Disallow: /auth/
 
-# ── PerplexityBot ──
-User-agent: PerplexityBot
+# ── 8. Meta AI & Autres Agents IA (Cohere, Bytespider) ──
+User-agent: Meta-ExternalAgent
+User-agent: cohere-ai
+User-agent: Bytespider
 Allow: /
 Allow: /llms.txt
+Allow: /llms-full.txt
 Disallow: /admin
 Disallow: /api/
+Disallow: /auth/
 
-# ── AdsBot (Google Shopping) ──
+# ── 9. AdsBot (Google Shopping) ──
 User-agent: AdsBot-Google
 Allow: /
 Allow: /listings/
+Allow: /l/
 Allow: /profile/seller/
 Allow: /search
 
-# Fichiers de référencement
+# ── Sitemaps & Documentation LLMs (GEO) ──
 Sitemap: https://daloamarket.com/sitemap.xml
-
-# LLMs.txt — Documentation pour IA / LLM
 # LLMs-Txt: https://daloamarket.com/llms.txt
+# LLMs-Full-Txt: https://daloamarket.com/llms-full.txt

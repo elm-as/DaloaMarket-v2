@@ -1,3 +1,14 @@
+# Redirections permanentes (301) de l'ancien domaine .shop vers le domaine officiel .com
+https://daloamarket.shop/*      https://daloamarket.com/:splat  301!
+http://daloamarket.shop/*       https://daloamarket.com/:splat  301!
+https://www.daloamarket.shop/*  https://daloamarket.com/:splat  301!
+http://www.daloamarket.shop/*   https://daloamarket.com/:splat  301!
+
+# Redirection www.daloamarket.com vers domaine canonique sans www
+https://www.daloamarket.com/*   https://daloamarket.com/:splat  301!
+http://www.daloamarket.com/*    https://daloamarket.com/:splat  301!
+
+# Fichiers statiques et modules de build
 /@vite/*          /@vite/:splat          200
 /@react-refresh   /@react-refresh        200
 /@id/*            /@id/:splat            200
@@ -6,6 +17,11 @@
 /src/*            /src/:splat            200
 /assets/*         /assets/:splat         200
 /llms.txt         /llms.txt              200
+/llms-full.txt    /llms-full.txt         200
 /sitemap.xml      /sitemap.xml           200
+/robots.txt       /robots.txt            200
+/917afbced62346469f16dc92320fc541.txt /917afbced62346469f16dc92320fc541.txt 200
 /api/*            /.netlify/functions/:splat  200
+
+# Single Page Application (SPA Fallback)
 /*                /index.html            200

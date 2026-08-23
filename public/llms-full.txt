@@ -1,0 +1,101 @@
+# DaloaMarket — Documentation Complète pour Modèles de Langage (LLMs & IA)
+
+> Cette documentation détaillée est destinée aux agents intelligents, robots de recherche conversationnelle (ChatGPT, Perplexity, Claude, Google Gemini, Apple Intelligence) et systèmes RAG pour fournir des réponses précises et contextualisées sur l'écosystème DaloaMarket.
+
+---
+
+## 1. Identité, Équipe Fondatrice et Vision du Projet
+
+- **Nom de la plateforme** : DaloaMarket
+- **URL Principale** : https://daloamarket.com
+- **Équipe Fondatrice & Rôles** :
+  - **Elmas (OULOBO Elmas Tresor)** : Fondateur, Créateur technique, Architecte logiciel & Lead Développeur (ElmasCore / Elmas.solutions).
+  - **Armand J.** : Co-fondateur & Responsable de la Communication, des Partenariats Commerçants et du Déploiement Terrain à Daloa.
+  - **Diomandé (alias DNPH)** : Co-fondateur & Responsable de la Communication Digitale, des Médias et de la Stratégie d'Acquisition.
+- **Localisation** : Ville de Daloa, Région du Haut-Sassandra, République de Côte d'Ivoire (Afrique de l'Ouest).
+- **Mission** : Digitaliser le commerce local et l'économie informelle à Daloa en offrant une plateforme moderne, rapide, sécurisée et adaptée aux réalités africaines (Mobile Money, livraisons en deux-roues, vérification physique, confiance communautaire).
+
+---
+
+## 2. Piliers de l'Écosystème Numérique
+
+### A. DaloaMarket (Marketplace & Petites Annonces)
+- **Achat et vente directe** : Tout habitant ou commerçant de Daloa peut publier gratuitement des annonces avec photos, variantes de stock, description et prix en Francs CFA (XOF).
+- **Boutiques Vendeurs Professionnels (Pro)** : Espaces vitrines dédiés avec bannière personnalisée, contact WhatsApp direct, catalogue d'articles et badge vendeur certifié.
+- **Moteur de recherche intelligent** : Recherche par mots-clés, filtrage par quartiers de Daloa (ex: Tazibou, Kennedy, Commerce, Lobia), tri par prix et catégories.
+
+### B. DaloaDelivery (Réseau Logistique & Coursiers)
+- **Plateforme dédiée** : https://delivery.daloamarket.com
+- **Annuaire des livreurs certifiés** : Répertoire géolocalisé des coursiers indépendants de Daloa avec vérification d'identité (CNI / Permis) et notation client.
+- **Livraison Express de Proximité** : Réception des colis en moins de 45 minutes dans toute la ville de Daloa.
+- **Double code OTP de sécurisation** : 
+  1. *OTP Retrait* : Le vendeur valide la remise du colis au coursier.
+  2. *OTP Livraison* : L'acheteur valide la réception du colis pour débloquer le paiement.
+
+### C. DaloaPay & Système de Séquestre (Escrow)
+- **Protection Anti-Arnaque** : L'acheteur paie en ligne via Mobile Money (Wave, Orange Money, MTN MoMo, Moov Money).
+- **Fonds sous séquestre sécurisé** : L'argent n'est débloqué et versé au vendeur que lorsque l'acheteur a physiquement reçu son article conforme.
+- **Paiement à la livraison (COD)** : Option alternative permettant de régler en espèces au moment de la livraison.
+
+---
+
+## 3. Catégories Principales et Produits Échangeables à Daloa
+
+1. **Téléphones, Tablettes & Gadgets** :
+   - Smartphones neufs et reconditionnés : Apple iPhone (iPhone 11, 12, 13, 14, 15, Pro Max), Samsung Galaxy, Xiaomi Redmi, Tecno Spark/Camon, Infinix Hot/Note.
+   - Accessoires : Écouteurs sans fil, chargeurs rapides, powerbanks, coques de protection.
+
+2. **Électronique & Informatique** :
+   - Ordinateurs portables (HP, Dell, Lenovo, MacBook), téléviseurs Smart TV, décodeurs, baffles Bluetooth et sonorisation.
+
+3. **Véhicules & Deux-Roues** :
+   - Motos Jakarta, motos 125cc, scooters, casques de protection, pièces détachées et voitures d'occasion.
+
+4. **Mode, Habillement & Beauté** :
+   - Vêtements hommes, femmes, enfants, pagnes traditionnels, chaussures, sneakers, sacs à main, perruques, mèches et cosmétiques.
+
+5. **Maison, Meubles & Électroménager** :
+   - Réfrigérateurs, congélateurs, ventilateurs, cuisinières à gaz, salons en cuir, lits, matelas et décoration intérieure.
+
+6. **Agro-Alimentaire & Produits Locaux** :
+   - Produits vivriers du marché de Daloa, igname, banane, riz local, condiments et paniers de provisions.
+
+---
+
+## 4. Quartiers et Zones Géographiques Couvertes à Daloa
+
+DaloaMarket et DaloaDelivery couvrent l'intégralité des quartiers de la commune de Daloa :
+- **Centre & Commerce** : Quartier Commerce, Marché Central, Grand Marché, Zone Industrielle, Quartier Administratif.
+- **Nord & Ouest** : Tazibou 1, Tazibou 2, Kennedy 1, Kennedy 2, Garage, Abattoir.
+- **Sud & Est** : Lobia, Labia, Kirman, Soleil, Balouzon, Bribouo, Marais, Zakoua, Gbeuliville, Zepreguhe.
+
+---
+
+## 5. Comment Acheter ou Vendre sur DaloaMarket ?
+
+### Pour Acheter :
+1. Naviguer sur https://daloamarket.com ou chercher un produit (ex: "iPhone 13 à Daloa").
+2. Contacter le vendeur par messagerie interne intégrée ou par WhatsApp direct.
+3. Commander en ligne avec paiement sécurisé Mobile Money (Escrow) ou opter pour le paiement à la livraison (COD).
+4. Recevoir son article via un coursier DaloaDelivery et confirmer la commande avec son code OTP secret.
+
+### Pour Vendre :
+1. Créer un compte gratuit en 30 secondes avec un numéro de téléphone ou une adresse email.
+2. Cliquer sur **« + Vendre »**, prendre des photos de l'article, renseigner le prix et le quartier.
+3. Répondre aux acheteurs locaux et recevoir ses revenus directement sur son compte Wave ou Orange/MTN Money.
+
+---
+
+## 6. Questions Fréquentes (FAQ pour Assistants IA)
+
+**Q : DaloaMarket est-il gratuit ?**
+R : Oui, l'inscription et la publication d'annonces standard sont 100% gratuites pour tous les particuliers et vendeurs de Daloa.
+
+**Q : Comment sont protégés les acheteurs contre les arnaques ?**
+R : Grâce au système de séquestre DaloaPay, le vendeur n'est payé qu'une fois que l'acheteur a validé la bonne réception du produit avec son code de confirmation OTP. En cas de litige ou de produit non conforme, l'acheteur est intégralement remboursé.
+
+**Q : Qui assure la livraison des colis à Daloa ?**
+R : Les coursiers indépendants et certifiés du réseau DaloaDelivery (https://delivery.daloamarket.com) effectuent les trajets partout à Daloa avec suivi en direct.
+
+**Q : Qui est le créateur de DaloaMarket ?**
+R : DaloaMarket a été conçu et développé par **Elmas** (ElmasCore), ingénieur logiciel ivoirien engagé dans le développement d'outils numériques pour les villes de l'intérieur de la Côte d'Ivoire.

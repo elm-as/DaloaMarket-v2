@@ -33,7 +33,7 @@ export default defineConfig({
   },
   server: {
     port: Number(process.env.VITE_PORT) || 5173,
-    strictPort: true,
+    strictPort: false,
     proxy: {
       '/api': {
         target: 'http://localhost:8888',

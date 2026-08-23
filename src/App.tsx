@@ -19,6 +19,9 @@ import { supabase } from './lib/supabase';
 import { PhaseProvider, usePhase } from './contexts/PhaseContext';
 // Static pages (eager loads)
 import HomePage from './pages/HomePage';
+import SearchPage from './pages/SearchPage';
+import CategoryPage from './pages/CategoryPage';
+import ListingDetailPage from './pages/ListingDetailPage';
 import AboutPage from './pages/AboutPage';
 import FAQPage from './pages/FAQPage';
 import TermsPage from './pages/TermsPage';
@@ -39,9 +42,6 @@ const ExternalRedirect: React.FC<{ to: string }> = ({ to }) => {
 };
 
 // Lazy loaded pages
-const SearchPage = React.lazy(() => import('./pages/SearchPage'));
-const CategoryPage = React.lazy(() => import('./pages/CategoryPage'));
-const ListingDetailPage = React.lazy(() => import('./pages/ListingDetailPage'));
 const ListingCreatePage = React.lazy(() => import('./pages/ListingCreatePage'));
 const MessagesPage = React.lazy(() => import('./pages/MessagesPage'));
 const ChatPage = React.lazy(() => import('./pages/ChatPage'));
@@ -74,6 +74,7 @@ const ShopSettingsPage = React.lazy(() => import('./pages/ShopSettingsPage'));
 const MaintenancePage = React.lazy(() => import('./pages/MaintenancePage'));
 const MentionsLegalesPage = React.lazy(() => import('./pages/MentionsLegalesPage'));
 import { useSystemSettings } from './hooks/useSystemSettings';
+import { useScrollRestoration } from './hooks/useScrollRestoration';
 
 function AppContent() {
   const { user, userProfile, isAdmin, isProfileComplete, profileHydrated, loading: authLoading } = useSupabase();
@@ -81,6 +82,7 @@ function AppContent() {
   const navigate = useNavigate();
   const { maintenance, paymentConfig, loading: settingsLoading } = useSystemSettings();
   const { showMonetisation } = usePhase();
+  useScrollRestoration();
 
   // ── Enregistrement natif des Notifications Push Capacitor (Android / iOS) ──
   useEffect(() => {
@@ -198,13 +200,12 @@ function AppContent() {
   }
 
   return (
-    <AnimatePresence mode="wait">
-      <Suspense fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)]">
-          <LoadingSpinner size="lg" />
-        </div>
-      }>
-        <Routes location={location} key={location.pathname}>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)]">
+        <LoadingSpinner size="lg" />
+      </div>
+    }>
+      <Routes location={location}>
           {/* Banned page - no layout */}
           <Route path="/banned" element={<BannedPage />} />
 
@@ -387,7 +388,6 @@ function AppContent() {
           <Route path="*" element={<AppLayout><NotFoundPage /></AppLayout>} />
         </Routes>
       </Suspense>
-    </AnimatePresence>
   );
 }
 

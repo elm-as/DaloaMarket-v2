@@ -33,6 +33,8 @@ export interface ListingCardData {
   listing_user_id: string;
   original_price: number | null;
   variants?: ListingVariant[];
+  similarityPercent?: number;
+  matchReason?: string;
 }
 
 interface ListingCardProps {
@@ -92,12 +94,11 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, index = 0 }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
-        duration: 0.25,
-        delay: index * 0.04,
-        ease: [0.2, 0, 0, 1],
+        duration: 0.15,
+        ease: 'easeOut',
       }}
       className="h-full"
     >

@@ -11,14 +11,14 @@ const SimilarListingsSection: React.FC<SimilarListingsSectionProps> = ({ listing
   if (listings.length === 0) return null;
 
   return (
-    <div className="space-y-3 pt-2">
-      <SectionHeader title="Annonces similaires à Daloa" />
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {listings.map((sim) => (
-          <ListingCard key={sim.id} listing={sim} />
+    <section className="space-y-3 pt-4 border-t border-gray-100/80">
+      <SectionHeader title="Annonces similaires" />
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {listings.map((sim, idx) => (
+          <ListingCard key={sim.id} listing={sim} index={idx} />
         ))}
       </div>
-    </div>
+    </section>
   );
 };
 

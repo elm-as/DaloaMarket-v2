@@ -9,6 +9,7 @@ import {
   subscribeToPush,
   getExistingSubscription,
 } from '../../lib/pushNotifications';
+import { useScrollRestoration } from '../../hooks/useScrollRestoration';
 import AppBar from './AppBar';
 import BottomNavBar from './BottomNavBar';
 import InstallPrompt from '../ui/InstallPrompt';
@@ -25,30 +26,21 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const location = useLocation();
   const { user, isProfileComplete } = useSupabase();
 
+  // Handle intelligent scroll restoration across routes (PUSH vs POP)
+  // useScrollRestoration handled globally in App.tsx
+
   // Activate global PWA notification listeners (Realtime for Chat, Orders, Admin alerts)
   usePwaNotifications();
 
   useEffect(() => {
-    if (!user || !isProfileComplete) return;
+    if (!user?.id) return;
     if (!isPushSupported()) return;
 
-    const permission = getPermissionState();
-
-    // If already granted, silently ensure subscription exists
-    if (permission === 'granted') {
-      getExistingSubscription().then((existing) => {
-        if (!existing) subscribeToPush(user.id);
-      });
-      return;
-    }
-
-    // Never auto-prompt if already prompted or denied
-    // The user can manually enable from Settings
-  }, [user, isProfileComplete]);
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-  }, [location.pathname]);
+    // Déclencher la synchronisation du token pour cet utilisateur connecté
+    subscribeToPush(user.id).catch((err) => {
+      console.warn('[Push] Auto-sync subscription to Supabase failed:', err);
+    });
+  }, [user?.id]);
 
   const isChatPage = /^\/messages\/[^/]+\/[^/]+/.test(location.pathname);
   const isListingDetailPage = /^\/(listings|l)\/[^/]+/.test(location.pathname);
@@ -92,19 +84,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             style={{ maxWidth: isChatPage ? '100%' : 'var(--container-max-width)', marginLeft: 'auto', marginRight: 'auto', width: '100%', overflowX: 'hidden' }}
             className={isChatPage ? 'h-[100dvh] flex flex-col' : ''}
           >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.15, ease: [0.2, 0, 0, 1] }}
-                style={{ width: '100%', overflowX: 'hidden' }}
-                className={isChatPage ? 'h-full flex flex-col flex-1' : ''}
-              >
-                {children}
-              </motion.div>
-            </AnimatePresence>
+            <div
+              style={{ width: '100%', overflowX: 'hidden' }}
+              className={isChatPage ? 'h-full flex flex-col flex-1' : ''}
+            >
+              {children}
+            </div>
           </div>
         </main>
 

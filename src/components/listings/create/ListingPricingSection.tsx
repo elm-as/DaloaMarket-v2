@@ -1,10 +1,8 @@
 import React from 'react';
-import { Wallet, Percent, ClipboardCheck } from 'lucide-react';
+import { Percent, Sparkles, CheckCircle2 } from 'lucide-react';
 import type { UseFormRegister, FieldErrors } from 'react-hook-form';
-import { Card } from '../../ui/Card';
 import type { ListingFormValues } from '../../../pages/ListingCreatePage';
 import { formatPrice } from '../../../lib/utils';
-import { SELLER_FEE_RATE, PRO_SELLER_FEE_RATE } from '../../../lib/pricing';
 import { ListingVariantsSection } from './ListingVariantsSection';
 import type { ListingVariant } from '../../../types/listing';
 
@@ -15,6 +13,7 @@ interface ListingPricingSectionProps {
   discountPercent: number;
   sellerFee: number;
   netPayout: number;
+  sellerFeeRate?: number;
   isPro?: boolean;
   variants: ListingVariant[];
   onVariantsChange: (variants: ListingVariant[]) => void;
@@ -27,69 +26,81 @@ export const ListingPricingSection: React.FC<ListingPricingSectionProps> = ({
   discountPercent,
   sellerFee,
   netPayout,
+  sellerFeeRate = 0,
   isPro = false,
   variants,
   onVariantsChange,
 }) => {
-  const currentSellerFeeRate = isPro ? PRO_SELLER_FEE_RATE : SELLER_FEE_RATE;
   return (
     <div className="space-y-4">
-      {/* SECTION HEADER */}
-      <div className="flex items-center gap-2.5 px-1">
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-emerald-50 text-emerald-600">
-          <Wallet className="h-4 w-4" />
-        </div>
+      {/* ── 2-COLUMN PRICE GRID ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Prix de vente */}
         <div>
-          <h2 className="text-sm font-extrabold text-gray-900">Tarification & Stock</h2>
-          <p className="text-[11px] font-medium text-gray-500">Définissez votre prix et gérez la quantité disponible</p>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-lg shadow-gray-200/50 space-y-4">
-        {/* PRIX DE VENTE */}
-        <div>
-          <label className="block text-xs font-bold text-gray-800 mb-1.5 pl-1">
-            Prix de vente <span className="text-red-500">*</span>
-          </label>
+          <div className="flex items-center justify-between mb-1.5 pl-1">
+            <label className="text-xs font-bold text-gray-800">
+              Prix de vente <span className="text-red-500">*</span>
+            </label>
+            {!isNaN(priceNum) && priceNum > 0 && (
+              <span className="text-xs font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg border border-orange-100">
+                {formatPrice(priceNum)}
+              </span>
+            )}
+          </div>
           <div className="relative">
             <input
               type="number"
               {...register('price', { required: 'Le prix est requis', min: { value: 300, message: 'Minimum 300 FCFA' } })}
               placeholder="0"
-              className="w-full h-12 pl-4 pr-16 rounded-2xl border border-gray-200 bg-orange-50/20 text-base font-extrabold placeholder:text-gray-400 placeholder:font-normal focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all text-gray-900"
+              className="w-full h-11 pl-3.5 pr-14 rounded-2xl border border-gray-200 bg-orange-50/20 text-base font-extrabold placeholder:text-gray-400 placeholder:font-normal focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all text-gray-900 shadow-2xs"
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-orange-600">FCFA</span>
+            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-orange-600">FCFA</span>
           </div>
-          {errors.price && <p className="text-xs text-red-500 mt-1.5 ml-1 font-semibold">{errors.price.message}</p>}
+          {errors.price && <p className="text-xs text-red-500 mt-1 ml-1 font-semibold">{errors.price.message}</p>}
         </div>
 
-        {/* PRIX ORIGINAL */}
+        {/* Prix d'origine (Promo) */}
         <div>
-          <label className="block text-xs font-bold text-gray-800 mb-1.5 pl-1">
-            Prix d'origine (avant réduction)
-          </label>
+          <div className="flex items-center justify-between mb-1.5 pl-1">
+            <label className="text-xs font-bold text-gray-800">
+              Prix d'origine <span className="text-[10px] text-gray-400 font-normal">(Optionnel)</span>
+            </label>
+            {discountPercent > 0 && (
+              <span className="bg-red-100 text-red-600 text-[10px] font-extrabold px-2 py-0.5 rounded-lg flex items-center gap-0.5 animate-pulse">
+                <Percent className="w-2.5 h-2.5" />
+                -{discountPercent}%
+              </span>
+            )}
+          </div>
           <div className="relative">
             <input
               type="number"
               {...register('original_price', { min: { value: 0, message: 'Minimum 0 FCFA' } })}
-              placeholder="Ex: 15000"
-              className="w-full h-12 pl-4 pr-24 rounded-2xl border border-gray-200 bg-gray-50/70 text-sm font-medium placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all text-gray-900"
+              placeholder="Ex: 15 000"
+              className="w-full h-11 pl-3.5 pr-14 rounded-2xl border border-gray-200 bg-gray-50/70 text-sm font-medium placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all text-gray-900 shadow-2xs"
             />
-            {discountPercent > 0 && (
-              <div className="absolute right-16 top-1/2 -translate-y-1/2 bg-red-100 text-red-600 text-[10px] font-extrabold px-2 py-0.5 rounded-lg flex items-center gap-0.5 animate-pulse">
-                <Percent className="w-2.5 h-2.5" />
-                -{discountPercent}%
-              </div>
-            )}
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">FCFA</span>
+            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">FCFA</span>
           </div>
-          <p className="text-[10px] text-gray-400 mt-1.5 pl-1 leading-relaxed">
-            Si le prix d'origine est plus élevé que le prix de vente, un badge de promotion s'affichera sur votre annonce.
-          </p>
-          {errors.original_price && <p className="text-xs text-red-500 mt-1.5 ml-1 font-semibold">{errors.original_price.message}</p>}
+          {errors.original_price && <p className="text-xs text-red-500 mt-1 ml-1 font-semibold">{errors.original_price.message}</p>}
         </div>
+      </div>
 
-        {/* QUANTITÉ / STOCK */}
+      {/* ── SIMULATEUR DE COMMISSION (UNIQUEMENT SI COMMISSION > 0) ── */}
+      {sellerFeeRate > 0 && !isNaN(priceNum) && priceNum > 0 && (
+        <div className="p-3.5 rounded-2xl bg-orange-50/40 border border-orange-100 text-xs space-y-2">
+          <div className="flex justify-between items-center text-gray-600 font-medium">
+            <span>Frais de service ({(sellerFeeRate * 100).toFixed(0)}%)</span>
+            <span className="text-red-500 font-bold">-{formatPrice(sellerFee)}</span>
+          </div>
+          <div className="flex justify-between items-center text-gray-900 font-bold pt-2 border-t border-orange-150/60">
+            <span>Votre gain net reversé</span>
+            <span className="text-orange-600 font-black text-sm">{formatPrice(netPayout)}</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── QUANTITÉ / STOCK (SI PAS DE VARIANTES) ── */}
+      {variants.length === 0 && (
         <div>
           <label className="block text-xs font-bold text-gray-800 mb-1.5 pl-1">
             Quantité en stock <span className="text-red-500">*</span>
@@ -98,50 +109,19 @@ export const ListingPricingSection: React.FC<ListingPricingSectionProps> = ({
             <input
               type="number"
               {...register('stock', { required: 'La quantité est requise', min: { value: 1, message: 'Minimum 1' } })}
-              readOnly={variants.length > 0}
               placeholder="1"
-              className="w-full h-12 pl-4 pr-16 rounded-2xl border border-gray-200 bg-gray-50/70 text-sm font-semibold placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all text-gray-900"
+              className="w-full h-11 pl-3.5 pr-16 rounded-2xl border border-gray-200 bg-gray-50/70 text-sm font-semibold placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all text-gray-900 shadow-2xs"
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">unités</span>
+            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">unités</span>
           </div>
-          <p className="text-[10px] text-gray-400 mt-1.5 pl-1">
-            {variants.length > 0 ? 'Le stock total est calculé automatiquement avec les tailles ci-dessous.' : "Laissez à 1 s'il s'agit d'un article unique ou d'occasion."}
-          </p>
-          {errors.stock && <p className="text-xs text-red-500 mt-1.5 ml-1 font-semibold">{errors.stock.message}</p>}
+          {errors.stock && <p className="text-xs text-red-500 mt-1 ml-1 font-semibold">{errors.stock.message}</p>}
         </div>
+      )}
 
-        <ListingVariantsSection variants={variants} onChange={onVariantsChange} />
-
-        {/* SIMULATEUR DE REVENUS */}
-        <div className="pt-2">
-          <div className="bg-gradient-to-br from-orange-50/50 via-amber-50/30 to-orange-50/20 rounded-3xl p-4 border border-orange-100 shadow-sm space-y-3">
-            <h3 className="text-[11px] font-extrabold text-orange-950 uppercase tracking-wider flex items-center gap-1.5">
-              <ClipboardCheck className="w-4 h-4 text-orange-600" />
-              Simulateur de revenus vendeur
-            </h3>
-            
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between items-center text-gray-600 font-medium">
-                <span>Prix de vente</span>
-                <span className="font-extrabold text-gray-900">{!isNaN(priceNum) && priceNum > 0 ? formatPrice(priceNum) : '0 FCFA'}</span>
-              </div>
-              <div className="flex justify-between items-center text-gray-600 font-medium">
-                <span>Commission service ({(currentSellerFeeRate * 100).toFixed(1)}%)</span>
-                <span className="font-bold text-red-500">-{!isNaN(sellerFee) && sellerFee > 0 ? formatPrice(sellerFee) : '0 FCFA'}</span>
-              </div>
-              
-              <div className="h-px bg-orange-100 my-2" />
-              
-              <div className="flex justify-between items-center">
-                <span className="font-extrabold text-gray-900">Votre gain net</span>
-                <span className="font-black text-orange-600 text-sm bg-white px-2.5 py-1 rounded-xl shadow-sm border border-orange-100">
-                  {!isNaN(netPayout) && netPayout > 0 ? formatPrice(netPayout) : '0 FCFA'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* ── VARIANTS COMPONENT (COULEURS, TAILLES, POINTURES) ── */}
+      <ListingVariantsSection variants={variants} onChange={onVariantsChange} />
     </div>
   );
 };
+
+export default ListingPricingSection;

@@ -127,12 +127,7 @@ const ListingDetailPage: React.FC = () => {
   }
 
   return (
-    <motion.div
-      className="min-h-screen bg-gray-50/70 pb-32 lg:pb-8 relative"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-    >
+    <div className="min-h-screen bg-gray-50/70 pb-32 lg:pb-8 relative">
       {isSold && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="text-center">
@@ -222,7 +217,7 @@ const ListingDetailPage: React.FC = () => {
           setDeleteConfirmOpen(false);
         }}
       />
-    </motion.div>
+    </div>
   );
 };
 

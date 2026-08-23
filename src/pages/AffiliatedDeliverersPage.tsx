@@ -23,6 +23,7 @@ import toast from 'react-hot-toast';
 import { useSupabase } from '../hooks/useSupabase';
 import { useSystemSettings } from '../hooks/useSystemSettings';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { formatWhatsAppPhone } from '../lib/utils';
 import { useSEO } from '../hooks/useSEO';
 import { Button } from '../components/ui/Button';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -556,7 +557,7 @@ export default function AffiliatedDeliverersPage() {
                           </a>
 
                           <a
-                            href={`https://wa.me/225${driver.phone.replace(/\D/g, '')}`}
+                            href={`https://wa.me/${formatWhatsAppPhone(driver.phone)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="w-8.5 h-8.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/60 active:scale-95 transition-all flex items-center justify-center shadow-2xs"

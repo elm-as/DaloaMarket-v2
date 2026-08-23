@@ -1,7 +1,7 @@
 // Service Worker de base pour PWA DaloaMarket (network-first pour HTML)
 // Important: ne JAMAIS mettre en cache les requêtes API cross-origin (ex: Supabase)
 // sinon on peut “figer” une réponse vide et faire disparaître les données au refresh.
-const CACHE_NAME = 'daloamarket-cache-v9'; // bump pour invalider anciens caches
+const CACHE_NAME = 'daloamarket-cache-v10'; // bump pour invalider anciens caches
 const urlsToCache = [
   '/',
   '/logo.png',
@@ -134,15 +134,15 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body || '',
-    icon: data.icon || '/web-app-manifest-192x192.png',
-    badge: '/favicon-96x96.png',
+    icon: data.icon || '/android-chrome-192x192.png',
+    badge: '/android-chrome-192x192.png',
     image: data.image || undefined,
     data: { url: data.url || '/' },
     vibrate: [200, 100, 200],
     tag: data.tag || 'daloamarket-notification',
     renotify: true,
     actions: [
-      { action: 'open', title: 'Ouvrir', icon: '/favicon-96x96.png' },
+      { action: 'open', title: 'Ouvrir', icon: '/android-chrome-192x192.png' },
       { action: 'dismiss', title: 'Fermer' },
     ],
   };

@@ -35,15 +35,22 @@ export default function MentionsLegalesPage() {
                 <h2 className="text-base sm:text-lg font-bold mb-3">1. Informations Générales & Éditeur</h2>
                 <div className="space-y-3 text-xs sm:text-sm text-[var(--color-on-surface-variant)] leading-relaxed">
                   <p>
-                    La plateforme accessible à l'adresse <strong>daloamarket.com</strong> (ci-après « DaloaMarket ») est une marketplace e-commerce et de petites annonces hyper-locales dédiée à la ville de Daloa et sa région (Côte d'Ivoire), éditée par <strong>ElmasCore (OULOBO Elmas Tresor)</strong>.
+                    La plateforme accessible à l'adresse <strong>daloamarket.com</strong> (ci-après « DaloaMarket ») est une marketplace e-commerce et de petites annonces hyper-locales dédiée à la ville de Daloa et sa région (Côte d'Ivoire), co-fondée et développée par <strong>OULOBO Elmas Tresor</strong> (ElmasCore), aux côtés d'<strong>Armand J.</strong> et de <strong>Diomandé (alias DNPH)</strong> en charge du pôle communication et du déploiement opérationnel.
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                     <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
                       <User className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
                       <div>
-                        <p className="font-bold text-xs text-gray-900">Fondateur & Direction</p>
-                        <p className="text-xs text-gray-600">OULOBO Elmas Tresor</p>
+                        <p className="font-bold text-xs text-gray-900">Fondateur & Lead Dev</p>
+                        <p className="text-xs text-gray-600">OULOBO Elmas Tresor (Elmas)</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
+                      <User className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
+                      <div>
+                        <p className="font-bold text-xs text-gray-900">Pôle Communication & Terrain</p>
+                        <p className="text-xs text-gray-600">Armand J. & Diomandé (DNPH)</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
@@ -57,14 +64,7 @@ export default function MentionsLegalesPage() {
                       <Mail className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
                       <div>
                         <p className="font-bold text-xs text-gray-900">E-mails Officiels</p>
-                        <p className="text-xs text-gray-600">contact@daloamarket.com / support@daloamarket.com</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
-                      <Phone className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
-                      <div>
-                        <p className="font-bold text-xs text-gray-900">WhatsApp / Support</p>
-                        <p className="text-xs text-gray-600">+225 07 88 00 08 31</p>
+                        <p className="text-xs text-gray-600">contact@daloamarket.com</p>
                       </div>
                     </div>
                   </div>

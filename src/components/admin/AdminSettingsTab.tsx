@@ -401,242 +401,331 @@ export function AdminSettingsTab() {
         </div>
       </Card>
 
-      {/* SECTION 1 : MODE MAINTENANCE */}
-      <Card className="p-6 rounded-2xl border border-gray-100 shadow-elevation-1 bg-white">
-        <div className="flex items-center gap-3 pb-4 mb-4 border-b border-gray-100">
-          <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
-            <Wrench className="w-5 h-5" />
-          </div>
+      {/* ========================================================================= */}
+      {/* SECTION DU BAS : CONFIGURATION SYSTÈME, PAIEMENT, SÉCURITÉ & ANTI-ABUS */}
+      {/* ========================================================================= */}
+      <div className="pt-2">
+        <div className="flex items-center gap-2.5 mb-4">
+          <Sliders className="w-5 h-5 text-orange-600" />
           <div>
-            <h2 className="text-base font-bold text-gray-900">Mode Maintenance Général</h2>
-            <p className="text-xs text-gray-500">Bloque l'accès aux clients et affiche un écran d'indisponibilité temporaire.</p>
+            <h3 className="text-base font-black text-gray-900 tracking-tight">Paramètres Système, Sécurité & Urgences</h3>
+            <p className="text-xs text-gray-500">Contrôle de la maintenance, des flux de paiement, de l'anti-abus et des accès réseau.</p>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200">
-            <input
-              type="checkbox"
-              id="maintToggle"
-              checked={activeMaintEnabled}
-              onChange={(e) => setMaintEnabled(e.target.checked)}
-              className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500"
-            />
-            <label htmlFor="maintToggle" className="text-xs font-semibold text-gray-800 cursor-pointer">
-              Activer le mode maintenance immédiat (Seuls les administrateurs pourront naviguer)
-            </label>
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          {/* SECTION 1 : MODE MAINTENANCE */}
+          <Card className="p-6 rounded-3xl border border-gray-200/80 shadow-xs bg-white space-y-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  'w-11 h-11 rounded-2xl flex items-center justify-center transition-colors',
+                  activeMaintEnabled ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-700'
+                )}>
+                  <Wrench className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-gray-900">Mode Maintenance Général</h2>
+                  <p className="text-xs text-gray-500">Bloque l'accès aux clients avec écran d'indisponibilité.</p>
+                </div>
+              </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">
-              Message d'information pour les utilisateurs
-            </label>
-            <textarea
-              rows={2}
-              value={activeMaintMessage}
-              onChange={(e) => setMaintMessage(e.target.value)}
-              className="w-full text-xs sm:text-sm p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none"
-              placeholder="Ex: DaloaMarket effectue une mise à jour technique. Retour prévu à 14h."
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">
-              Estimation d'ouverture (Texte court optionnel)
-            </label>
-            <input
-              type="text"
-              value={activeMaintReopening}
-              onChange={(e) => setMaintReopening(e.target.value)}
-              className="w-full text-xs sm:text-sm p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none"
-              placeholder="Ex: Aujourd'hui à 15h00"
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSaveMaintenance}
-              disabled={savingMaint}
-              size="sm"
-              className="bg-orange-600 hover:bg-orange-700 text-white font-semibold"
-            >
-              <Save className="w-4 h-4 mr-1.5" />
-              {savingMaint ? 'Enregistrement...' : 'Enregistrer Mode Maintenance'}
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      {/* SECTION 2 : ÉTAT DES PAIEMENTS & FORCE COD */}
-      <Card className="p-6 rounded-2xl border border-gray-100 shadow-elevation-1 bg-white">
-        <div className="flex items-center gap-3 pb-4 mb-4 border-b border-gray-100">
-          <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
-            <CreditCard className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-gray-900">Passerelle de Paiement MoneyFusion</h2>
-            <p className="text-xs text-gray-500">Contrôlez l'état des paiements en ligne et activez les bandeaux d'alerte.</p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">
-              Statut du service de paiement Mobile Money
-            </label>
-            <select
-              value={activePayStatus || 'normal'}
-              onChange={(e) => setPayStatus(e.target.value as any)}
-              className="w-full text-xs sm:text-sm p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none bg-white"
-            >
-              <option value="normal">Opérationnel (Normal)</option>
-              <option value="degraded">Dégradé (Ralentissements signalés)</option>
-              <option value="down">Indisponible (Paiements en ligne coupés)</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200">
-            <input
-              type="checkbox"
-              id="disableOnlineToggle"
-              checked={activeDisableOnline || false}
-              onChange={(e) => setDisableOnline(e.target.checked)}
-              className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500"
-            />
-            <label htmlFor="disableOnlineToggle" className="text-xs font-semibold text-gray-800 cursor-pointer">
-              Désactiver temporairement les paiements en ligne (Force le paiement en espèces / COD uniquement)
-            </label>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">
-              Bannière d'information paiement (affichée lors du checkout si renseignée)
-            </label>
-            <input
-              type="text"
-              value={activePayNotice || ''}
-              onChange={(e) => setPayNotice(e.target.value)}
-              className="w-full text-xs sm:text-sm p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none"
-              placeholder="Ex: Le réseau MTN MoMo subit des lenteurs nationales. Privilégiez Wave ou Orange."
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSavePaymentConfig}
-              disabled={savingPay}
-              size="sm"
-              className="bg-orange-600 hover:bg-orange-700 text-white font-semibold"
-            >
-              <Save className="w-4 h-4 mr-1.5" />
-              {savingPay ? 'Enregistrement...' : 'Enregistrer Paramètres Paiement'}
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      {/* SECTION 3 : PARAMÈTRES ANTI-ABUS ANNULATIONS */}
-      <Card className="p-6 rounded-2xl border border-gray-100 shadow-elevation-1 bg-white">
-        <div className="flex items-center gap-3 pb-4 mb-4 border-b border-gray-100">
-          <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
-            <ShieldAlert className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-gray-900">Anti-Abus Annulations Répétées</h2>
-            <p className="text-xs text-gray-500">Configurez le seuil d'annulations consécutives avant de bloquer un acheteur.</p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Nombre maximum d'annulations consécutives autorisées
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={10}
-                value={activeCancelMax}
-                onChange={(e) => setCancelMax(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full text-xs sm:text-sm p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:outline-none"
-              />
-              <p className="text-[11px] text-gray-400 mt-1">Recommandé : 3 annulations d'affilée.</p>
+              {/* Status Indicator Badge */}
+              <span className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold',
+                activeMaintEnabled ? 'bg-orange-100 text-orange-800 border border-orange-200 animate-pulse' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+              )}>
+                <span className={cn('w-1.5 h-1.5 rounded-full', activeMaintEnabled ? 'bg-orange-600' : 'bg-emerald-600')} />
+                {activeMaintEnabled ? 'Maintenance Active' : 'Site En Ligne'}
+              </span>
             </div>
 
-            <div className="flex items-center pt-5">
-              <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200 w-full">
-                <input
-                  type="checkbox"
-                  id="cancelToggle"
-                  checked={activeCancelEnabled}
-                  onChange={(e) => setCancelEnabled(e.target.checked)}
-                  className="w-4 h-4 rounded text-red-600 focus:ring-red-500"
-                />
-                <label htmlFor="cancelToggle" className="text-xs font-semibold text-gray-800 cursor-pointer">
-                  Activer le verrouillage anti-abus automatique
+            <div className="space-y-4">
+              {/* Interactive Switch Toggle */}
+              <div className={cn(
+                'flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer',
+                activeMaintEnabled ? 'bg-orange-50/70 border-orange-200' : 'bg-gray-50/70 border-gray-200/80 hover:bg-gray-100/60'
+              )}
+              onClick={() => setMaintEnabled(!activeMaintEnabled)}
+              >
+                <div className="flex flex-col pr-4">
+                  <span className="text-xs font-bold text-gray-900">Activer le mode maintenance immédiat</span>
+                  <span className="text-[11px] text-gray-500">Seuls les administrateurs connectés pourront naviguer</span>
+                </div>
+                {/* Switch Graphic */}
+                <div className={cn(
+                  'w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out shrink-0',
+                  activeMaintEnabled ? 'bg-orange-600' : 'bg-gray-300'
+                )}>
+                  <div className={cn(
+                    'bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out',
+                    activeMaintEnabled ? 'translate-x-5' : 'translate-x-0'
+                  )} />
+                </div>
+              </div>
+
+              {/* Message Input */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Message d'information pour les utilisateurs
                 </label>
+                <textarea
+                  rows={2}
+                  value={activeMaintMessage}
+                  onChange={(e) => setMaintMessage(e.target.value)}
+                  className="w-full text-xs p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 focus:outline-none bg-gray-50/50"
+                  placeholder="Ex: DaloaMarket effectue une mise à jour technique. Retour prévu très rapidement !"
+                />
+              </div>
+
+              {/* Estimation */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Estimation d'ouverture (Texte court optionnel)
+                </label>
+                <input
+                  type="text"
+                  value={activeMaintReopening}
+                  onChange={(e) => setMaintReopening(e.target.value)}
+                  className="w-full text-xs p-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 focus:outline-none bg-gray-50/50 font-medium"
+                  placeholder="Ex: Aujourd'hui à 15h00 ou 2026-08-20T14:00"
+                />
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button
+                  onClick={handleSaveMaintenance}
+                  disabled={savingMaint}
+                  size="sm"
+                  className="rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs shadow-xs"
+                >
+                  <Save className="w-3.5 h-3.5 mr-1.5" />
+                  {savingMaint ? 'Enregistrement...' : 'Enregistrer Mode Maintenance'}
+                </Button>
               </div>
             </div>
-          </div>
+          </Card>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">
-              Message d'explication affiché à l'acheteur bloqué
-            </label>
-            <textarea
-              rows={2}
-              value={activeCancelNotice}
-              onChange={(e) => setCancelNotice(e.target.value)}
-              className="w-full text-xs sm:text-sm p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:outline-none"
-              placeholder="Ex: Vous avez atteint la limite d'annulations consécutives..."
-            />
-          </div>
+          {/* SECTION 2 : ÉTAT DES PAIEMENTS & FORCE COD */}
+          <Card className="p-6 rounded-3xl border border-gray-200/80 shadow-xs bg-white space-y-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-gray-900">Passerelle de Paiement MoneyFusion</h2>
+                  <p className="text-xs text-gray-500">Contrôlez l'état des paiements en ligne et alertes.</p>
+                </div>
+              </div>
 
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSaveCancellationConfig}
-              disabled={savingCancel}
-              size="sm"
-              className="bg-red-600 hover:bg-red-700 text-white font-semibold"
-            >
-              <Save className="w-4 h-4 mr-1.5" />
-              {savingCancel ? 'Enregistrement...' : 'Enregistrer Paramètres Anti-Abus'}
-            </Button>
+              <span className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold',
+                activePayStatus === 'down' ? 'bg-red-100 text-red-800 border border-red-200' :
+                activePayStatus === 'degraded' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                'bg-emerald-100 text-emerald-800 border border-emerald-200'
+              )}>
+                <span className={cn(
+                  'w-1.5 h-1.5 rounded-full',
+                  activePayStatus === 'down' ? 'bg-red-600' : activePayStatus === 'degraded' ? 'bg-amber-600' : 'bg-emerald-600'
+                )} />
+                {activePayStatus === 'down' ? 'Indisponible' : activePayStatus === 'degraded' ? 'Dégradé' : 'Opérationnel'}
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Statut du service de paiement Mobile Money
+                </label>
+                <select
+                  value={activePayStatus || 'normal'}
+                  onChange={(e) => setPayStatus(e.target.value as any)}
+                  className="w-full text-xs p-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 focus:outline-none bg-gray-50/50 font-bold text-gray-800"
+                >
+                  <option value="normal">🟢 Opérationnel (Normal - Wave, Orange, MTN, Moov)</option>
+                  <option value="degraded">🟡 Dégradé (Lenteurs signalées chez un opérateur)</option>
+                  <option value="down">🔴 Indisponible (Paiements en ligne coupés temporairement)</option>
+                </select>
+              </div>
+
+              {/* Force COD Switch */}
+              <div
+                className={cn(
+                  'flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer',
+                  activeDisableOnline ? 'bg-amber-50/70 border-amber-200' : 'bg-gray-50/70 border-gray-200/80 hover:bg-gray-100/60'
+                )}
+                onClick={() => setDisableOnline(!activeDisableOnline)}
+              >
+                <div className="flex flex-col pr-4">
+                  <span className="text-xs font-bold text-gray-900">Désactiver temporairement les paiements en ligne</span>
+                  <span className="text-[11px] text-gray-500">Force le paiement en espèces / COD uniquement au panier</span>
+                </div>
+                <div className={cn(
+                  'w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out shrink-0',
+                  activeDisableOnline ? 'bg-amber-600' : 'bg-gray-300'
+                )}>
+                  <div className={cn(
+                    'bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out',
+                    activeDisableOnline ? 'translate-x-5' : 'translate-x-0'
+                  )} />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Bannière d'information paiement (affichée au checkout si renseignée)
+                </label>
+                <input
+                  type="text"
+                  value={activePayNotice || ''}
+                  onChange={(e) => setPayNotice(e.target.value)}
+                  className="w-full text-xs p-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 focus:outline-none bg-gray-50/50"
+                  placeholder="Ex: Le réseau MTN MoMo subit des lenteurs nationales. Privilégiez Wave ou Orange."
+                />
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button
+                  onClick={handleSavePaymentConfig}
+                  disabled={savingPay}
+                  size="sm"
+                  className="rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs shadow-xs"
+                >
+                  <Save className="w-3.5 h-3.5 mr-1.5" />
+                  {savingPay ? 'Enregistrement...' : 'Enregistrer Paramètres Paiement'}
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          {/* SECTION 3 : PARAMÈTRES ANTI-ABUS ANNULATIONS */}
+          <Card className="p-6 rounded-3xl border border-gray-200/80 shadow-xs bg-white space-y-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-gray-900">Anti-Abus Annulations Répétées</h2>
+                  <p className="text-xs text-gray-500">Verrouillage automatique en cas d'abus d'annulation.</p>
+                </div>
+              </div>
+
+              <span className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold',
+                activeCancelEnabled ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-gray-100 text-gray-700 border border-gray-200'
+              )}>
+                <span className={cn('w-1.5 h-1.5 rounded-full', activeCancelEnabled ? 'bg-red-600' : 'bg-gray-400')} />
+                {activeCancelEnabled ? 'Verrouillage Actif' : 'Désactivé'}
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Seuil maximum d'annulations consécutives
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={activeCancelMax}
+                    onChange={(e) => setCancelMax(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full text-xs p-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 focus:outline-none bg-gray-50/50 font-bold text-gray-900"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1">Recommandé : 3 annulations d'affilée.</p>
+                </div>
+
+                {/* Switch Anti-abus */}
+                <div
+                  className={cn(
+                    'flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer',
+                    activeCancelEnabled ? 'bg-red-50/70 border-red-200' : 'bg-gray-50/70 border-gray-200/80'
+                  )}
+                  onClick={() => setCancelEnabled(!activeCancelEnabled)}
+                >
+                  <div className="flex flex-col pr-2">
+                    <span className="text-[11px] font-bold text-gray-900">Activer le verrouillage</span>
+                    <span className="text-[10px] text-gray-500">Bloque après {activeCancelMax} annulations</span>
+                  </div>
+                  <div className={cn(
+                    'w-9 h-5 flex items-center rounded-full p-0.5 transition-colors shrink-0',
+                    activeCancelEnabled ? 'bg-red-600' : 'bg-gray-300'
+                  )}>
+                    <div className={cn(
+                      'bg-white w-4 h-4 rounded-full shadow-md transform transition-transform',
+                      activeCancelEnabled ? 'translate-x-4' : 'translate-x-0'
+                    )} />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Message d'explication affiché à l'acheteur bloqué
+                </label>
+                <textarea
+                  rows={2}
+                  value={activeCancelNotice}
+                  onChange={(e) => setCancelNotice(e.target.value)}
+                  className="w-full text-xs p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 focus:outline-none bg-gray-50/50"
+                  placeholder="Ex: Vous avez atteint la limite d'annulations consécutives..."
+                />
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button
+                  onClick={handleSaveCancellationConfig}
+                  disabled={savingCancel}
+                  size="sm"
+                  className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs shadow-xs"
+                >
+                  <Save className="w-3.5 h-3.5 mr-1.5" />
+                  {savingCancel ? 'Enregistrement...' : 'Enregistrer Paramètres Anti-Abus'}
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          {/* SECTION 4 : ACTIONS DE SECOURS DE SYNCHRONISATION */}
+          <Card className="p-6 rounded-3xl border border-slate-800 shadow-sm bg-gradient-to-br from-slate-900 via-slate-850 to-slate-900 text-white space-y-5">
+            <div className="flex items-center gap-3 pb-4 border-b border-slate-800">
+              <div className="w-11 h-11 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                <RefreshCw className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-sm font-black text-white">Actions de Secours & Resync Payouts</h2>
+                <p className="text-xs text-slate-400">En cas d'échec de webhook, forcez la vérification des versements.</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs text-slate-300 leading-relaxed bg-slate-800/60 p-3.5 rounded-2xl border border-slate-700/60">
+                Cette commande interpelle directement le serveur Railway pour re-vérifier chaque transaction de versement en attente et retenter l'envoi vers MoneyFusion sans bloquer les vendeurs.
+              </p>
+
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleTriggerPayoutSync}
+                  disabled={syncingPayouts}
+                  size="sm"
+                  className="rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-md shadow-amber-500/10"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${syncingPayouts ? 'animate-spin' : ''}`} />
+                  {syncingPayouts ? 'Synchronisation...' : 'Forcer Sync Payouts'}
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          {/* SECTION 5 : GESTION DES BANNISSEMENTS IP (PLEINE LARGEUR) */}
+          <div className="lg:col-span-2">
+            <AdminIpBanSection />
           </div>
         </div>
-      </Card>
-
-      {/* SECTION 4 : ACTIONS DE SECOURS DE SYNCHRONISATION */}
-      <Card className="p-6 rounded-2xl border border-gray-100 shadow-elevation-1 bg-slate-900 text-white">
-        <div className="flex items-center gap-3 pb-4 mb-4 border-b border-slate-800">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
-            <RefreshCw className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-white">Actions de Secours & Resync Payouts</h2>
-            <p className="text-xs text-slate-400">En cas d'échec de webhook MoneyFusion, forcez la vérification des virements en attente.</p>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-slate-300 leading-relaxed max-w-lg">
-            Cette commande interpelle le serveur Railway pour re-vérifier chaque transaction de versement en attente et retenter l'envoi vers MoneyFusion.
-          </p>
-          <Button
-            onClick={handleTriggerPayoutSync}
-            disabled={syncingPayouts}
-            size="sm"
-            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold whitespace-nowrap"
-          >
-            <RefreshCw className={`w-4 h-4 mr-1.5 ${syncingPayouts ? 'animate-spin' : ''}`} />
-            {syncingPayouts ? 'Synchronisation...' : 'Forcer Sync Payouts'}
-          </Button>
-        </div>
-      </Card>
-
-      {/* SECTION 5 : GESTION DES BANNISSEMENTS IP */}
-      <AdminIpBanSection />
+      </div>
     </div>
   );
 }

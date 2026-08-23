@@ -107,6 +107,7 @@ export function useSEO(title: string, options: SEOOptions = {}) {
         }
       });
     };
-  }, [title, description, keywords, ogTitle, ogDescription, ogImage, ogUrl, canonical, jsonLd]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, description, keywords, ogTitle, ogDescription, ogImage, ogUrl, canonical, JSON.stringify(jsonLd)]);
 }
 

@@ -127,32 +127,32 @@ export default function AboutPage() {
             {/* Équipe Terrain & Communication */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200/60">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-8 h-8 rounded-xl bg-gray-200 text-gray-800 flex items-center justify-center font-bold text-xs">
-                    AR
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center font-black text-xs">
+                    AJ
                   </div>
                   <div>
-                    <h4 className="font-bold text-xs text-gray-900">Armand</h4>
-                    <p className="text-[10px] text-gray-500 font-semibold">Communication & Relations Locales</p>
+                    <h4 className="font-black text-xs text-gray-900">Armand J.</h4>
+                    <p className="text-[10px] text-orange-600 font-bold">Co-fondateur · Communication & Relations Partenaires</p>
                   </div>
                 </div>
                 <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
-                  En charge de la sensibilisation des commerçants et du déploiement opérationnel sur le terrain à Daloa.
+                  Pilote la stratégie de communication auprès des commerçants, les partenariats locaux et le déploiement opérationnel sur le terrain à Daloa.
                 </p>
               </div>
 
               <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200/60">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-8 h-8 rounded-xl bg-gray-200 text-gray-800 flex items-center justify-center font-bold text-xs">
-                    DI
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center font-black text-xs">
+                    DN
                   </div>
                   <div>
-                    <h4 className="font-bold text-xs text-gray-900">Diomandé</h4>
-                    <p className="text-[10px] text-gray-500 font-semibold">Support & Coordination Terrain</p>
+                    <h4 className="font-black text-xs text-gray-900">Diomandé (DNPH)</h4>
+                    <p className="text-[10px] text-orange-600 font-bold">Co-fondateur · Communication Digitale & Médias</p>
                   </div>
                 </div>
                 <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
-                  Assure le suivi avec les livreurs, l'assistance aux marchands et les retours utilisateurs directs.
+                  En charge de la création de contenu, de la communication sur les réseaux sociaux, de la visibilité digitale et du lien avec la communauté.
                 </p>
               </div>
             </div>
