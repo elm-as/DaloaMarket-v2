@@ -377,22 +377,25 @@ export default function AcheterPackAnnoncesPage() {
                 })}
               </div>
 
-              <div className="flex justify-between pt-2">
+              <div className="flex items-center justify-between pt-2 gap-3">
                 <Button
+                  type="button"
                   onClick={() => setStep(1)}
                   variant="outlined"
-                  size="lg"
-                  className="rounded-2xl font-extrabold"
+                  color="secondary"
+                  size="md"
+                  className="rounded-xl px-5 font-bold"
                 >
                   ← Retour
                 </Button>
                 <Button
+                  type="button"
                   onClick={() => setStep(3)}
                   color="primary"
-                  size="lg"
-                  className="rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-extrabold shadow-lg shadow-orange-500/25 active:scale-[0.98] flex items-center gap-1 px-8"
+                  size="md"
+                  className="rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 font-bold text-white shadow-sm active:scale-[0.98] flex items-center gap-1.5 px-6"
                 >
-                  Continuer
+                  <span>Continuer</span>
                   <ChevronRight size={16} />
                 </Button>
               </div>
@@ -468,13 +471,14 @@ export default function AcheterPackAnnoncesPage() {
                       </span>
                     </div>
 
-                    <div className="flex justify-between pt-4 gap-3">
+                    <div className="flex items-center justify-between pt-4 gap-3">
                       <Button
                         type="button"
                         onClick={() => setStep(2)}
                         variant="outlined"
-                        size="lg"
-                        className="rounded-2xl font-extrabold"
+                        color="secondary"
+                        size="md"
+                        className="rounded-xl px-5 font-bold"
                       >
                         ← Retour
                       </Button>
@@ -482,10 +486,10 @@ export default function AcheterPackAnnoncesPage() {
                       <Button
                         type="submit"
                         color="primary"
-                        size="lg"
+                        size="md"
                         loading={loading}
                         disabled={loading}
-                        className="flex-1 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-extrabold text-white shadow-lg shadow-orange-500/25 active:scale-[0.98]"
+                        className="flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 font-bold text-white shadow-sm active:scale-[0.98] whitespace-nowrap"
                       >
                         Payer {selectedPack.price.toLocaleString()} FCFA
                       </Button>

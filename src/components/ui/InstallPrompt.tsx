@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, X, Share, PlusSquare, Sparkles, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Download, X, Share2, PlusSquare, CheckCircle2 } from 'lucide-react';
 import { Button } from './Button';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -13,7 +13,7 @@ export const InstallPrompt: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
-  const [showIosModal, setShowIosModal] = useState(false);
+  const [showGuideModal, setShowGuideModal] = useState(false);
 
   useEffect(() => {
     // 1. Vérifier si l'app est déjà installée en mode Standalone
@@ -21,56 +21,51 @@ export const InstallPrompt: React.FC = () => {
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true;
 
-    if (isStandalone) return; // Déjà installée, pas besoin de bannière
+    if (isStandalone) return;
 
-    // Vérifier si déjà masquée pendant cette session
-    const dismissedSession = sessionStorage.getItem('pwa_prompt_dismissed');
-    if (dismissedSession) return;
-
-    // 2. Détecter iOS (Safari sur iPhone / iPad)
+    // 2. Détection iOS
     const ua = window.navigator.userAgent;
     const detectedIOS = /iphone|ipad|ipod/i.test(ua);
     setIsIOS(detectedIOS);
 
-    if (detectedIOS) {
-      // Sur iOS, 'beforeinstallprompt' n'existe pas -> afficher directement la bannière d'aide
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
       setIsVisible(true);
-    } else {
-      // Sur Android / Chrome -> écouter 'beforeinstallprompt'
-      const handler = (e: Event) => {
-        e.preventDefault();
-        setDeferredPrompt(e as BeforeInstallPromptEvent);
-        setIsVisible(true);
-      };
+    };
 
-      window.addEventListener('beforeinstallprompt', handler);
-      return () => {
-        window.removeEventListener('beforeinstallprompt', handler);
-      };
-    }
+    window.addEventListener('beforeinstallprompt', handler);
+
+    const timer = setTimeout(() => {
+      setIsVisible(true);
+    }, 1500);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      clearTimeout(timer);
+    };
   }, []);
 
   const handleInstall = async () => {
-    if (isIOS) {
-      setShowIosModal(true);
-      return;
+    if (deferredPrompt) {
+      try {
+        await deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          setIsVisible(false);
+        }
+        setDeferredPrompt(null);
+        return;
+      } catch (err) {
+        console.log('[PWA] Prompt error, fallback to guide modal', err);
+      }
     }
-
-    if (!deferredPrompt) return;
-
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-
-    if (outcome === 'accepted') {
-      setIsVisible(false);
-    }
-
-    setDeferredPrompt(null);
+    
+    setShowGuideModal(true);
   };
 
   const handleDismiss = () => {
     setIsDismissed(true);
-    sessionStorage.setItem('pwa_prompt_dismissed', 'true');
     setTimeout(() => setIsVisible(false), 300);
   };
 
@@ -91,17 +86,30 @@ export const InstallPrompt: React.FC = () => {
               stiffness: 300,
             }}
           >
-            <div className="relative backdrop-blur-xl bg-white/95 shadow-2xl border border-gray-100 rounded-2xl p-4 flex items-center gap-3">
-              <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-600/30">
-                <Download className="w-6 h-6 animate-bounce" />
+            <div className="relative backdrop-blur-xl bg-white/95 shadow-2xl border border-gray-100 rounded-2xl p-3.5 flex items-center gap-3">
+              {/* Logo Officiel DaloaMarket */}
+              <div className="flex-shrink-0 relative w-12 h-12 rounded-xl bg-gray-50 border border-gray-100 p-1.5 shadow-sm flex items-center justify-center overflow-hidden">
+                <img
+                  src="/logo.png"
+                  alt="DaloaMarket Logo"
+                  className="w-full h-full object-contain rounded-lg"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-gray-900 leading-tight">
-                  Installer DaloaMarket
-                </p>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {isIOS ? 'Accès direct depuis votre écran d\'accueil iOS' : 'Accès rapide sans passer par le navigateur'}
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-black text-gray-900 leading-tight">
+                    DaloaMarket
+                  </p>
+                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                    App
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5 truncate">
+                  {isIOS ? 'Ajouter à l\'écran d\'accueil iPhone' : 'Installer l\'application mobile'}
                 </p>
               </div>
 
@@ -111,16 +119,16 @@ export const InstallPrompt: React.FC = () => {
                   variant="filled"
                   color="primary"
                   onClick={handleInstall}
-                  className="whitespace-nowrap"
+                  className="whitespace-nowrap font-bold"
                 >
-                  {isIOS ? 'Comment faire ?' : 'Installer'}
+                  Installer
                 </Button>
                 <button
                   onClick={handleDismiss}
                   className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                   aria-label="Fermer"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -128,9 +136,9 @@ export const InstallPrompt: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* MODAL INSTRUCTIONS iOS */}
+      {/* MODAL INSTRUCTIONS AVEC LOGO OFFICIEL */}
       <AnimatePresence>
-        {showIosModal && (
+        {showGuideModal && (
           <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm">
             <motion.div
               initial={{ y: '100%', opacity: 0 }}
@@ -140,52 +148,86 @@ export const InstallPrompt: React.FC = () => {
               className="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-2xl relative border border-gray-100"
             >
               <button
-                onClick={() => setShowIosModal(false)}
+                onClick={() => setShowGuideModal(false)}
                 className="absolute top-4 right-4 p-2 rounded-full bg-gray-100 text-gray-500 hover:text-gray-800"
               >
                 <X className="w-5 h-5" />
               </button>
 
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold">
-                  📱
+                <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 p-2 shadow-sm flex items-center justify-center">
+                  <img src="/logo.png" alt="DaloaMarket" className="w-full h-full object-contain" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-gray-900">Installer sur iPhone / iPad</h3>
-                  <p className="text-xs text-gray-500">Ajouter DaloaMarket à votre écran d'accueil</p>
+                  <h3 className="font-black text-lg text-gray-900">
+                    Installer DaloaMarket
+                  </h3>
+                  <p className="text-xs text-gray-500">Ajouter à votre écran d'accueil en 2 gestes</p>
                 </div>
               </div>
 
               <div className="space-y-4 my-6">
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                    1
-                  </div>
-                  <div className="text-xs text-gray-700">
-                    <p className="font-semibold text-gray-900 mb-0.5">Appuyez sur le bouton Partager 📤</p>
-                    <p>Dans la barre en bas de votre navigateur Safari, touchez l'icône de partage (le carré avec une flèche vers le haut).</p>
-                  </div>
-                </div>
+                {isIOS ? (
+                  <>
+                    <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                        1
+                      </div>
+                      <div className="text-xs text-gray-700">
+                        <p className="font-semibold text-gray-900 mb-0.5 flex items-center gap-1.5">
+                          Appuyez sur Partager <Share2 className="w-3.5 h-3.5 inline text-indigo-600" />
+                        </p>
+                        <p>Dans la barre en bas de votre navigateur Safari, touchez l'icône de partage.</p>
+                      </div>
+                    </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                    2
-                  </div>
-                  <div className="text-xs text-gray-700">
-                    <p className="font-semibold text-gray-900 mb-0.5">Sélectionnez « Sur l'écran d'accueil » ➕</p>
-                    <p>Faites défiler le menu vers le bas et appuyez sur l'option avec un **+**.</p>
-                  </div>
-                </div>
+                    <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                        2
+                      </div>
+                      <div className="text-xs text-gray-700">
+                        <p className="font-semibold text-gray-900 mb-0.5 flex items-center gap-1.5">
+                          Sélectionnez « Sur l'écran d'accueil » <PlusSquare className="w-3.5 h-3.5 inline text-indigo-600" />
+                        </p>
+                        <p>Faites défiler le menu vers le bas et appuyez sur l'option.</p>
+                      </div>
+                    </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                    3
-                  </div>
-                  <div className="text-xs text-gray-700">
-                    <p className="font-semibold text-gray-900 mb-0.5">Appuyez sur « Ajouter » 🚀</p>
-                    <p>En haut à droite de l'écran, confirmez pour créer l'application sur votre téléphone.</p>
-                  </div>
-                </div>
+                    <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                        3
+                      </div>
+                      <div className="text-xs text-gray-700">
+                        <p className="font-semibold text-gray-900 mb-0.5 flex items-center gap-1.5">
+                          Appuyez sur « Ajouter » <CheckCircle2 className="w-3.5 h-3.5 inline text-emerald-600" />
+                        </p>
+                        <p>En haut à droite de l'écran, confirmez pour créer l'icône sur votre téléphone.</p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                        1
+                      </div>
+                      <div className="text-xs text-gray-700">
+                        <p className="font-semibold text-gray-900 mb-0.5">Ouvrez le menu du navigateur</p>
+                        <p>Appuyez sur les 3 points verticaux en haut à droite du navigateur.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                        2
+                      </div>
+                      <div className="text-xs text-gray-700">
+                        <p className="font-semibold text-gray-900 mb-0.5">Sélectionnez « Installer l'application » ou « Ajouter à l'écran d'accueil »</p>
+                        <p>L'icône DaloaMarket sera immédiatement créée sur votre écran d'accueil.</p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               <Button
@@ -193,11 +235,11 @@ export const InstallPrompt: React.FC = () => {
                 color="primary"
                 fullWidth
                 onClick={() => {
-                  setShowIosModal(false);
+                  setShowGuideModal(false);
                   handleDismiss();
                 }}
               >
-                C'est compris !
+                C'est compris
               </Button>
             </motion.div>
           </div>

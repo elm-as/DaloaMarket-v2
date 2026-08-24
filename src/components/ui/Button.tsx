@@ -18,8 +18,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  filled: 'text-white shadow-[var(--elevation-2)] hover:shadow-[var(--elevation-3)]',
-  outlined: 'bg-transparent border-2 hover:bg-opacity-5',
+  filled: 'text-white shadow-sm hover:shadow-md',
+  outlined: 'bg-transparent border border-current hover:bg-opacity-5',
   tonal: 'bg-opacity-12 hover:bg-opacity-16',
   text: 'bg-transparent hover:bg-gray-100',
 };
@@ -32,29 +32,29 @@ const colorStyles: Record<ButtonVariant, Record<ButtonColor, string>> = {
     success: 'bg-[var(--color-success)] hover:bg-emerald-600',
   },
   outlined: {
-    primary: 'border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary-50)]',
-    secondary: 'border-[var(--color-secondary)] text-[var(--color-secondary)] hover:bg-[var(--color-secondary-50)]',
-    error: 'border-[var(--color-error)] text-[var(--color-error)] hover:bg-[var(--color-error-light)]',
-    success: 'border-[var(--color-success)] text-[var(--color-success)] hover:bg-[var(--color-success-light)]',
+    primary: 'border-orange-500 text-orange-600 hover:bg-orange-50/50',
+    secondary: 'border-gray-300 text-gray-700 hover:bg-gray-50',
+    error: 'border-red-500 text-red-600 hover:bg-red-50',
+    success: 'border-emerald-500 text-emerald-600 hover:bg-emerald-50',
   },
   tonal: {
-    primary: 'bg-[var(--color-primary-50)] text-[var(--color-primary-700)] hover:bg-[var(--color-primary-100)]',
-    secondary: 'bg-[var(--color-secondary-50)] text-[var(--color-secondary-700)] hover:bg-[var(--color-secondary-100)]',
-    error: 'bg-[var(--color-error-light)] text-red-700 hover:bg-red-100',
-    success: 'bg-[var(--color-success-light)] text-emerald-700 hover:bg-emerald-100',
+    primary: 'bg-orange-50 text-orange-700 hover:bg-orange-100',
+    secondary: 'bg-gray-100 text-gray-800 hover:bg-gray-200',
+    error: 'bg-red-50 text-red-700 hover:bg-red-100',
+    success: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
   },
   text: {
-    primary: 'text-[var(--color-primary)] hover:bg-[var(--color-primary-50)]',
-    secondary: 'text-[var(--color-secondary)] hover:bg-[var(--color-secondary-50)]',
-    error: 'text-[var(--color-error)] hover:bg-[var(--color-error-light)]',
-    success: 'text-[var(--color-success)] hover:bg-[var(--color-success-light)]',
+    primary: 'text-orange-600 hover:bg-orange-50',
+    secondary: 'text-gray-700 hover:bg-gray-100',
+    error: 'text-red-600 hover:bg-red-50',
+    success: 'text-emerald-600 hover:bg-emerald-50',
   },
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'h-9 px-3 text-[13px] gap-1.5 rounded-[var(--radius-sm)]',
-  md: 'h-11 px-5 text-[15px] gap-2 rounded-[var(--radius-md)]',
-  lg: 'h-14 px-8 text-[17px] gap-2.5 rounded-[var(--radius-lg)]',
+  sm: 'min-h-[36px] px-3.5 py-1.5 text-xs font-semibold gap-1.5 rounded-xl leading-tight',
+  md: 'min-h-[42px] px-4 py-2 text-sm font-semibold gap-2 rounded-xl leading-tight',
+  lg: 'min-h-[46px] px-5 py-2.5 text-sm sm:text-base font-bold gap-2 rounded-xl leading-tight',
 };
 
 export const Button: React.FC<ButtonProps> = ({

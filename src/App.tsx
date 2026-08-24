@@ -347,6 +347,12 @@ function AppContent() {
             ) : <Navigate to="/" replace />
           } />
           <Route path="/acheter-pack-annonces" element={<Navigate to="/acheter-pack" replace />} />
+          {/* French route aliases for notifications & SEO */}
+          <Route path="/creer-annonce" element={<Navigate to="/create-listing" replace />} />
+          <Route path="/publier" element={<Navigate to="/create-listing" replace />} />
+          <Route path="/comment-ca-marche" element={<Navigate to="/how-it-works" replace />} />
+          <Route path="/categories" element={<Navigate to="/search" replace />} />
+          <Route path="/livreurs" element={<Navigate to="/mes-livreurs" replace />} />
           <Route path="/payment/success" element={
             <PrivateRoute>
               <AppLayout><PaymentReturnPage /></AppLayout>

@@ -70,7 +70,7 @@ const SellerCard: React.FC<SellerCardProps> = ({ listing, isPro, currentUserId, 
         {!isOwnListing && (
           <button
             type="button"
-            className="flex-1 h-10 rounded-2xl bg-gray-50 hover:bg-gray-100 text-gray-700 font-black text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all border border-gray-200/70"
+            className="flex-1 h-9 rounded-xl bg-gray-100/90 hover:bg-gray-200/80 text-gray-800 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
             onClick={() => {
               if (!currentUserId) {
                 navigate('/login', { state: { from: `/listings/${listing.id}` } });
@@ -79,7 +79,7 @@ const SellerCard: React.FC<SellerCardProps> = ({ listing, isPro, currentUserId, 
               navigate(`/messages/${listing.id}/${listing.user_id}`);
             }}
           >
-            <MessageCircle className="h-4 w-4 text-gray-500" />
+            <MessageCircle className="h-3.5 w-3.5 text-gray-600" />
             <span>Message</span>
           </button>
         )}
@@ -92,20 +92,20 @@ const SellerCard: React.FC<SellerCardProps> = ({ listing, isPro, currentUserId, 
             )}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-10 h-10 flex-shrink-0 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center active:scale-95 transition-all shadow-xs shadow-emerald-500/25"
+            className="w-9 h-9 flex-shrink-0 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center active:scale-[0.98] transition-all shadow-xs"
             title="Contacter sur WhatsApp"
             aria-label="Contacter sur WhatsApp"
           >
-            <WhatsAppIcon size={20} className="w-5 h-5" />
+            <WhatsAppIcon size={18} className="w-4.5 h-4.5" />
           </a>
         )}
 
         <Link to={sellerPath} className="flex-1">
           <button
             type="button"
-            className="w-full h-10 rounded-2xl bg-orange-50 hover:bg-orange-100 text-orange-600 font-black text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all border border-orange-200/60"
+            className="w-full h-9 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all border border-orange-200/60"
           >
-            <Store className="h-4 w-4 text-orange-600" />
+            <Store className="h-3.5 w-3.5 text-orange-600" />
             <span>Visiter la vitrine</span>
           </button>
         </Link>

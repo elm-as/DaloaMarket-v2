@@ -3,7 +3,6 @@ import { useDropzone } from 'react-dropzone';
 import { ImagePlus, X, Star } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import toast from 'react-hot-toast';
-import { RemoveBgButton } from './RemoveBgButton';
 
 interface PhotoUploaderProps {
   images: File[];
@@ -83,23 +82,17 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
 
             {/* Badge photo principale */}
             {index === 0 && (
-              <div className="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm text-amber-400 text-[9px] font-black px-1.5 py-0.5 rounded-lg flex items-center gap-0.5 shadow-xs">
-                <Star className="w-2.5 h-2.5 fill-amber-400" />
+              <div className="absolute bottom-1.5 left-1.5 bg-black/75 backdrop-blur-xs text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-xs">
+                <Star className="w-3 h-3 fill-amber-400" />
                 <span>Principale</span>
               </div>
             )}
-
-            {/* ✨ AI Background Removal Button */}
-            <RemoveBgButton
-              imageFile={file}
-              onResult={(processedFile) => replaceImage(index, processedFile)}
-            />
 
             {/* Bouton supprimer */}
             <button
               type="button"
               onClick={() => removeImage(index)}
-              className="absolute top-1 right-1 w-6 h-6 bg-black/60 hover:bg-red-500 backdrop-blur-sm rounded-full flex items-center justify-center text-white active:scale-95 transition-all shadow-xs"
+              className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-red-500 backdrop-blur-xs rounded-full flex items-center justify-center text-white active:scale-90 transition-all shadow-xs"
               aria-label={`Supprimer la photo ${index + 1}`}
             >
               <X className="h-3.5 w-3.5" />

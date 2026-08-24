@@ -1074,22 +1074,22 @@ const CheckoutPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex items-center gap-3 pt-2">
               <Button
                 variant="outlined"
                 color="secondary"
-                size="lg"
+                size="md"
                 onClick={() => setStep(1)}
-                className="w-1/3 rounded-2xl font-extrabold"
+                className="rounded-xl px-5 font-bold shrink-0"
               >
                 ← Retour
               </Button>
               <Button
                 variant="filled"
                 color="primary"
-                size="lg"
+                size="md"
                 onClick={handleStep2Next}
-                className="w-2/3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-extrabold shadow-lg shadow-orange-500/25 active:scale-[0.98]"
+                className="flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 font-bold text-white shadow-sm active:scale-[0.98] whitespace-nowrap"
               >
                 Continuer vers le paiement →
               </Button>
@@ -1303,25 +1303,25 @@ const CheckoutPage: React.FC = () => {
               </div>
             )}
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex items-center gap-3 pt-2">
               <Button
                 variant="outlined"
                 color="secondary"
-                size="lg"
+                size="md"
                 onClick={() => setStep(deliveryMode === 'pickup' ? 1 : 2)}
-                className="w-1/3 rounded-2xl font-extrabold"
+                className="rounded-xl px-5 font-bold shrink-0"
               >
                 ← Retour
               </Button>
               <Button
                 variant="filled"
                 color="primary"
-                size="lg"
+                size="md"
                 loading={paying}
                 disabled={isSelfCheckout}
-                icon={<CreditCard className="h-5 w-5" />}
+                icon={<CreditCard className="h-4 w-4" />}
                 onClick={handlePay}
-                className="w-2/3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-extrabold shadow-lg shadow-orange-500/25 active:scale-[0.98]"
+                className="flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 font-bold text-white shadow-sm active:scale-[0.98] whitespace-nowrap"
               >
                 {paymentActionLabel}
               </Button>

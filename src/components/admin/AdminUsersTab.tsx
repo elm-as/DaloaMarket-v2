@@ -72,6 +72,8 @@ export const AdminUsersTab: React.FC = () => {
 
       // 2. Récupération des profils livreurs associés (dans delivery_persons)
       const deliveryMap = new Map<string, any>();
+      const listingCountMap = new Map<string, number>();
+
       if (userIds.length > 0) {
         try {
           const { data: deliveryList } = await (supabase as any)
@@ -87,13 +89,52 @@ export const AdminUsersTab: React.FC = () => {
         } catch (deliveryErr) {
           console.warn('Erreur non-bloquante lors du chargement des livreurs:', deliveryErr);
         }
+
+        try {
+          // Compter les annonces créées pour distinguer les vendeurs réels
+          const { data: listingsData } = await supabase
+            .from('listings')
+            .select('user_id')
+            .in('user_id', userIds);
+
+          if (listingsData) {
+            listingsData.forEach((l: any) => {
+              listingCountMap.set(l.user_id, (listingCountMap.get(l.user_id) || 0) + 1);
+            });
+          }
+        } catch (listingErr) {
+          console.warn('Erreur non-bloquante listings:', listingErr);
+        }
       }
 
-      // 3. Fusion des données
-      const mergedUsers = rawUsers.map((u) => ({
-        ...u,
-        delivery_person: deliveryMap.get(u.id) || null,
-      }));
+      // 3. Fusion et classification exacte des données
+      const mergedUsers = rawUsers.map((u) => {
+        const deliveryData = deliveryMap.get(u.id) || null;
+        const listingsCount = listingCountMap.get(u.id) || 0;
+        const hasDeliveryProfile = !!deliveryData || u.role === 'livreur' || (u as any).app_origin === 'delivery';
+        const hasMarketProfile = listingsCount > 0 || !!u.shop_name || u.role === 'pro' || u.role === 'seller';
+
+        // Si le compte est un livreur pur sans boutique/annonce -> DaloaDelivery Only
+        // Si le compte a des annonces/boutique sans profil livreur -> DaloaMarket Only
+        // Si le compte a les deux -> Both
+        // Si simple client sans annonce et sans profil livreur -> DaloaMarket (acheteur)
+        const isDelivery = hasDeliveryProfile;
+        const isBoth = hasDeliveryProfile && hasMarketProfile;
+        const isMarket = !hasDeliveryProfile || hasMarketProfile;
+        const isDeliveryOnly = isDelivery && !isBoth;
+        const isMarketOnly = isMarket && !isBoth;
+
+        return {
+          ...u,
+          delivery_person: deliveryData,
+          listings_count: listingsCount,
+          isDelivery,
+          isMarket,
+          isBoth,
+          isDeliveryOnly,
+          isMarketOnly,
+        };
+      });
 
       setAllUsers(mergedUsers);
       setUserTotal(count || 0);
@@ -203,23 +244,6 @@ export const AdminUsersTab: React.FC = () => {
     toast.success(`${label} copié !`);
   };
 
-  // Helper to determine platform provenance
-  const getPlatformInfo = (u: any) => {
-    const isDelivery = !!u.delivery_person || u.role === 'livreur';
-    const deliveryData = u.delivery_person;
-    // Every user in users table has a market presence (client / seller)
-    const isMarket = true;
-    const isBoth = isDelivery && isMarket;
-
-    return {
-      isDelivery,
-      isMarket,
-      deliveryData,
-      isBoth,
-      isMarketOnly: isMarket && !isDelivery,
-    };
-  };
-
   // Filtered users list
   const filteredUsers = useMemo(() => {
     return allUsers.filter((u) => {
@@ -234,11 +258,9 @@ export const AdminUsersTab: React.FC = () => {
 
       if (!matchSearch) return false;
 
-      const { isDelivery, isBoth, isMarketOnly } = getPlatformInfo(u);
-
-      if (platformFilter === 'market_only') return isMarketOnly;
-      if (platformFilter === 'delivery') return isDelivery;
-      if (platformFilter === 'both') return isBoth;
+      if (platformFilter === 'market_only') return u.isMarketOnly;
+      if (platformFilter === 'delivery') return u.isDelivery;
+      if (platformFilter === 'both') return u.isBoth;
       if (platformFilter === 'banned') return u.banned;
       if (platformFilter === 'appeals') return u.ban_appeal_status === 'pending';
 
@@ -255,10 +277,9 @@ export const AdminUsersTab: React.FC = () => {
     let appealCount = 0;
 
     allUsers.forEach((u) => {
-      const { isDelivery, isBoth, isMarket } = getPlatformInfo(u);
-      if (isMarket) marketCount++;
-      if (isDelivery) deliveryCount++;
-      if (isBoth) bothCount++;
+      if (u.isMarketOnly) marketCount++;
+      if (u.isDelivery) deliveryCount++;
+      if (u.isBoth) bothCount++;
       if (u.banned) bannedCount++;
       if (u.ban_appeal_status === 'pending') appealCount++;
     });
@@ -353,7 +374,7 @@ export const AdminUsersTab: React.FC = () => {
               )}
             >
               <ShoppingBag className="w-3.5 h-3.5" />
-              <span>DaloaMarket</span>
+              <span>DaloaMarket ({counts.marketCount})</span>
             </button>
 
             <button
@@ -444,24 +465,11 @@ export const AdminUsersTab: React.FC = () => {
                 {filteredUsers.map((u) => {
                   const isTargetSuperAdmin = (u.role || 'user').toLowerCase() === 'superadmin';
                   const isCurrentUserSuperAdmin = currentUserRole === 'superadmin';
-                  const isCurrentUserAdmin = currentUserRole === 'admin';
                   const isLocked = isTargetSuperAdmin && !isCurrentUserSuperAdmin;
                   const isSelf = u.id === user?.id;
                   const hasAppeal = u.ban_appeal_status === 'pending';
                   const consecutive = u.consecutive_cancellations || 0;
-                  const totalCancels = u.cancellation_count || 0;
-                  const { isDelivery, isMarket, deliveryData, isBoth } = getPlatformInfo(u);
-
-                  // Role badge color helper
-                  const roleColors: Record<string, string> = {
-                    superadmin: 'bg-purple-100 text-purple-800 border-purple-200',
-                    admin: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-                    moderateur: 'bg-blue-100 text-blue-800 border-blue-200',
-                    pro: 'bg-amber-100 text-amber-800 border-amber-200',
-                    helper: 'bg-teal-100 text-teal-800 border-teal-200',
-                    livreur: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-                    user: 'bg-gray-100 text-gray-700 border-gray-200',
-                  };
+                  const deliveryData = u.delivery_person;
 
                   return (
                     <tr
@@ -514,17 +522,24 @@ export const AdminUsersTab: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Plateforme(s) Inscrite(s) */}
+                      {/* Plateforme(s) Inscrite(s) - DÉTECTION PRÉCISE ET DYNAMIQUE */}
                       <td className="py-3.5 px-3">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          {/* Badge DaloaMarket */}
-                          <div className="inline-flex items-center gap-1 px-2.5 py-0.8 rounded-lg bg-orange-50 text-orange-800 border border-orange-200/80 text-[11px] font-extrabold shadow-2xs">
-                            <ShoppingBag className="w-3.5 h-3.5 text-orange-600 shrink-0" />
-                            <span>DaloaMarket</span>
-                          </div>
+                          {/* Badge DaloaMarket (Uniquement si pertinent) */}
+                          {u.isMarket && (
+                            <div className="inline-flex items-center gap-1 px-2.5 py-0.8 rounded-lg bg-orange-50 text-orange-800 border border-orange-200/80 text-[11px] font-extrabold shadow-2xs">
+                              <ShoppingBag className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+                              <span>DaloaMarket</span>
+                              {u.listings_count > 0 && (
+                                <span className="text-[10px] bg-orange-200/70 text-orange-900 px-1 rounded font-bold">
+                                  {u.listings_count} annonces
+                                </span>
+                              )}
+                            </div>
+                          )}
 
                           {/* Badge DaloaDelivery (si le profil livreur existe) */}
-                          {isDelivery && (
+                          {u.isDelivery && (
                             <div className="inline-flex items-center gap-1 px-2.5 py-0.8 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-[11px] font-extrabold shadow-2xs">
                               <Bike className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                               <span>DaloaDelivery</span>
@@ -534,6 +549,14 @@ export const AdminUsersTab: React.FC = () => {
                                 </span>
                               )}
                             </div>
+                          )}
+
+                          {/* Badge Hybride si l'utilisateur est présent activement sur les deux */}
+                          {u.isBoth && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-black">
+                              <Sparkles className="w-3 h-3 text-purple-600" />
+                              Compte Double (DM + DD)
+                            </span>
                           )}
 
                           {/* Extra verification badge */}
@@ -548,48 +571,40 @@ export const AdminUsersTab: React.FC = () => {
 
                       {/* Rôle Attribué */}
                       <td className="py-3.5 px-3">
-                        <div className="relative inline-block">
-                          <select
-                            value={u.role || 'user'}
-                            disabled={isLocked || isSelf}
-                            onChange={(e) => changeRole(u.id, e.target.value)}
-                            className={cn(
-                              'appearance-none pl-2.5 pr-7 py-1 rounded-lg border text-xs font-bold cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed outline-none focus:ring-2 focus:ring-orange-500/20',
-                              roleColors[u.role || 'user'] || roleColors.user
-                            )}
-                          >
-                            <option value="user">User (Standard)</option>
-                            <option value="pro">Vendeur Pro</option>
-                            <option value="livreur">Livreur DaloaDelivery</option>
-                            <option value="helper">Helper</option>
-                            <option value="moderateur">Modérateur</option>
-                            {(isCurrentUserSuperAdmin || isCurrentUserAdmin) && (
-                              <option value="admin">Administrateur</option>
-                            )}
-                            {isCurrentUserSuperAdmin && (
-                              <option value="superadmin">SuperAdmin</option>
-                            )}
-                          </select>
-                          <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">
-                            <ArrowUpDown size={10} />
-                          </div>
-                        </div>
+                        <select
+                          value={u.role || 'user'}
+                          disabled={isLocked || isSelf}
+                          onChange={(e) => changeRole(u.id, e.target.value)}
+                          className={cn(
+                            'px-2.5 py-1 rounded-lg border text-xs font-bold transition-all outline-none cursor-pointer',
+                            u.role === 'admin' || u.role === 'superadmin'
+                              ? 'bg-indigo-50 border-indigo-200 text-indigo-800'
+                              : u.role === 'livreur'
+                              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                              : u.role === 'pro'
+                              ? 'bg-amber-50 border-amber-200 text-amber-800'
+                              : 'bg-gray-50 border-gray-200 text-gray-700'
+                          )}
+                        >
+                          <option value="user">User (Client)</option>
+                          <option value="pro">Pro (Vendeur)</option>
+                          <option value="livreur">Livreur</option>
+                          <option value="helper">Helper</option>
+                          <option value="moderateur">Modérateur</option>
+                          <option value="admin">Admin</option>
+                          {isCurrentUserSuperAdmin && <option value="superadmin">SuperAdmin</option>}
+                        </select>
                       </td>
 
-                      {/* Anti-Abus & Annulations */}
+                      {/* Anti-Abus Annulations */}
                       <td className="py-3.5 px-3">
-                        <div className="space-y-1">
-                          <div className="text-[11px] text-gray-600 font-semibold">
-                            Total : <strong className="text-gray-900">{totalCancels}</strong>
-                          </div>
+                        <div className="flex items-center gap-1.5">
                           {consecutive > 0 ? (
                             <div className="flex items-center gap-1.5">
                               <span
                                 className={cn(
                                   'px-2 py-0.5 rounded-md text-[10px] font-black',
-                                  consecutive >= 3
-                                    ? 'bg-red-100 text-red-700 border border-red-200 animate-pulse'
-                                    : 'bg-amber-100 text-amber-800 border border-amber-200'
+                                  consecutive >= 3 ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
                                 )}
                               >
                                 {consecutive} conséc.
@@ -648,7 +663,7 @@ export const AdminUsersTab: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Actions (Fixé et toujours visible sans tronquage) */}
+                      {/* Actions */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex justify-end">
                           <Button
@@ -695,7 +710,7 @@ export const AdminUsersTab: React.FC = () => {
               const hasAppeal = u.ban_appeal_status === 'pending';
               const consecutive = u.consecutive_cancellations || 0;
               const totalCancels = u.cancellation_count || 0;
-              const { isDelivery, isMarket, deliveryData, isBoth } = getPlatformInfo(u);
+              const deliveryData = u.delivery_person;
 
               return (
                 <div key={u.id} className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-xs space-y-3">
@@ -726,15 +741,24 @@ export const AdminUsersTab: React.FC = () => {
 
                   {/* Platform Badges Mobile */}
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-50 text-orange-800 border border-orange-200 text-xs font-bold">
-                      <ShoppingBag className="w-3.5 h-3.5 text-orange-600" />
-                      DaloaMarket
-                    </span>
-                    {isDelivery && (
+                    {u.isMarket && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-50 text-orange-800 border border-orange-200 text-xs font-bold">
+                        <ShoppingBag className="w-3.5 h-3.5 text-orange-600" />
+                        DaloaMarket
+                        {u.listings_count > 0 && <span className="text-xs">({u.listings_count} annonces)</span>}
+                      </span>
+                    )}
+                    {u.isDelivery && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
                         <Bike className="w-3.5 h-3.5 text-emerald-600" />
                         DaloaDelivery
                         {deliveryData?.vehicle_type && <span className="text-gray-500 font-normal">({deliveryData.vehicle_type})</span>}
+                      </span>
+                    )}
+                    {u.isBoth && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-black">
+                        <Sparkles className="w-3 h-3 text-purple-600" />
+                        Double Compte
                       </span>
                     )}
                   </div>

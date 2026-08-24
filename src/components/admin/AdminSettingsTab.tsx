@@ -387,6 +387,138 @@ export function AdminSettingsTab() {
             </div>
           </div>
 
+          {/* ── Monétisation & Visibilité ─────────────────────────── */}
+          <div className="pt-3 mt-1 border-t border-gray-100">
+            <p className="text-[11px] font-extrabold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-orange-500" />
+              Monétisation & Visibilité
+            </p>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {/* Toggle: Boost d'annonces */}
+              <div className={cn(
+                "p-3.5 rounded-2xl border flex items-start justify-between gap-3 transition-colors",
+                activePhase.enable_boost ? "bg-orange-50/60 border-orange-200" : "bg-gray-50 border-gray-100"
+              )}>
+                <div>
+                  <p className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-orange-500 shrink-0" />
+                    <span>Boost d'annonces</span>
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Mise en avant prioritaire payante (badge « Sponsorisé »).</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={activePhase.enable_boost}
+                  onChange={(e) =>
+                    setPhaseForm({
+                      ...activePhase,
+                      enable_boost: e.target.checked,
+                    })
+                  }
+                  className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 mt-0.5"
+                />
+              </div>
+
+              {/* Toggle: Bump de visibilité */}
+              <div className={cn(
+                "p-3.5 rounded-2xl border flex items-start justify-between gap-3 transition-colors",
+                activePhase.enable_bump ? "bg-blue-50/60 border-blue-200" : "bg-gray-50 border-gray-100"
+              )}>
+                <div>
+                  <p className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                    <Layers className="w-4 h-4 text-blue-500 shrink-0" />
+                    <span>Bump de visibilité</span>
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Remonter une annonce en tête du flux (payant).</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={activePhase.enable_bump}
+                  onChange={(e) =>
+                    setPhaseForm({
+                      ...activePhase,
+                      enable_bump: e.target.checked,
+                    })
+                  }
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 mt-0.5"
+                />
+              </div>
+
+              {/* Toggle: Badge Vendeur Pro */}
+              <div className={cn(
+                "p-3.5 rounded-2xl border flex items-start justify-between gap-3 transition-colors",
+                activePhase.enable_seller_badge ? "bg-emerald-50/60 border-emerald-200" : "bg-gray-50 border-gray-100"
+              )}>
+                <div>
+                  <p className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Badge Vendeur Pro</span>
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Abonnement Pro avec badge vérifié et avantages.</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={activePhase.enable_seller_badge}
+                  onChange={(e) =>
+                    setPhaseForm({
+                      ...activePhase,
+                      enable_seller_badge: e.target.checked,
+                    })
+                  }
+                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ── Limites & Commission ─────────────────────────── */}
+          <div className="pt-3 mt-1 border-t border-gray-100">
+            <p className="text-[11px] font-extrabold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <Sliders className="w-3.5 h-3.5 text-gray-400" />
+              Limites & Commission
+            </p>
+            <div className="grid sm:grid-cols-2 gap-3.5">
+              {/* Max annonces gratuites */}
+              <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-100 space-y-2">
+                <p className="text-xs font-bold text-gray-900">Max annonces gratuites par vendeur</p>
+                <p className="text-[11px] text-gray-500">Au-delà, le vendeur doit acheter un pack ou passer Pro.</p>
+                <input
+                  type="number"
+                  min={1}
+                  value={activePhase.max_free_listings >= 999999 ? '' : activePhase.max_free_listings}
+                  placeholder="Illimité"
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? 999999 : Math.max(1, parseInt(e.target.value) || 1);
+                    setPhaseForm({ ...activePhase, max_free_listings: val });
+                  }}
+                  className="w-full text-xs p-2.5 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 focus:outline-none font-bold"
+                />
+              </div>
+
+              {/* Override commission vendeur */}
+              <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-100 space-y-2">
+                <p className="text-xs font-bold text-gray-900">Commission vendeur (override)</p>
+                <p className="text-[11px] text-gray-500">Laisser vide = taux par défaut. Mettre 0 = 0% (Phase 0 gratuit).</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    value={activePhase.seller_fee_override !== null ? activePhase.seller_fee_override : ''}
+                    placeholder="Défaut"
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? null : Math.min(100, Math.max(0, parseFloat(e.target.value) || 0));
+                      setPhaseForm({ ...activePhase, seller_fee_override: val });
+                    }}
+                    className="w-full text-xs p-2.5 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 focus:outline-none font-bold"
+                  />
+                  <span className="text-xs font-bold text-gray-500 shrink-0">%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="flex justify-end pt-2">
             <Button
               onClick={handleSavePhaseConfig}
