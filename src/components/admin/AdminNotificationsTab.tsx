@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Send,
   Bell,
@@ -11,10 +11,12 @@ import {
   Zap,
   ShieldCheck,
   Bike,
-  CheckCircle2,
-  Copy,
+  Tag,
+  Flame,
+  Calendar,
+  DollarSign,
   ChevronRight,
-  Filter
+  HeartHandshake
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
@@ -27,7 +29,7 @@ import { broadcastPushNotification } from '../../lib/pushNotifications';
 
 interface NotificationTemplate {
   id: string;
-  category: 'pwa' | 'publish' | 'buy' | 'events' | 'trust' | 'drivers';
+  category: 'pwa' | 'publish' | 'buy' | 'events' | 'trust' | 'drivers' | 'reactivate';
   categoryLabel: string;
   categoryIcon: React.ComponentType<{ className?: string }>;
   title: string;
@@ -37,7 +39,7 @@ interface NotificationTemplate {
 }
 
 const TEMPLATES: NotificationTemplate[] = [
-  // 📲 1. Installation PWA / Application Mobile
+  // 📲 1. INSTALLATION PWA / APPLICATION MOBILE
   {
     id: 'pwa-general',
     category: 'pwa',
@@ -79,11 +81,11 @@ const TEMPLATES: NotificationTemplate[] = [
     recommendedTime: 'Matin vers 08h30 ou 11h30',
   },
 
-  // 🎯 2. Inciter à Publier / Vendre
+  // 💰 2. INCITER À PUBLIER & VENDRE
   {
     id: 'pub-passive',
     category: 'publish',
-    categoryLabel: 'Vente & Dépôt',
+    categoryLabel: 'Vente & Publication',
     categoryIcon: PlusCircle,
     title: '💰 Une annonce aujourd’hui, de l’argent qui rentre demain !',
     body: "Publie ton article en 1 minute : il reste visible 24h/24 auprès de milliers d'acheteurs à Daloa. Ne laisse pas dormir tes produits !",
@@ -93,7 +95,7 @@ const TEMPLATES: NotificationTemplate[] = [
   {
     id: 'pub-declutter',
     category: 'publish',
-    categoryLabel: 'Vente & Dépôt',
+    categoryLabel: 'Vente & Publication',
     categoryIcon: PlusCircle,
     title: '📦 Transforme tes objets inutilisés en cash !',
     body: 'Un téléphone, un vêtement ou un appareil qui traîne chez toi ? Dépose ton annonce gratuitement et trouve un acheteur à Daloa aujourd’hui.',
@@ -103,15 +105,35 @@ const TEMPLATES: NotificationTemplate[] = [
   {
     id: 'pub-shop',
     category: 'publish',
-    categoryLabel: 'Vente & Dépôt',
+    categoryLabel: 'Vente & Publication',
     categoryIcon: PlusCircle,
     title: '🏬 Commerçants de Daloa : vendez sans bouger de votre boutique !',
     body: 'Créez votre catalogue en ligne sur DaloaMarket et bénéficiez de la livraison express partout en ville.',
     url: '/create-listing',
     recommendedTime: 'Mardi ou Jeudi matin vers 10h00',
   },
+  {
+    id: 'pub-vehicles',
+    category: 'publish',
+    categoryLabel: 'Vente & Publication',
+    categoryIcon: PlusCircle,
+    title: '🏍️ Vends ta moto ou ta voiture rapidement à Daloa !',
+    body: 'Des centaines d’acheteurs cherchent des engins roulants tous les jours. Dépose ton annonce avec photos en 2 minutes.',
+    url: '/create-listing',
+    recommendedTime: 'Samedi vers 10h30',
+  },
+  {
+    id: 'pub-pro-badge',
+    category: 'publish',
+    categoryLabel: 'Vente & Publication',
+    categoryIcon: PlusCircle,
+    title: '👑 Passe Vendeur PRO et multiplie tes ventes par 5 !',
+    body: 'Obtiens le badge vérifié, une commission réduite à 2.5% et une visibilité maximale en tête de liste.',
+    url: '/devenir-pro',
+    recommendedTime: 'Lundi matin vers 09h00',
+  },
 
-  // 🛍️ 3. Booster les Achats & Nouveautés
+  // 🛍️ 3. ACHATS, NOUVEAUTÉS & CATÉGORIES
   {
     id: 'buy-friday',
     category: 'buy',
@@ -142,8 +164,28 @@ const TEMPLATES: NotificationTemplate[] = [
     url: '/c/mode',
     recommendedTime: 'Jeudi ou Vendredi vers 17h00',
   },
+  {
+    id: 'buy-motos',
+    category: 'buy',
+    categoryLabel: 'Achats & Découverte',
+    categoryIcon: ShoppingBag,
+    title: '🏍️ Motos Haojue, TVS, Boxer disponibles à Daloa !',
+    body: 'Trouve la moto idéale pour tes déplacements ou ton activité à des prix défiant toute concurrence.',
+    url: '/c/vehicules',
+    recommendedTime: 'Samedi vers 11h00',
+  },
+  {
+    id: 'buy-home',
+    category: 'buy',
+    categoryLabel: 'Achats & Découverte',
+    categoryIcon: ShoppingBag,
+    title: '📺 Équipe ta maison au meilleur prix à Daloa !',
+    body: 'Smart TV, réfrigérateurs, ventilateurs et meubles disponibles immédiatement près de chez toi.',
+    url: '/c/maison-deco',
+    recommendedTime: 'Dimanche après-midi vers 15h00',
+  },
 
-  // ⚡ 4. Événements & Moments Clés
+  // ⚡ 4. ÉVÉNEMENTS, WEEK-END & FIN DE MOIS
   {
     id: 'event-weekend',
     category: 'events',
@@ -164,8 +206,28 @@ const TEMPLATES: NotificationTemplate[] = [
     url: '/',
     recommendedTime: 'Entre le 28 et le 2 du mois vers 19h00',
   },
+  {
+    id: 'event-sunday-deals',
+    category: 'events',
+    categoryLabel: 'Moments Clés',
+    categoryIcon: Zap,
+    title: '☕ Dimanche tranquille : explore les ventes flash !',
+    body: 'Installe-toi confortablement et découvre les offres exclusives disponibles ce dimanche à Daloa.',
+    url: '/',
+    recommendedTime: 'Dimanche matin vers 10h00',
+  },
+  {
+    id: 'event-rentree',
+    category: 'events',
+    categoryLabel: 'Moments Clés',
+    categoryIcon: Zap,
+    title: '🎒 Prépare la rentrée sans te ruiner à Daloa !',
+    body: 'Fournitures, sacs, ordinateurs portables et tenues scolaires à prix direct particulier.',
+    url: '/search',
+    recommendedTime: 'Période de rentrée scolaire vers 14h00',
+  },
 
-  // 🔒 5. Confiance & Sécurité Séquestre
+  // 🔒 5. SÉCURITÉ, CONFIANCE & SÉQUESTRE
   {
     id: 'trust-escrow',
     category: 'trust',
@@ -176,8 +238,40 @@ const TEMPLATES: NotificationTemplate[] = [
     url: '/how-it-works',
     recommendedTime: 'Lundi ou Mardi vers 14h00',
   },
+  {
+    id: 'trust-fast-delivery',
+    category: 'trust',
+    categoryLabel: 'Sécurité & Séquestre',
+    categoryIcon: ShieldCheck,
+    title: '⚡ Livraison en moins de 45 minutes partout à Daloa !',
+    body: 'Commandez en ligne et recevez votre colis à Commerce, Tazibouo, Lobia ou Kennedy sans vous déplacer.',
+    url: '/how-it-works',
+    recommendedTime: 'Mercredi ou Vendredi vers 11h30',
+  },
 
-  // 🛵 6. Recrutement Livreurs DaloaDelivery
+  // 🔄 6. RÉACTIVATION DES INACTIFS
+  {
+    id: 'reactivate-missed',
+    category: 'reactivate',
+    categoryLabel: 'Réactivation',
+    categoryIcon: HeartHandshake,
+    title: '👋 Tu nous as manqué ! Découvre les nouveautés à Daloa',
+    body: 'Des dizaines de nouvelles annonces ont été publiées cette semaine dans ton quartier. Viens jeter un coup d’œil !',
+    url: '/',
+    recommendedTime: 'Samedi après-midi vers 16h00',
+  },
+  {
+    id: 'reactivate-price-drop',
+    category: 'reactivate',
+    categoryLabel: 'Réactivation',
+    categoryIcon: Tag,
+    title: '📉 Des baisses de prix viennent d’avoir lieu à Daloa !',
+    body: 'Plusieurs vendeurs ont réduit leurs tarifs aujourd’hui. C’est le moment idéal pour faire une bonne affaire.',
+    url: '/search',
+    recommendedTime: 'Mardi soir vers 19h00',
+  },
+
+  // 🛵 7. LIVREURS DALOADELIVERY
   {
     id: 'driver-recruit',
     category: 'drivers',
@@ -187,6 +281,16 @@ const TEMPLATES: NotificationTemplate[] = [
     body: 'Rejoins le réseau DaloaDelivery : reçois des courses directement sur ton téléphone et sois payé instantanément.',
     url: 'https://livreur.daloamarket.com/inscription',
     recommendedTime: 'Lundi ou Mercredi vers 10h00',
+  },
+  {
+    id: 'driver-online',
+    category: 'drivers',
+    categoryLabel: 'Livreurs DaloaDelivery',
+    categoryIcon: Bike,
+    title: '🛵 Forte demande de livraisons en cours à Daloa !',
+    body: 'Passez en ligne sur votre cockpit DaloaDelivery : plusieurs colis attendent d’être pris en charge dès maintenant.',
+    url: 'https://livreur.daloamarket.com/dashboard',
+    recommendedTime: 'Midi (12h00) ou Soir (18h00)',
   },
 ];
 
@@ -212,13 +316,12 @@ export const AdminNotificationsTab: React.FC = () => {
     setNotifBody(t.body);
     setNotifUrl(t.url);
 
-    // Scroll fluide vers le formulaire
     const formElement = document.getElementById('notif-form-section');
     if (formElement) {
       formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    toast.success('Modèle chargé ! Vous pouvez le modifier ou l’envoyer.', { icon: '✨' });
+    toast.success('Modèle chargé dans l’éditeur !', { icon: '✨' });
   };
 
   const filteredTemplates = useMemo(() => {
@@ -250,7 +353,6 @@ export const AdminNotificationsTab: React.FC = () => {
         setNotifUrl('');
         fetchNotifHistory();
       } else {
-        // Fallback local en cas d'indisponibilité du serveur
         const { error: err } = await supabase.from('notifications').insert({
           title: notifTitle,
           body: notifBody,
@@ -277,10 +379,10 @@ export const AdminNotificationsTab: React.FC = () => {
       <div>
         <h2 className="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
           <Bell className="w-6 h-6 text-orange-600" />
-          Centre des Notifications Push
+          Centre des Notifications Push ({TEMPLATES.length} Modèles Intégrés)
         </h2>
         <p className="text-xs text-gray-500 mt-1">
-          Sélectionnez un modèle pré-rédigé en 1 clic, personnalisez-le et diffusez-le à tous vos abonnés.
+          Sélectionnez un modèle pré-rédigé en 1 clic, personnalisez-le et diffusez-le instantanément.
         </p>
       </div>
 
@@ -293,7 +395,7 @@ export const AdminNotificationsTab: React.FC = () => {
             </div>
             <div>
               <h3 className="font-extrabold text-sm text-gray-900 leading-tight">
-                Modèles Pré-Rédigés & Formats Clés
+                Catalogue Complet des Modèles ({filteredTemplates.length})
               </h3>
               <p className="text-[11px] text-gray-500">
                 Cliquez sur un modèle pour remplir instantanément le formulaire d'envoi
@@ -304,13 +406,14 @@ export const AdminNotificationsTab: React.FC = () => {
           {/* Filtres par Catégorie */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
             {[
-              { key: 'all', label: 'Tous' },
-              { key: 'pwa', label: '📲 App / PWA' },
-              { key: 'publish', label: '💰 Vendre' },
-              { key: 'buy', label: '🛍️ Acheter' },
-              { key: 'events', label: '⚡ Week-end' },
-              { key: 'trust', label: '🔒 Séquestre' },
-              { key: 'drivers', label: '🛵 Livreurs' },
+              { key: 'all', label: `Tous (${TEMPLATES.length})` },
+              { key: 'pwa', label: '📲 App / PWA (4)' },
+              { key: 'publish', label: '💰 Vendre (5)' },
+              { key: 'buy', label: '🛍️ Acheter (5)' },
+              { key: 'events', label: '⚡ Week-end & Paie (4)' },
+              { key: 'trust', label: '🔒 Séquestre (2)' },
+              { key: 'reactivate', label: '🔄 Réactivation (2)' },
+              { key: 'drivers', label: '🛵 Livreurs (2)' },
             ].map((cat) => (
               <button
                 key={cat.key}
@@ -346,7 +449,7 @@ export const AdminNotificationsTab: React.FC = () => {
                       <IconComp className="w-3 h-3 text-orange-600" />
                       {t.categoryLabel}
                     </span>
-                    <span className="text-[10px] font-mono text-gray-400 truncate max-w-[120px]">
+                    <span className="text-[10px] font-mono text-gray-400 truncate max-w-[140px]">
                       {t.url}
                     </span>
                   </div>
