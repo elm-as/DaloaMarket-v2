@@ -7,7 +7,7 @@ import { Avatar } from '../components/profile/Avatar';
 import { ProBadge } from '../components/profile/ProBadge';
 import { usePhase } from '../contexts/PhaseContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   Star,
@@ -39,15 +39,39 @@ import { Modal } from '../components/ui/Modal';
 
 type TabId = 'listings' | 'reviews' | 'favorites' | 'shop';
 
+const getTabFromParam = (param: string | null): TabId => {
+  if (!param) return 'listings';
+  const clean = param.toLowerCase();
+  if (clean === 'shop' || clean === 'boutique' || clean === 'vitrine') return 'shop';
+  if (clean === 'reviews' || clean === 'avis') return 'reviews';
+  if (clean === 'favorites' || clean === 'favoris') return 'favorites';
+  if (clean === 'listings' || clean === 'annonces' || clean === 'articles') return 'listings';
+  return 'listings';
+};
+
 const ProfilePage: React.FC = () => {
   usePageTitle('Mon profil');
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, userProfile, signOut } = useSupabase();
   const { showMonetisation } = usePhase();
 
-  const [activeTab, setActiveTab] = useState<TabId>('listings');
+  const [activeTab, setActiveTab] = useState<TabId>(() => getTabFromParam(searchParams.get('tab')));
   const [profileStats, setProfileStats] = useState({ activeCount: 0, soldCount: 0, reviewCount: 0 });
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+
+  // Synchronise l'onglet si l'URL searchParam change (ex: redirection, notif push, retour arrière)
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      setActiveTab(getTabFromParam(tabParam));
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tabId: TabId) => {
+    setActiveTab(tabId);
+    setSearchParams({ tab: tabId }, { replace: true });
+  };
 
   const currentUserId = user?.id;
   const isPro = userProfile?.pro_until ? new Date(userProfile.pro_until) > new Date() : false;
@@ -345,7 +369,7 @@ const ProfilePage: React.FC = () => {
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabChange(tab.id)}
                   className={cn(
                     'relative flex-1 flex items-center justify-center gap-1.5 py-3 px-1 text-xs transition-colors select-none active:scale-[0.98]',
                     isSelected

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, User, Store } from 'lucide-react';
@@ -10,13 +10,31 @@ import { ShopTab } from '../components/settings/ShopTab';
 
 type TabId = 'compte' | 'boutique';
 
+const getSettingsTabFromParam = (param: string | null): TabId => {
+  if (!param) return 'compte';
+  const clean = param.toLowerCase();
+  if (clean === 'boutique' || clean === 'shop' || clean === 'vitrine' || clean === 'magasin') return 'boutique';
+  return 'compte';
+};
+
 const SettingsPage: React.FC = () => {
   usePageTitle('Paramètres');
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const initialTab: TabId = searchParams.get('tab') === 'boutique' ? 'boutique' : 'compte';
-  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+  const [activeTab, setActiveTab] = useState<TabId>(() => getSettingsTabFromParam(searchParams.get('tab')));
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      setActiveTab(getSettingsTabFromParam(tabParam));
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tabId: TabId) => {
+    setActiveTab(tabId);
+    setSearchParams({ tab: tabId }, { replace: true });
+  };
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
     { id: 'compte', label: 'Mon compte', icon: <User className="w-4 h-4" /> },
@@ -48,7 +66,7 @@ const SettingsPage: React.FC = () => {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={cn(
                 'flex-1 flex items-center justify-center gap-1.5 h-10 rounded-xl text-xs font-bold transition-all duration-200 active:scale-95',
                 activeTab === tab.id

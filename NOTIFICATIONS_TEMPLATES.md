@@ -10,6 +10,10 @@ Toutes les URLs ci-dessous sont **100% fonctionnelles et vérifiées** dans [`Ap
 
 | Page cible | Route principale (Code) | Alias FR supporté | Description |
 | :--- | :--- | :--- | :--- |
+| **Mon Profil (Annonces)** | `/profile?tab=listings` | `/profile`, `/profil` | Espace personnel & annonces actives |
+| **Ma Boutique (Studio)** | `/profile?tab=shop` | `/profile?tab=boutique` | Vitrine vendeur & lien de partage boutique |
+| **Réglages Boutique** | `/settings?tab=boutique` | `/settings?tab=shop` | Nom, logo, bannière, GPS de la boutique |
+| **Mon Compte** | `/settings?tab=compte` | `/settings?tab=account` | Nom, téléphone, mot de passe |
 | **Créer une annonce** | `/create-listing` | `/creer-annonce`, `/publier` | Formulaire de publication (Vendeur) |
 | **Accueil & Nouveautés** | `/` | `/` | Flux principal des annonces |
 | **Recherche & Catalogue** | `/search` | `/categories` | Recherche avec filtres et catégories |
@@ -23,6 +27,8 @@ Toutes les URLs ci-dessous sont **100% fonctionnelles et vérifiées** dans [`Ap
 ---
 
 ## 📋 Sommaire des Notifications
+1. [💬 Levier A : Catalogue WhatsApp & Partage en Statut (Vendeurs)](#-levier-a--catalogue-whatsapp--partage-en-statut-vendeurs)
+2. [📲 Objectif 0 : Inciter à Installer l'Application Mobile (PWA)](#-objectif-0--inciter-à-installer-lapplication-mobile-pwa)
 1. [🎯 Objectif 1 : Inciter à publier des annonces (Vendeurs & Particuliers)](#-objectif-1--inciter-à-publier-des-annonces-vendeurs--particuliers)
 2. [🛍️ Objectif 2 : Booster les achats & Découvrir les nouveautés (Acheteurs)](#️-objectif-2--booster-les-achats--découvrir-les-nouveautés-acheteurs)
 3. [⚡ Objectif 3 : Occasions clés (Week-end, Fin de mois, Rentrée)](#-objectif-3--occasions-clés-week-end-fin-de-mois-rentrée)

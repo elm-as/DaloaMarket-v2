@@ -47,7 +47,7 @@ const TEMPLATES: NotificationTemplate[] = [
     categoryIcon: MessageCircle,
     title: "📲 Fini d'envoyer 30 photos floues sur ton statut WhatsApp !",
     body: "Partage simplement le lien de ta boutique DaloaMarket. Tes clients voient tous tes articles avec prix et photos nettes en 1 clic.",
-    url: '/profile',
+    url: '/profile?tab=shop',
     recommendedTime: 'Matin entre 08h30 et 10h00',
   },
   {
@@ -57,7 +57,7 @@ const TEMPLATES: NotificationTemplate[] = [
     categoryIcon: Share2,
     title: "💼 Gagne du temps : ton catalogue complet en 1 seul lien",
     body: "Ne perds plus des heures à répéter les prix en inbox ! Mets le lien de ta boutique DaloaMarket dans ton statut et sur tes groupes.",
-    url: '/profile',
+    url: '/profile?tab=shop',
     recommendedTime: 'Après-midi entre 13h30 et 15h00',
   },
   {
@@ -67,7 +67,7 @@ const TEMPLATES: NotificationTemplate[] = [
     categoryIcon: MessageCircle,
     title: "💬 Partage ta vitrine : tes clients te contactent en direct",
     body: "En voyant ta boutique DaloaMarket, tes clients découvrent tout ton stock et peuvent t'écrire ou t'appeler directement sur WhatsApp.",
-    url: '/profile',
+    url: '/profile?tab=shop',
     recommendedTime: 'Samedi matin entre 08h30 et 10h30',
   },
   {
@@ -452,7 +452,9 @@ export const AdminNotificationsTab: React.FC = () => {
   const quickLinks = [
     { label: 'Accueil', url: '/' },
     { label: 'Publier Annonce', url: '/create-listing' },
-    { label: 'Boutique / Profil', url: '/profile' },
+    { label: 'Ma Boutique', url: '/profile?tab=shop' },
+    { label: 'Réglages Boutique', url: '/settings?tab=boutique' },
+    { label: 'Mon Compte', url: '/settings?tab=compte' },
     { label: 'Chaîne WhatsApp', url: 'https://whatsapp.com/channel/0029Vb94o2vJENy5kkADR42U' },
     { label: 'Cockpit Livreur', url: 'https://livreur.daloamarket.com/dashboard' },
   ];
