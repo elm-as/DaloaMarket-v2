@@ -12,9 +12,8 @@ import {
   ShieldCheck,
   Bike,
   Tag,
-  Flame,
-  Calendar,
-  DollarSign,
+  MessageCircle,
+  Share2,
   ChevronRight,
   HeartHandshake
 } from 'lucide-react';
@@ -29,7 +28,7 @@ import { broadcastPushNotification } from '../../lib/pushNotifications';
 
 interface NotificationTemplate {
   id: string;
-  category: 'pwa' | 'publish' | 'buy' | 'events' | 'trust' | 'drivers' | 'reactivate';
+  category: 'whatsapp' | 'pwa' | 'publish' | 'buy' | 'events' | 'trust' | 'drivers' | 'reactivate';
   categoryLabel: string;
   categoryIcon: React.ComponentType<{ className?: string }>;
   title: string;
@@ -39,6 +38,48 @@ interface NotificationTemplate {
 }
 
 const TEMPLATES: NotificationTemplate[] = [
+  // 💬 0. LEVIER A — CATALOGUE WHATSAPP & STATUT VENDEUR
+  {
+    id: 'whatsapp-no-blur',
+    category: 'whatsapp',
+    categoryLabel: 'Statut WhatsApp (Levier A)',
+    categoryIcon: MessageCircle,
+    title: "📲 Fini d'envoyer 30 photos floues sur ton statut WhatsApp !",
+    body: "Partage simplement le lien de ta boutique DaloaMarket. Tes clients voient tous tes articles avec prix et photos nettes en 1 clic.",
+    url: '/profile',
+    recommendedTime: 'Matin entre 08h30 et 10h00',
+  },
+  {
+    id: 'whatsapp-pro-time',
+    category: 'whatsapp',
+    categoryLabel: 'Statut WhatsApp (Levier A)',
+    categoryIcon: Share2,
+    title: "💼 Gagne du temps : ton catalogue complet en 1 seul lien",
+    body: "Ne perds plus des heures à répéter les prix en inbox ! Mets le lien de ta boutique DaloaMarket dans ton statut et sur tes groupes.",
+    url: '/profile',
+    recommendedTime: 'Après-midi entre 13h30 et 15h00',
+  },
+  {
+    id: 'whatsapp-direct-contact',
+    category: 'whatsapp',
+    categoryLabel: 'Statut WhatsApp (Levier A)',
+    categoryIcon: MessageCircle,
+    title: "💬 Partage ta vitrine : tes clients te contactent en direct",
+    body: "En voyant ta boutique DaloaMarket, tes clients découvrent tout ton stock et peuvent t'écrire ou t'appeler directement sur WhatsApp.",
+    url: '/profile',
+    recommendedTime: 'Samedi matin entre 08h30 et 10h30',
+  },
+  {
+    id: 'whatsapp-new-arrivals',
+    category: 'whatsapp',
+    categoryLabel: 'Statut WhatsApp (Levier A)',
+    categoryIcon: Share2,
+    title: "🚀 Nouvel arrivage ? Partage ton lien en statut aujourd'hui !",
+    body: "Dépose tes nouveautés sur DaloaMarket et partage le lien dans ton statut WhatsApp pour faire exploser tes ventes du jour.",
+    url: '/create-listing',
+    recommendedTime: 'Mercredi ou Vendredi vers 11h00',
+  },
+
   // 📲 1. INSTALLATION PWA / APPLICATION MOBILE
   {
     id: 'pwa-general',
@@ -395,7 +436,7 @@ export const AdminNotificationsTab: React.FC = () => {
             </div>
             <div>
               <h3 className="font-extrabold text-sm text-gray-900 leading-tight">
-                Catalogue Complet des Modèles ({filteredTemplates.length})
+                Catalogue des Modèles ({filteredTemplates.length})
               </h3>
               <p className="text-[11px] text-gray-500">
                 Cliquez sur un modèle pour remplir instantanément le formulaire d'envoi
@@ -407,6 +448,7 @@ export const AdminNotificationsTab: React.FC = () => {
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
             {[
               { key: 'all', label: `Tous (${TEMPLATES.length})` },
+              { key: 'whatsapp', label: '💬 Statut WhatsApp (4)' },
               { key: 'pwa', label: '📲 App / PWA (4)' },
               { key: 'publish', label: '💰 Vendre (5)' },
               { key: 'buy', label: '🛍️ Acheter (5)' },
@@ -507,7 +549,7 @@ export const AdminNotificationsTab: React.FC = () => {
               </div>
               <input
                 type="text"
-                placeholder="Ex: 📲 Installe DaloaMarket sur ton écran d'accueil !"
+                placeholder="Ex: 📲 Fini d'envoyer 30 photos sur ton statut WhatsApp !"
                 value={notifTitle}
                 onChange={(e) => setNotifTitle(e.target.value)}
                 disabled={loading}
@@ -524,7 +566,7 @@ export const AdminNotificationsTab: React.FC = () => {
                 </span>
               </div>
               <textarea
-                placeholder="Ex: Plus besoin de chercher dans ton navigateur ! Accède à tes annonces en 1 clic..."
+                placeholder="Ex: Partage simplement le lien de ta boutique DaloaMarket..."
                 value={notifBody}
                 onChange={(e) => setNotifBody(e.target.value)}
                 disabled={loading}
@@ -538,7 +580,7 @@ export const AdminNotificationsTab: React.FC = () => {
               <label className="text-xs font-bold text-gray-700 block mb-1">Lien de redirection (URL)</label>
               <input
                 type="text"
-                placeholder="Ex: / ou /create-listing ou /c/electronique"
+                placeholder="Ex: /profile ou /create-listing"
                 value={notifUrl}
                 onChange={(e) => setNotifUrl(e.target.value)}
                 disabled={loading}
