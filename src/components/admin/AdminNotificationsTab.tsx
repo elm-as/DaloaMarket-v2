@@ -79,6 +79,26 @@ const TEMPLATES: NotificationTemplate[] = [
     url: '/create-listing',
     recommendedTime: 'Mercredi ou Vendredi vers 11h00',
   },
+  {
+    id: 'whatsapp-join-channel',
+    category: 'whatsapp',
+    categoryLabel: 'Statut WhatsApp (Levier A)',
+    categoryIcon: MessageCircle,
+    title: "🛍️ Rejoins la chaîne WhatsApp officielle DaloaMarket !",
+    body: "Sois le premier alerté des nouveaux arrivages, ventes flash et promotions à Daloa. Clique pour t'abonner !",
+    url: 'https://whatsapp.com/channel/0029Vb94o2vJENy5kkADR42U',
+    recommendedTime: 'Soirée vers 19h00 ou week-end',
+  },
+  {
+    id: 'whatsapp-deals-channel',
+    category: 'whatsapp',
+    categoryLabel: 'Statut WhatsApp (Levier A)',
+    categoryIcon: Sparkles,
+    title: "⚡ Bons plans en direct : rejoins notre chaîne WhatsApp",
+    body: "Découvre les meilleures pépites publiées chaque jour à Daloa directement dans ton onglet Actus WhatsApp.",
+    url: 'https://whatsapp.com/channel/0029Vb94o2vJENy5kkADR42U',
+    recommendedTime: 'Midi vers 12h30 ou Vendredi soir',
+  },
 
   // 📲 1. INSTALLATION PWA / APPLICATION MOBILE
   {
@@ -448,7 +468,7 @@ export const AdminNotificationsTab: React.FC = () => {
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
             {[
               { key: 'all', label: `Tous (${TEMPLATES.length})` },
-              { key: 'whatsapp', label: '💬 Statut WhatsApp (4)' },
+              { key: 'whatsapp', label: '💬 WhatsApp & Chaîne (6)' },
               { key: 'pwa', label: '📲 App / PWA (4)' },
               { key: 'publish', label: '💰 Vendre (5)' },
               { key: 'buy', label: '🛍️ Acheter (5)' },

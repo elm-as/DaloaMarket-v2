@@ -191,12 +191,61 @@ export const AdminListingsTab: React.FC = () => {
     }
   };
 
+  const handleShareToChannel = (l: AdminListing) => {
+    const listingUrl = `https://daloamarket.com${getListingPath(l.id)}`;
+    const text = `🛍️ NOUVEL ARRIVAGE SUR DALOA MARKET !
+
+📦 *${l.title}*
+💰 Prix : *${formatPrice(l.price)}*
+📍 Quartier : ${l.district || 'Daloa'}
+👤 Vendeur : ${l.user?.shop_name || l.user?.full_name || 'Vendeur DaloaMarket'}
+
+👉 Voir l'article et commander en toute sécurité :
+${listingUrl}
+
+🛵 Livraison express partout à Daloa avec DaloaDelivery !`;
+
+    navigator.clipboard.writeText(text);
+    toast.success('Texte copié ! Ouverture de WhatsApp pour la chaîne...', { icon: '📢' });
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleShareTopDigest = () => {
+    const activeListings = listings.filter((l) => l.status === 'active').slice(0, 5);
+    if (activeListings.length === 0) {
+      toast.error('Aucune annonce active trouvée');
+      return;
+    }
+
+    const itemsText = activeListings
+      .map(
+        (l, i) =>
+          `${i + 1}. *${l.title}* — ${formatPrice(l.price)} (${l.district || 'Daloa'})\n👉 https://daloamarket.com${getListingPath(l.id)}`
+      )
+      .join('\n\n');
+
+    const text = `🔥 ARRIVAGES DU JOUR SUR DALOA MARKET !
+
+Découvrez les dernières pépites publiées aujourd'hui à Daloa :
+
+${itemsText}
+
+📱 Retrouvez toutes les annonces sur : https://daloamarket.com
+🛵 Livraison rapide partout en ville !`;
+
+    navigator.clipboard.writeText(text);
+    toast.success('Digest des 5 annonces copié ! Ouverture de WhatsApp...', { icon: '🔥' });
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
+
   const totalPages = Math.ceil(listingTotal / ITEMS_PER_PAGE);
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      {/* Header section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 max-w-full">
+      {/* Header avec Titre et Compteurs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
         <div>
           <h2 className="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
             <Package className="w-6 h-6 text-orange-500" />
@@ -207,17 +256,30 @@ export const AdminListingsTab: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            fetchCounts();
-            fetchListings(listingPage);
-          }}
-          disabled={loading}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-bold transition-all border border-gray-200 shadow-2xs active:scale-95 self-start sm:self-auto"
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin text-orange-500' : ''} />
-          <span>Actualiser</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Bouton Digest WhatsApp Chaîne */}
+          <button
+            onClick={handleShareTopDigest}
+            disabled={loading}
+            title="Générer et diffuser un résumé des 5 dernières annonces sur votre chaîne WhatsApp"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition-all border border-emerald-200/80 shadow-2xs active:scale-95"
+          >
+            <WhatsAppIcon size={14} className="w-3.5 h-3.5" />
+            <span>📢 Digest Chaîne WhatsApp (Top 5)</span>
+          </button>
+
+          <button
+            onClick={() => {
+              fetchCounts();
+              fetchListings(listingPage);
+            }}
+            disabled={loading}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-bold transition-all border border-gray-200 shadow-2xs active:scale-95 self-start sm:self-auto"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin text-orange-500' : ''} />
+            <span>Actualiser</span>
+          </button>
+        </div>
       </div>
 
       {/* Barre de recherche globale & Filtres */}
@@ -465,6 +527,19 @@ export const AdminListingsTab: React.FC = () => {
                         {/* Actions */}
                         <td className="p-3.5 pr-5 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1">
+                            {/* Partage Chaîne WhatsApp */}
+                            {l.status === 'active' && (
+                              <button
+                                type="button"
+                                onClick={() => handleShareToChannel(l)}
+                                className="p-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 transition-all active:scale-95 flex items-center gap-1 font-bold text-[11px]"
+                                title="Diffuser sur la chaîne WhatsApp"
+                              >
+                                <WhatsAppIcon size={14} className="w-3.5 h-3.5" />
+                                <span className="hidden xl:inline">Chaîne</span>
+                              </button>
+                            )}
+
                             {/* Boost / Unboost */}
                             <button
                               type="button"
