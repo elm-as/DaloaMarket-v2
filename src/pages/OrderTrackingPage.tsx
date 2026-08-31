@@ -132,14 +132,14 @@ const OrderTrackingPage: React.FC = () => {
 
       if (dpId) {
         const { data: dpData } = await supabase
-          .from('users')
-          .select('full_name, phone')
+          .from('delivery_persons')
+          .select('name, phone')
           .eq('id', dpId)
-          .single();
+          .maybeSingle();
 
         if (dpData) {
           orderData.delivery_person = {
-            name: dpData.full_name || 'Livreur',
+            name: dpData.name || 'Livreur',
             phone: dpData.phone || '',
           };
         }
