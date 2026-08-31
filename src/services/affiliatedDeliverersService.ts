@@ -164,12 +164,15 @@ export const affiliatedDeliverersService = {
           .upsert({
             seller_id: userRes.user.id,
             delivery_person_id: driver.id,
-            status: 'active',
+            status: 'pending',
             updated_at: new Date().toISOString(),
           }, { onConflict: 'seller_id,delivery_person_id' });
 
         if (!affErr) {
-          return { success: true, message: `Livreur ${driver.name} ajouté avec succès !` };
+          return {
+            success: true,
+            message: `Demande d'affiliation envoyée à ${driver.name} ! En attente de sa validation.`,
+          };
         }
       }
 
@@ -183,7 +186,6 @@ export const affiliatedDeliverersService = {
         if (res.success) {
           return res;
         }
-        // Si l'erreur mentionne Pro mais que le livreur n'a pas été trouvé ou pour éviter la confusion en Phase 0
         return {
           success: false,
           message: res.message || `Aucun livreur DaloaDelivery trouvé avec le numéro ${phone}. Il doit d'abord créer son compte sur delivery.daloamarket.com.`,

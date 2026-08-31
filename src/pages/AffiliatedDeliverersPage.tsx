@@ -8,6 +8,7 @@ import {
   Info,
   Star,
   Sparkles,
+  Clock,
 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -27,6 +28,7 @@ import {
 import { AffiliatedNonProUpgradeCard } from '../components/affiliated/AffiliatedNonProUpgradeCard';
 import { AffiliatedDelivererCard } from '../components/affiliated/AffiliatedDelivererCard';
 import { SellerDeliverySettingsCard } from '../components/affiliated/SellerDeliverySettingsCard';
+import { InviteDelivererCard } from '../components/affiliated/InviteDelivererCard';
 
 export default function AffiliatedDeliverersPage() {
   usePageTitle('Mes livreurs affiliés');
@@ -149,10 +151,15 @@ export default function AffiliatedDeliverersPage() {
     }
   };
 
-  // Remove driver
+  // Remove driver or cancel invitation
   const handleRemoveDeliverer = async (affiliation: AffiliatedDeliverer) => {
+    const isPending = affiliation.status === 'pending';
     const driverName = affiliation.delivery_person?.name || 'ce livreur';
-    if (!window.confirm(`Voulez-vous vraiment retirer l'affiliation de ${driverName} ?`)) {
+    const confirmMessage = isPending
+      ? `Voulez-vous annuler la demande d'affiliation envoyée à ${driverName} ?`
+      : `Voulez-vous vraiment retirer l'affiliation de ${driverName} ?`;
+
+    if (!window.confirm(confirmMessage)) {
       return;
     }
 
@@ -161,12 +168,15 @@ export default function AffiliatedDeliverersPage() {
     setRemovingId(null);
 
     if (res.success) {
-      toast.success('Affiliation retirée avec succès');
+      toast.success(isPending ? 'Demande annulée avec succès' : 'Affiliation retirée avec succès');
       setDeliverers((prev) => prev.filter((d) => d.id !== affiliation.id));
     } else {
-      toast.error(res.message || 'Erreur de suppression');
+      toast.error(res.message || 'Erreur lors de l\'annulation');
     }
   };
+
+  const activeDeliverers = deliverers.filter((d) => d.status === 'active');
+  const pendingDeliverers = deliverers.filter((d) => d.status === 'pending');
 
   return (
     <div className="min-h-screen bg-gray-50/70 pb-28">
@@ -213,56 +223,49 @@ export default function AffiliatedDeliverersPage() {
         />
 
         {/* ── CARD 2: INVITER UN NOUVEAU LIVREUR ── */}
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 p-5 sm:p-6 space-y-3.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white flex items-center justify-center shadow-md shadow-orange-500/20">
-                <Plus className="w-5 h-5" />
+        <InviteDelivererCard
+          invitePhone={invitePhone}
+          setInvitePhone={setInvitePhone}
+          inviting={inviting}
+          onInvite={handleInviteDriver}
+        />
+
+        {/* ── CARD 3: DEMANDES EN ATTENTE ── */}
+        {pendingDeliverers.length > 0 && (
+          <div className="bg-white rounded-3xl border border-amber-200/80 shadow-xl shadow-amber-500/5 p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between pb-1 border-b border-amber-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center shadow-xs">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-black text-gray-900">
+                    Demandes en attente ({pendingDeliverers.length})
+                  </h2>
+                  <p className="text-xs text-amber-700 font-medium">En attente d'acceptation par le livreur sur DaloaDelivery</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-base font-black text-gray-900">Inviter un Livreur</h2>
-                <p className="text-xs text-gray-400 font-medium">Ajoutez un livreur pour lui confier vos courses en direct</p>
-              </div>
+              <span className="text-xs font-black text-amber-800 bg-amber-100/70 px-2.5 py-1 rounded-full border border-amber-200">
+                Annulable
+              </span>
             </div>
-            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100">
-              📱 DaloaDelivery
-            </span>
+
+            <div className="grid grid-cols-1 gap-2.5">
+              <AnimatePresence>
+                {pendingDeliverers.map((item) => (
+                  <AffiliatedDelivererCard
+                    key={item.id}
+                    item={item}
+                    removingId={removingId}
+                    onRemove={handleRemoveDeliverer}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
           </div>
+        )}
 
-          <form onSubmit={handleInviteDriver} className="pt-1">
-            <div className="flex flex-col sm:flex-row items-stretch gap-2.5">
-              <div className="relative flex-1 flex items-center bg-gray-50/80 focus-within:bg-white focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-400 border border-gray-200 rounded-2xl transition-all overflow-hidden px-3.5 py-1">
-                <span className="text-xs font-black text-gray-500 select-none pr-2 border-r border-gray-200">
-                  🇨🇮 +225
-                </span>
-                <input
-                  type="tel"
-                  value={invitePhone}
-                  onChange={(e) => setInvitePhone(e.target.value)}
-                  placeholder="07 08 09 10 11"
-                  className="flex-1 bg-transparent px-2.5 py-2 text-sm font-bold text-gray-900 placeholder:text-gray-400 placeholder:font-normal focus:outline-none border-none"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                color="primary"
-                size="md"
-                loading={inviting}
-                disabled={inviting}
-                icon={<Plus size={16} />}
-                className="rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-black shadow-md shadow-orange-500/25 active:scale-[0.98] whitespace-nowrap px-6 py-3"
-              >
-                Inviter
-              </Button>
-            </div>
-            <p className="text-[11px] text-gray-400 mt-2 font-medium">
-              💡 Le livreur recevra une invitation à valider directement dans son application DaloaDelivery.
-            </p>
-          </form>
-        </div>
-
-        {/* ── CARD 3: LISTE DES LIVREURS AFFILIÉS ── */}
+        {/* ── CARD 4: LISTE DES LIVREURS ACTIFS ── */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 p-5 sm:p-6 space-y-4">
           <div className="flex items-center justify-between pb-1 border-b border-gray-100/80">
             <div className="flex items-center gap-2.5">
@@ -271,17 +274,17 @@ export default function AffiliatedDeliverersPage() {
               </div>
               <div>
                 <h2 className="text-base font-black text-gray-900">
-                  Mes Livreurs Actifs
+                  Mes Livreurs Partenaires
                 </h2>
-                <p className="text-xs text-gray-400 font-medium">Flotte affiliée à votre boutique</p>
+                <p className="text-xs text-gray-400 font-medium">Flotte confirmée et active pour votre boutique</p>
               </div>
             </div>
             <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
-              {deliverers.length} {deliverers.length > 1 ? 'livreurs' : 'livreur'}
+              {activeDeliverers.length} {activeDeliverers.length > 1 ? 'livreurs' : 'livreur'}
             </span>
           </div>
 
-          {deliverers.length === 0 ? (
+          {activeDeliverers.length === 0 && pendingDeliverers.length === 0 ? (
             <div className="text-center py-10 px-4 border border-dashed border-gray-200 rounded-3xl bg-gray-50/50">
               <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-400 flex items-center justify-center mx-auto mb-3">
                 <Users className="w-6 h-6" />
@@ -291,10 +294,16 @@ export default function AffiliatedDeliverersPage() {
                 Invitez vos livreurs de confiance via leur numéro de téléphone ci-dessus pour leur confier vos commandes privées.
               </p>
             </div>
+          ) : activeDeliverers.length === 0 ? (
+            <div className="text-center py-6 px-4 border border-dashed border-gray-200 rounded-2xl bg-gray-50/30">
+              <p className="text-xs text-gray-500 font-medium">
+                Vos invitations sont en cours d'acceptation par vos livreurs.
+              </p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-2.5">
               <AnimatePresence>
-                {deliverers.map((item) => (
+                {activeDeliverers.map((item) => (
                   <AffiliatedDelivererCard
                     key={item.id}
                     item={item}
