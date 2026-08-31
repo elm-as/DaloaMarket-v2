@@ -173,22 +173,33 @@ export const affiliatedDeliverersService = {
         }
       }
 
-      // 2. Fallback via RPC Supabase
+      // 2. Appel du RPC Supabase (qui gère les statuts Pro, Phase 0 et les invitations)
       const { data, error } = await (supabase as any).rpc('invite_delivery_driver_by_phone', {
         p_phone: phone,
       });
 
-      if (!error && (data as any)?.success !== false) {
-        return (data as any) || { success: true };
+      if (!error && data) {
+        const res = data as any;
+        if (res.success) {
+          return res;
+        }
+        // Si l'erreur mentionne Pro mais que le livreur n'a pas été trouvé ou pour éviter la confusion en Phase 0
+        return {
+          success: false,
+          message: res.message || `Aucun livreur DaloaDelivery trouvé avec le numéro ${phone}. Il doit d'abord créer son compte sur delivery.daloamarket.com.`,
+        };
       }
 
       return {
         success: false,
-        message: (data as any)?.message || 'Aucun compte livreur DaloaDelivery trouvé avec ce numéro.',
+        message: `Aucun livreur DaloaDelivery trouvé avec le numéro ${phone}. Il doit d'abord créer son compte sur delivery.daloamarket.com.`,
       };
     } catch (err: any) {
       console.error('inviteDelivererByPhone error:', err);
-      return { success: false, message: err.message || 'Erreur lors de l\'invitation' };
+      return { 
+        success: false, 
+        message: err.message || 'Impossible de trouver ce livreur. Vérifiez le numéro de téléphone.' 
+      };
     }
   },
 
