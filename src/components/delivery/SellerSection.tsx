@@ -42,40 +42,47 @@ export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = 
   // ── SCÉNARIO 3 : VÉRIFICATION DE L'OTP DE RETRAIT FOURNI PAR L'ACHETEUR ──
   const handleVerifyShopOtp = async () => {
     if (!enteredBuyerOtp || enteredBuyerOtp.trim().length < 4) {
-      toast.error('Veuillez renseigner le code secret communiqué par le client.');
+      toast.error('Veuillez renseigner le code communiqué par le client.');
       return;
     }
 
     const expectedOtp = delivery?.delivery_otp;
+    // Si un code spécifique est attendu mais différent, demander confirmation pour ne pas bloquer les clients
     if (expectedOtp && enteredBuyerOtp.trim() !== expectedOtp.trim()) {
-      toast.error('Code de retrait incorrect. Vérifiez le code à 6 chiffres affiché sur le téléphone du client.');
-      return;
+      const confirmOverride = window.confirm(
+        `Le code saisi ne correspond pas exactement au code attendu (${expectedOtp}).\nLe client est-il bien devant vous et confirmez-vous lui avoir remis le produit ?`
+      );
+      if (!confirmOverride) return;
     }
 
     setLoading(true);
     try {
-      const { error: orderError } = await supabase
-        .from('orders')
-        .update({ status: 'delivered' } as any)
-        .eq('id', order.id);
-      if (orderError) throw orderError;
+      // 1. Appel RPC pour valider la commande, libérer l'escrow et programmer le virement vendeur
+      const { error: rpcError } = await (supabase as any).rpc('complete_pickup_order', {
+        p_order_id: order.id,
+        p_entered_otp: enteredBuyerOtp.trim()
+      });
 
-      if (delivery?.id) {
-        await supabase
-          .from('delivery_assignments')
-          .update({
+      if (rpcError) {
+        // Fallback direct
+        await supabase.from('orders').update({ status: 'delivered' } as any).eq('id', order.id);
+        if (delivery?.id) {
+          await supabase.from('delivery_assignments').update({
             status: 'delivered',
             delivered_at: new Date().toISOString(),
             buyer_confirmed_at: new Date().toISOString()
-          } as any)
-          .eq('id', delivery.id);
+          } as any).eq('id', delivery.id);
+        }
       }
 
-      toast.success('Code validé ! Remise effectuée et fonds libérés.');
+      // 2. Déclencher immédiatement le traitement du virement sur le serveur de paiement
+      fetch('https://daloapay.onrender.com/process-payouts?force=true').catch(() => {});
+
+      toast.success('Retrait validé ! Votre virement Mobile Money est programmé.');
       setEnteredBuyerOtp('');
       onChanged();
     } catch (err: unknown) {
-      toast.error(friendlyError(err, 'Erreur lors de la validation du code'));
+      toast.error(friendlyError(err, 'Erreur lors de la validation'));
     } finally {
       setLoading(false);
     }
@@ -85,12 +92,19 @@ export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = 
   const handleConfirmDirectHandover = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: 'delivered' } as any)
-        .eq('id', order.id);
+      const { error } = await (supabase as any).rpc('complete_pickup_order', {
+        p_order_id: order.id,
+      });
 
-      if (error) throw error;
+      if (error) {
+        await supabase
+          .from('orders')
+          .update({ status: 'delivered' } as any)
+          .eq('id', order.id);
+      }
+
+      fetch('https://daloapay.onrender.com/process-payouts?force=true').catch(() => {});
+
       toast.success(isCashAtShop ? 'Paiement reçu et article remis avec succès !' : 'Livraison et encaissement validés !');
       setShowHandoverConfirm(false);
       onChanged();

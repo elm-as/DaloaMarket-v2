@@ -6,6 +6,7 @@ import { extractUuid, formatListingShareText, shareWithImage } from '../lib/util
 import type { ListingFull, ReviewData, SimilarListing } from '../types/listing';
 import { findSimilarListings } from '../lib/recommendationEngine';
 import { userBehaviorService } from '../services/userBehaviorService';
+import { incrementListingViews } from '../lib/analytics';
 
 interface CachedListingDetail {
   listing: ListingFull;
@@ -190,6 +191,9 @@ export function useListingDetail(id: string | undefined, userId: string | undefi
         title: listingData.title,
         district: listingData.district,
       });
+
+      // Incrémentation des vues réelles dans Supabase (view_count)
+      void incrementListingViews(listingData.id, userId);
 
       // Récupération des favoris, avis et des candidats pour le moteur ML de similarité
       const [favRes, revRes, simCandidatesRes] = await Promise.all([

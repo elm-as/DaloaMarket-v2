@@ -23,7 +23,7 @@ export function haversineDistance(a: LatLng, b: LatLng): number {
 export const DELIVERY_RATE_PER_KM = 85;
 export const DELIVERY_MIN = 500;
 export const DELIVERY_FREE_KM = 1.5;
-export const BUYER_FEE_RATE = 0.03;
+export const BUYER_FEE_RATE = 0.0; // 0% de frais côté acheteur (annulé pour maximiser la conversion)
 export const SELLER_FEE_RATE = 0.035;
 export const PRO_SELLER_FEE_RATE = 0.025;
 export const DRIVER_FEE_RATE = 0.10;

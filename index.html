@@ -41,6 +41,20 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="color-scheme" content="light only" />
 
+    <!-- Early PWA Install Prompt Capture for Android -->
+    <script>
+      window.__deferredPwaPrompt = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.__deferredPwaPrompt = e;
+        window.dispatchEvent(new CustomEvent('daloa:pwa-ready'));
+      });
+      window.addEventListener('appinstalled', function() {
+        window.__deferredPwaPrompt = null;
+        try { localStorage.setItem('pwa_installed', 'true'); } catch (err) {}
+      });
+    </script>
+
     <!-- Open Graph / Social Link Previews (WhatsApp, Facebook, LinkedIn, iMessage) -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="DaloaMarket — Achetez et vendez à Daloa, la marketplace ivoirienne de proximité" />

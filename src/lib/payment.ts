@@ -9,6 +9,8 @@
  *   4. en parallèle, Money Fusion appelle notre webhook qui met à jour la DB
  */
 
+import { supabase } from './supabase';
+
 const PAYMENT_API_URL =
   import.meta.env.VITE_PAYMENT_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:3000' : 'https://daloapay.onrender.com');
@@ -51,11 +53,23 @@ export const normalizeMoneyFusionUrl = (url?: string, token?: string, amount?: n
   return '';
 };
 
+const getAccessToken = async (): Promise<string> => {
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session?.access_token) {
+    throw new Error('Votre session a expiré. Veuillez vous reconnecter.');
+  }
+  return data.session.access_token;
+};
+
 const POST_JSON = async <T>(url: string, body: unknown): Promise<T> => {
   try {
+    const accessToken = await getAccessToken();
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
       body: JSON.stringify(body),
     });
     const text = await res.text();
@@ -141,9 +155,10 @@ export const checkPaymentStatus = async (
   if (!PAYMENT_API_URL) {
     throw new Error('Configuration invalide: VITE_PAYMENT_API_URL non définie');
   }
-  const res = await fetch(
-    `${PAYMENT_API_URL}/check-payment?transactionId=${encodeURIComponent(transactionId)}`
-  );
+  const accessToken = await getAccessToken();
+  const res = await fetch(`${PAYMENT_API_URL}/check-payment?transactionId=${encodeURIComponent(transactionId)}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
   if (!res.ok) {
     throw new Error(`Erreur ${res.status}`);
   }

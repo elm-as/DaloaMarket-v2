@@ -1,13 +1,16 @@
 {
-  "name": "DaloaMarket",
+  "id": "daloamarket-pwa",
+  "name": "DaloaMarket — Marketplace Locale de Daloa",
   "short_name": "DaloaMarket",
-  "description": "Achetez et vendez facilement sur DaloaMarket !",
-  "start_url": ".",
+  "description": "Achetez et vendez facilement sur DaloaMarket, la marketplace 100% locale de Daloa !",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#fff7ed",
+  "background_color": "#ffffff",
   "theme_color": "#ff7f00",
   "lang": "fr",
   "orientation": "portrait",
+  "categories": ["shopping", "business", "lifestyle"],
   "icons": [
     {
       "src": "/apple-touch-icon.png",
@@ -17,12 +20,28 @@
     {
       "src": "/android-chrome-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/android-chrome-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Rechercher",
+      "short_name": "Recherche",
+      "description": "Rechercher des articles à Daloa",
+      "url": "/search"
+    },
+    {
+      "name": "Publier une annonce",
+      "short_name": "Vendre",
+      "description": "Publier une nouvelle annonce à Daloa",
+      "url": "/create-listing"
     }
   ]
 }

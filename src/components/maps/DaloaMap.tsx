@@ -62,7 +62,7 @@ const SELLER_ICON = createMarkerIcon('linear-gradient(135deg, #FF8A00, #FF5500)'
 const BUYER_ICON = createMarkerIcon('linear-gradient(135deg, #3B82F6, #1D4ED8)', '📍', 'rgba(37, 99, 235, 0.6)');
 const COURIER_ICON = createMarkerIcon('linear-gradient(135deg, #10B981, #059669)', '🛵', 'rgba(16, 185, 129, 0.6)');
 
-const TILE_URL_STREET = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+const TILE_URL_STREET = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
 const TILE_URL_SATELLITE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 
 export default function DaloaMap({
@@ -93,11 +93,10 @@ export default function DaloaMap({
       zoomControl: false,
     });
 
-    // Style CARTO Voyager haute résolution
+    // Style Plan HD Esri World Street Map
     const initialLayer = L.tileLayer(TILE_URL_STREET, {
-      maxZoom: 20,
-      subdomains: 'abcd',
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
+      maxZoom: 19,
+      attribution: '&copy; Esri &copy; OpenStreetMap contributors',
     }).addTo(map);
 
     tileLayerRef.current = initialLayer;
@@ -126,9 +125,8 @@ export default function DaloaMap({
       }).addTo(mapRef.current);
     } else {
       tileLayerRef.current = L.tileLayer(TILE_URL_STREET, {
-        maxZoom: 20,
-        subdomains: 'abcd',
-        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        maxZoom: 19,
+        attribution: '&copy; Esri &copy; OpenStreetMap contributors',
       }).addTo(mapRef.current);
     }
   };
