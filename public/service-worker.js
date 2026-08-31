@@ -98,9 +98,9 @@ self.addEventListener('fetch', (event) => {
   // Pour le reste: cache-first basique (icônes, manifest, etc.)
   event.respondWith(
     caches.match(request).then((cached) => {
-      return (
-        cached ||
-        fetch(request).then((response) => {
+      if (cached) return cached;
+      return fetch(request)
+        .then((response) => {
           const copy = response.clone();
           // Sécurité: uniquement cache des réponses GET OK
           if (request.method === 'GET' && response.ok) {
@@ -108,7 +108,13 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-      );
+        .catch(() => {
+          return new Response('Offline resource unavailable', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: new Headers({ 'Content-Type': 'text/plain' }),
+          });
+        });
     })
   );
 });
