@@ -78,6 +78,8 @@ export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) 
                 <img
                   src={userProfile.shop_banner_url}
                   alt="Bannière boutique"
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -97,6 +99,8 @@ export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) 
                 <img
                   src={userProfile.shop_logo_url}
                   alt="Logo boutique"
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
                   className="w-14 h-14 rounded-2xl object-cover ring-4 ring-white -mt-9 relative z-10 bg-white shadow-md flex-shrink-0"
                 />
               ) : (

@@ -31,6 +31,7 @@ import { Button } from '../ui/Button';
 import { cn, formatDate } from '../../lib/utils';
 import { useSupabase } from '../../hooks/useSupabase';
 import { BanUserModal } from './BanUserModal';
+import Avatar from '../profile/Avatar';
 
 type PlatformFilter = 'all' | 'market_only' | 'delivery' | 'both' | 'banned' | 'appeals';
 
@@ -483,13 +484,12 @@ export const AdminUsersTab: React.FC = () => {
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
                           {/* Avatar Circle */}
-                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-200/80 flex items-center justify-center text-xs font-black text-gray-700 shrink-0 overflow-hidden shadow-2xs">
-                            {u.avatar_url ? (
-                              <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              <span>{(u.full_name || u.email || 'U').charAt(0).toUpperCase()}</span>
-                            )}
-                          </div>
+                          <Avatar
+                            src={u.avatar_url}
+                            name={u.full_name || u.email}
+                            size="sm"
+                            className="w-9 h-9 rounded-xl shadow-2xs border border-gray-200/80 shrink-0"
+                          />
 
                           {/* Info Text */}
                           <div className="min-w-0">

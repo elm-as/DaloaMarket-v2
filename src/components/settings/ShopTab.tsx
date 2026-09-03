@@ -268,7 +268,7 @@ export const ShopTab: React.FC = () => {
             </p>
             <label className="block relative aspect-[3/1] bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.99] transition-all group hover:border-orange-300">
               {shopBannerUrl ? (
-                <img src={shopBannerUrl} alt="Bannière" className="w-full h-full object-cover" />
+                <img src={shopBannerUrl} alt="Bannière" referrerPolicy="no-referrer" crossOrigin="anonymous" className="w-full h-full object-cover" />
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-1.5 p-3 text-center">
                   <Upload className="h-6 w-6 text-orange-500" />
@@ -308,7 +308,7 @@ export const ShopTab: React.FC = () => {
               <div className="relative w-20 h-20 flex-shrink-0">
                 <label className="relative flex items-center justify-center w-20 h-20 rounded-2xl overflow-hidden bg-gray-50 border-2 border-dashed border-gray-200 cursor-pointer active:scale-95 transition-all group hover:border-orange-400 shadow-2xs">
                   {shopLogoUrl ? (
-                    <img src={shopLogoUrl} alt="Logo" className="w-full h-full object-cover" />
+                    <img src={shopLogoUrl} alt="Logo" referrerPolicy="no-referrer" crossOrigin="anonymous" className="w-full h-full object-cover" />
                   ) : (
                     <div className="flex items-center justify-center h-full text-gray-400">
                       <ImageIcon className="h-6 w-6 text-orange-500" />

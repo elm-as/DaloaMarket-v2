@@ -378,6 +378,8 @@ const SellerProfilePage: React.FC = () => {
           <img
             src={seller.shop_banner_url}
             alt="Bannière"
+            referrerPolicy="no-referrer"
+            crossOrigin="anonymous"
             className="w-full h-full object-cover"
           />
         ) : (
@@ -430,6 +432,8 @@ const SellerProfilePage: React.FC = () => {
               <img
                 src={seller.shop_logo_url || seller.avatar_url || ''}
                 alt={shopTitle}
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
                 onError={(e) => {
                   (e.currentTarget as HTMLElement).style.display = 'none';
                   const fallback = e.currentTarget.nextElementSibling as HTMLElement;
