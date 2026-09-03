@@ -585,7 +585,7 @@ const CheckoutPage: React.FC = () => {
       // ─────────────────────────────────────────────────────────────
       const { createOrder } = await import("../lib/payment");
       const isPickupMode = deliveryMode === 'pickup';
-      const resolvedDeliveryMode = isPickupMode ? 'pickup_point' : 'delivery';
+      const resolvedDeliveryMode: 'delivery' | 'pickup_point' = isPickupMode ? 'pickup_point' : 'delivery';
       const resolvedAddress = isPickupMode ? 'Retrait en boutique' : (deliveryAddress || 'Daloa');
 
       const processItem = async (targetListingId: string, targetVariantId?: string, targetQty: number = 1, targetAmount: number = total) => {
@@ -609,12 +609,28 @@ const CheckoutPage: React.FC = () => {
       };
 
       if (isCartMode) {
-        await processItem(
-          cartItems[0].listing_id,
-          cartItems[0].variant_id,
-          cartItems.reduce((acc, i) => acc + i.quantity, 0),
-          total
-        );
+        const allInputs = cartItems.map((item) => ({
+          buyer_id: user.id,
+          listing_id: item.listing_id,
+          variant_id: item.variant_id,
+          quantity: item.quantity,
+          delivery_address: resolvedAddress,
+          delivery_mode: resolvedDeliveryMode,
+          delivery_lat: isPickupMode ? undefined : deliveryLatitude,
+          delivery_lng: isPickupMode ? undefined : deliveryLongitude,
+          amount: (item.listing_price || 0) * item.quantity,
+        }));
+        const first = allInputs[0];
+        const result = await createOrder({
+          ...first,
+          amount: total,
+        }, allInputs);
+        if (result.payment_url) {
+          clearCart();
+          window.location.href = result.payment_url;
+        } else {
+          throw new Error("Aucune URL de paiement reçue");
+        }
       } else {
         await processItem(listing!.id, requestedVariantId, 1, total);
       }

@@ -116,7 +116,8 @@ export interface CreateOrderResponse {
 }
 
 export const createOrder = async (
-  input: CreateOrderInput
+  input: CreateOrderInput,
+  orderInputs?: CreateOrderInput[]
 ): Promise<CreateOrderResponse> => {
   if (!PAYMENT_API_URL) {
     throw new Error("Configuration invalide: VITE_PAYMENT_API_URL non definie");
@@ -128,6 +129,7 @@ export const createOrder = async (
     customerPhone: '',
     userId: input.buyer_id,
     orderInput: input,
+    orderInputs: orderInputs && orderInputs.length > 0 ? orderInputs : [input],
   });
 
   if (res) {
