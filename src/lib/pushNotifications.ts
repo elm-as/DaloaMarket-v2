@@ -4,6 +4,18 @@ const VAPID_PUBLIC_KEY =
   import.meta.env.VITE_VAPID_PUBLIC_KEY ||
   'BCU8msD00uw2OYTKGZ_U-d-2cp2SPo7iQzkapnEP9hVsKzPf_eAZduYOqmmzGz58b0k-zT-Z3ogsymll11ZfRx4';
 
+/**
+ * En-têtes pour les routes push du serveur, qui exigent désormais un
+ * utilisateur authentifié (/push/register, /push/notify-user) ou un
+ * administrateur (/push/broadcast). Renvoie null si la session a expiré.
+ */
+async function authHeaders(): Promise<Record<string, string> | null> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) return null;
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+}
+
 const PUSH_API_URL = import.meta.env.VITE_PAYMENT_API_URL || 'https://api.daloamarket.com';
 
 /**
@@ -135,10 +147,19 @@ export async function subscribeToPush(userId: string): Promise<PushSubscription 
     console.log('[Push] 📤 Envoi du token au serveur Railway /push/register...');
 
     // Envoyer le token au serveur Railway (qui utilise service_role pour bypass RLS)
+    const headers = await authHeaders();
+    if (!headers) {
+      console.warn('[Push] Session absente, enregistrement reporté.');
+      return null;
+    }
+
     const registerResponse = await fetch(`${PUSH_API_URL}/push/register`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
+        // Conservé pour l'ancien serveur, qui l'exige encore. Le serveur durci
+        // l'ignore et déduit l'utilisateur du jeton : le web reste donc
+        // compatible avec les deux versions, sans fenêtre de coupure.
         user_id: userId,
         endpoint,
         keys_p256dh,
@@ -200,9 +221,12 @@ export async function broadcastPushNotification(params: {
   image?: string;
 }): Promise<{ success: boolean; sent?: number; total?: number; error?: string }> {
   try {
+    const headers = await authHeaders();
+    if (!headers) return { success: false, error: 'Session expirée, reconnectez-vous.' };
+
     const response = await fetch(`${PUSH_API_URL}/push/broadcast`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         title: params.title,
         body: params.body,
@@ -229,9 +253,12 @@ export async function notifyUserPush(params: {
   image?: string;
 }): Promise<{ success: boolean; sent?: number; error?: string }> {
   try {
+    const headers = await authHeaders();
+    if (!headers) return { success: false, error: 'Session expirée, reconnectez-vous.' };
+
     const response = await fetch(`${PUSH_API_URL}/push/notify-user`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         targetUserId: params.targetUserId,
         title: params.title,

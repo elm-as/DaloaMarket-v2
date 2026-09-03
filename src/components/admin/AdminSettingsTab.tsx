@@ -223,8 +223,18 @@ export function AdminSettingsTab() {
   const handleTriggerPayoutSync = async () => {
     setSyncingPayouts(true);
     try {
-      const apiUrl = import.meta.env.VITE_PAYMENT_API_URL || 'https://daloamarket-payments.up.railway.app';
-      const res = await fetch(`${apiUrl}/process-payouts?force=true`);
+      const apiUrl = import.meta.env.VITE_PAYMENT_API_URL || 'https://api.daloamarket.com';
+      // La route exige un utilisateur authentifié. `?force=true` a été retiré :
+      // il n'est plus honoré que pour l'administration (en-tête x-admin-secret,
+      // qui n'a rien à faire dans un navigateur) et il est inutile ici, tout
+      // virement légitime étant créé avec scheduled_for = now().
+      const { data: sess } = await supabase.auth.getSession();
+      const accessToken = sess.session?.access_token;
+      if (!accessToken) throw new Error('Session expirée, reconnectez-vous.');
+
+      const res = await fetch(`${apiUrl}/process-payouts`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       const data = await res.json();
 
       if (data.success) {

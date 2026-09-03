@@ -164,3 +164,28 @@ export const checkPaymentStatus = async (
   }
   return res.json();
 };
+
+/**
+ * Déclenche le traitement des virements en attente côté serveur.
+ *
+ * Appelé en « tire-et-oublie » juste après une remise validée : c'est ce qui
+ * rend les virements automatiques. La route exige désormais un utilisateur
+ * authentifié, donc on y joint le jeton de session.
+ *
+ * `?force=true` a été retiré volontairement : il court-circuite le délai
+ * d'escrow et n'est plus honoré que pour l'administration. Il était de toute
+ * façon inutile ici, `create_seller_payout` posant `scheduled_for = now()`,
+ * donc tout virement légitime est immédiatement éligible.
+ */
+export const triggerPayoutProcessing = async (): Promise<void> => {
+  if (!PAYMENT_API_URL) return;
+  try {
+    const accessToken = await getAccessToken();
+    await fetch(`${PAYMENT_API_URL}/process-payouts`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+  } catch {
+    // Silencieux : l'échec du déclenchement ne doit pas bloquer la remise.
+    // Les virements restent en 'pending' et repartiront au prochain appel.
+  }
+};

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { triggerPayoutProcessing } from '../../lib/payment';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Package as PackageIcon, User as UserIcon, Clock, CheckCircle, XCircle, Eye, EyeOff, AlertTriangle, Store, Phone } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -46,37 +47,40 @@ export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = 
       return;
     }
 
-    const expectedOtp = delivery?.delivery_otp;
-    // Si un code spécifique est attendu mais différent, demander confirmation pour ne pas bloquer les clients
-    if (expectedOtp && enteredBuyerOtp.trim() !== expectedOtp.trim()) {
-      const confirmOverride = window.confirm(
-        `Le code saisi ne correspond pas exactement au code attendu (${expectedOtp}).\nLe client est-il bien devant vous et confirmez-vous lui avoir remis le produit ?`
-      );
-      if (!confirmOverride) return;
-    }
-
+    // Le code n'est plus comparé ici : il est vérifié par le serveur.
+    // L'ancien window.confirm affichait le code attendu et permettait de passer
+    // outre, ce qui vidait l'OTP de tout sens. Le serveur compte désormais les
+    // tentatives et bascule la course en litige au bout de 5 échecs.
     setLoading(true);
     try {
-      // 1. Appel RPC pour valider la commande, libérer l'escrow et programmer le virement vendeur
-      const { error: rpcError } = await (supabase as any).rpc('complete_pickup_order', {
+      const { data, error: rpcError } = await (supabase as any).rpc('complete_pickup_order', {
         p_order_id: order.id,
         p_entered_otp: enteredBuyerOtp.trim()
       });
 
-      if (rpcError) {
-        // Fallback direct
-        await supabase.from('orders').update({ status: 'delivered' } as any).eq('id', order.id);
-        if (delivery?.id) {
-          await supabase.from('delivery_assignments').update({
-            status: 'delivered',
-            delivered_at: new Date().toISOString(),
-            buyer_confirmed_at: new Date().toISOString()
-          } as any).eq('id', delivery.id);
+      if (rpcError) throw rpcError;
+
+      // Cette RPC renvoie { success: false, reason } dans le corps plutôt qu'une
+      // erreur Postgres : sans ce test, un refus passerait pour un succès.
+      if (data && data.success === false) {
+        if (data.reason === 'invalid_otp') {
+          toast.error(
+            `Code incorrect (tentative ${data.attempts ?? '?'}/${data.max_attempts ?? 5}).`
+          );
+        } else if (data.reason === 'locked') {
+          toast.error('Trop de tentatives : la commande est passée en litige.');
+        } else if (data.reason === 'unauthorized') {
+          toast.error("Vous n'êtes pas autorisé à valider cette commande.");
+        } else {
+          toast.error(data.reason || 'Validation refusée.');
         }
+        return;
       }
 
-      // 2. Déclencher immédiatement le traitement du virement sur le serveur de paiement
-      fetch('https://daloapay.onrender.com/process-payouts?force=true').catch(() => {});
+      // Aucun repli en écriture directe : l'ancien code, si la RPC échouait,
+      // écrivait lui-même orders.status = 'delivered', ce qui contournait
+      // toute vérification d'OTP côté serveur.
+      triggerPayoutProcessing();
 
       toast.success('Retrait validé ! Votre virement Mobile Money est programmé.');
       setEnteredBuyerOtp('');
@@ -92,18 +96,22 @@ export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = 
   const handleConfirmDirectHandover = async () => {
     setLoading(true);
     try {
-      const { error } = await (supabase as any).rpc('complete_pickup_order', {
+      const { data, error } = await (supabase as any).rpc('complete_pickup_order', {
         p_order_id: order.id,
       });
 
-      if (error) {
-        await supabase
-          .from('orders')
-          .update({ status: 'delivered' } as any)
-          .eq('id', order.id);
+      if (error) throw error;
+      if (data && data.success === false) {
+        toast.error(
+          data.reason === 'unauthorized'
+            ? "Vous n'êtes pas autorisé à valider cette commande."
+            : data.reason || 'Validation refusée.'
+        );
+        return;
       }
 
-      fetch('https://daloapay.onrender.com/process-payouts?force=true').catch(() => {});
+      // Repli en écriture directe retiré : voir handleVerifyShopOtp.
+      triggerPayoutProcessing();
 
       toast.success(isCashAtShop ? 'Paiement reçu et article remis avec succès !' : 'Livraison et encaissement validés !');
       setShowHandoverConfirm(false);

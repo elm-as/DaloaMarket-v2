@@ -123,17 +123,20 @@ const HomePage: React.FC = () => {
   // Hydrate le moteur de reco avec les favoris Supabase de l'utilisateur (persistant, cross-device)
   useEffect(() => {
     if (!user?.id) return;
-    supabase
-      .from('favorites')
-      .select('listing:listing_id(id, title, price, category, district, description)')
-      .eq('user_id', user.id)
-      .limit(50)
-      .then(({ data }) => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('favorites')
+          .select('listing:listing_id(id, title, price, category, district, description)')
+          .eq('user_id', user.id)
+          .limit(50);
         if (!data?.length) return;
         const favListings = data.map((row: any) => row.listing).filter(Boolean);
         if (favListings.length) userBehaviorService.hydrateFavorites(favListings);
-      })
-      .catch(() => {/* silencieux */});
+      } catch {
+        /* silencieux */
+      }
+    })();
   }, [user?.id]);
 
   useEffect(() => {
