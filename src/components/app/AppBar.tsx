@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Search, MessageSquare, User, Home, Plus, ShoppingCart, Package } from 'lucide-react';
+import { Search, MessageSquare, User, Home, Plus, ShoppingCart, Package, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSupabase } from '../../hooks/useSupabase';
 import { useMessageRead } from '../../contexts/MessageReadContext';
@@ -10,7 +10,7 @@ import Avatar from '../profile/Avatar';
 
 const AppBar: React.FC = () => {
   const location = useLocation();
-  const { user, userProfile } = useSupabase();
+  const { user, userProfile, isAdmin } = useSupabase();
   const { unreadCount, refreshUnread } = useMessageRead();
   const { activeOrderCount, refreshOrderCount } = useOrderCount();
   const { itemCount } = useCart();
@@ -134,6 +134,18 @@ const AppBar: React.FC = () => {
                   {activeOrderCount > 99 ? '99+' : activeOrderCount}
                 </motion.span>
               )}
+            </Link>
+          )}
+
+          {user && isAdmin && (
+            <Link
+              to="/admin"
+              className="relative flex items-center justify-center rounded-xl active:scale-[0.92] transition-transform"
+              style={{ width: 38, height: 38, color: '#9333EA', background: '#FAF5FF', border: '1px solid #E9D5FF' }}
+              aria-label="Console Administration"
+              title="Admin"
+            >
+              <Shield style={{ width: 19, height: 19 }} />
             </Link>
           )}
 
@@ -296,6 +308,21 @@ const AppBar: React.FC = () => {
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </motion.span>
               )}
+            </Link>
+          )}
+
+          {user && isAdmin && (
+            <Link
+              to="/admin"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors border border-purple-200/80"
+              style={{
+                color: location.pathname.startsWith('/admin') ? '#6B21A8' : '#7E22CE',
+                background: location.pathname.startsWith('/admin') ? '#F3E8FF' : '#FAF5FF',
+              }}
+              title="Console Administration"
+            >
+              <Shield style={{ width: 17, height: 17, color: '#9333EA' }} />
+              <span className="hidden xl:inline">Admin</span>
             </Link>
           )}
 

@@ -35,6 +35,8 @@ const Avatar: React.FC<AvatarProps> = ({
       <img
         src={src}
         alt={name || 'Photo de profil'}
+        referrerPolicy="no-referrer"
+        crossOrigin="anonymous"
         onError={() => setImgError(true)}
         className={cn(
           'rounded-full object-cover ring-2 ring-white shadow-sm flex-shrink-0 bg-gray-100',

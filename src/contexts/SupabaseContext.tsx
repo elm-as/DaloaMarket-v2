@@ -286,7 +286,13 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }
 
   const ALLOWED_ADMIN_ROLES = ['superadmin', 'admin', 'moderateur', 'helper'];
-  const isAdmin = userProfile?.role ? ALLOWED_ADMIN_ROLES.includes(userProfile.role.toLowerCase()) : false;
+  const rawRole =
+    userProfile?.role ||
+    (user?.user_metadata as any)?.role ||
+    (user?.app_metadata as any)?.role ||
+    (session?.user?.user_metadata as any)?.role ||
+    '';
+  const isAdmin = rawRole ? ALLOWED_ADMIN_ROLES.includes(String(rawRole).toLowerCase().trim()) : false;
 
   const value = { session, user, userProfile, loading, profileLoading, profileHydrated, isProfileComplete, isAdmin, signUp, signIn, signOut, createUserProfile, updateUserProfile, refreshUserProfile };
 

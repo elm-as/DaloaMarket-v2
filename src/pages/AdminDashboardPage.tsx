@@ -34,7 +34,11 @@ export default function AdminDashboardPage() {
   const navigate = useNavigate();
   const { user, userProfile, isAdmin } = useSupabase();
 
-  const role = userProfile?.role?.toLowerCase() || 'user';
+  const role =
+    userProfile?.role?.toLowerCase() ||
+    (user?.user_metadata as any)?.role?.toLowerCase() ||
+    (user?.app_metadata as any)?.role?.toLowerCase() ||
+    'user';
   const visibleTabs = TABS.filter((tab) => {
     if (tab.key === 'kpis' || tab.key === 'utilisateurs' || tab.key === 'settings') {
       return ['superadmin', 'admin'].includes(role);

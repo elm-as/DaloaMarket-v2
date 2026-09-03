@@ -53,7 +53,7 @@ const ProfilePage: React.FC = () => {
   usePageTitle('Mon profil');
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, userProfile, signOut } = useSupabase();
+  const { user, userProfile, isAdmin, signOut } = useSupabase();
   const { showMonetisation } = usePhase();
 
   const [activeTab, setActiveTab] = useState<TabId>(() => getTabFromParam(searchParams.get('tab')));
@@ -159,14 +159,27 @@ const ProfilePage: React.FC = () => {
             </h1>
           </div>
 
-          <button
-            type="button"
-            onClick={() => navigate('/settings')}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-extrabold hover:bg-white/30 active:scale-95 transition-all shadow-sm"
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span>Paramètres</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/admin')}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-purple-700/90 hover:bg-purple-800 backdrop-blur-md border border-purple-400/40 text-white text-xs font-extrabold active:scale-95 transition-all shadow-sm"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span>Admin</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => navigate('/settings')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-extrabold hover:bg-white/30 active:scale-95 transition-all shadow-sm"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>Paramètres</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -274,6 +287,34 @@ const ProfilePage: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Bannière d'accès Console Admin */}
+          {isAdmin && (
+            <div className="mt-4 p-3 bg-gradient-to-r from-purple-50 via-indigo-50 to-purple-50 border border-purple-200/80 rounded-2xl flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold shadow-sm flex-shrink-0">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black text-purple-950">Console d'Administration</span>
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-purple-200/90 text-purple-800">
+                      {userProfile?.role || 'SuperAdmin'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-purple-700/90">KPIs, utilisateurs, modération et configurations</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/admin')}
+                className="px-3 py-1.5 rounded-xl bg-purple-600 text-white text-xs font-extrabold hover:bg-purple-700 active:scale-95 transition-all shadow-sm flex items-center gap-1 flex-shrink-0"
+              >
+                <span>Accéder</span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          )}
 
           {/* ── 3-Tile Stats Strip ── */}
           <div className="grid grid-cols-3 gap-2 w-full mt-4 pt-4 border-t border-gray-100">
