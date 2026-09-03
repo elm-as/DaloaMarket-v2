@@ -291,6 +291,13 @@ export function scoreItemSimilarity(
       // Incompatible total (ex: Téléphone vs Télévision / Moto vs Robe)
       clusterMultiplier = 0.05;
     }
+  } else if (srcCluster !== targetCluster) {
+    // Un seul des deux a un type précis (l'autre est 'general').
+    // Garde-fou : empêche un article générique de remonter par simple coïncidence
+    // textuelle. Pénalité douce si même catégorie, plus forte sinon.
+    const sameCategory =
+      normalizeText(source.category || '') === normalizeText(target.category || '');
+    clusterMultiplier = sameCategory ? 0.9 : 0.55;
   }
 
   // 2. Text Similarity (Titre + Description)
@@ -364,6 +371,67 @@ export function scoreItemSimilarity(
   };
 }
 
+/** Identifiant vendeur, tolérant aux différentes formes du modèle. */
+function getSellerKey(item: ListingEntity): string | null {
+  return (
+    (item.listing_user_id as string) ||
+    (item.user_id as string) ||
+    (item.seller?.id as string) ||
+    null
+  );
+}
+
+/** Empreinte grossière d'un titre pour repérer les quasi-doublons (reposts). */
+function titleFingerprint(title: string): string {
+  return tokenizeText(title)
+    .filter((t) => !t.includes('_'))
+    .sort()
+    .slice(0, 6)
+    .join('|');
+}
+
+/**
+ * Post-traitement : supprime les quasi-doublons et limite la domination d'un
+ * seul vendeur, pour un bloc de recommandations plus varié et pertinent.
+ */
+function diversifyResults<T extends ListingEntity>(
+  scored: ScoredListing<T>[],
+  limit: number
+): ScoredListing<T>[] {
+  const out: ScoredListing<T>[] = [];
+  const sellerCount = new Map<string, number>();
+  const seenFingerprints = new Set<string>();
+  const MAX_PER_SELLER = 2;
+
+  for (const s of scored) {
+    if (out.length >= limit) break;
+
+    const fp = titleFingerprint(s.item.title);
+    if (fp && seenFingerprints.has(fp)) continue; // quasi-doublon
+
+    const seller = getSellerKey(s.item);
+    if (seller) {
+      const n = sellerCount.get(seller) || 0;
+      if (n >= MAX_PER_SELLER) continue; // anti-monopole vendeur
+      sellerCount.set(seller, n + 1);
+    }
+
+    if (fp) seenFingerprints.add(fp);
+    out.push(s);
+  }
+
+  // Si la diversité a trop réduit la liste, compléter avec les meilleurs restants.
+  if (out.length < limit) {
+    const chosen = new Set(out.map((o) => o.item.id));
+    for (const s of scored) {
+      if (out.length >= limit) break;
+      if (!chosen.has(s.item.id)) out.push(s);
+    }
+  }
+
+  return out;
+}
+
 /**
  * Recherche et classe les annonces les plus similaires à une annonce donnée
  */
@@ -394,5 +462,5 @@ export function findSimilarListings<T extends ListingEntity>(
 
   scoredList.sort((a, b) => b.score - a.score);
 
-  return scoredList.slice(0, limit);
+  return diversifyResults(scoredList, limit);
 }

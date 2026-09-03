@@ -16,8 +16,30 @@ import {
   computeLocationSimilarity,
   normalizeText,
 } from '../lib/recommendationEngine';
+import { supabase } from '../lib/supabase';
 
 export type InteractionType = 'view' | 'click' | 'search' | 'favorite' | 'contact' | 'add_to_cart';
+
+// Cache de l'utilisateur courant pour attribuer les events serveur sans I/O bloquant.
+let cachedUserId: string | null = null;
+if (supabase) {
+  supabase.auth.getSession().then(({ data }) => {
+    cachedUserId = data.session?.user?.id ?? null;
+  });
+  supabase.auth.onAuthStateChange((_e, session) => {
+    cachedUserId = session?.user?.id ?? null;
+  });
+}
+
+// Correspondance InteractionType -> nom d'event serveur (table `events`).
+const EVENT_NAME_MAP: Record<InteractionType, string> = {
+  view: 'listing_view',
+  click: 'listing_click',
+  search: 'search',
+  favorite: 'favorite_add',
+  contact: 'contact_seller',
+  add_to_cart: 'add_to_cart',
+};
 
 export interface UserInteraction {
   type: InteractionType;
@@ -116,6 +138,34 @@ class UserBehaviorService {
 
     this.profileDirty = true;
     this.saveInteractions();
+
+    // Persistance serveur (fire-and-forget) — graine pour le ML futur.
+    this.logToServer(fullInteraction);
+  }
+
+  /**
+   * Envoie l'interaction dans la table `events` côté serveur. Ne bloque jamais
+   * l'UX et n'échoue jamais visiblement.
+   */
+  private logToServer(interaction: UserInteraction) {
+    if (!supabase) return;
+    const eventName = EVENT_NAME_MAP[interaction.type];
+    if (!eventName) return;
+
+    const { type, listingId, timestamp, ...rest } = interaction;
+    void supabase
+      .from('events')
+      .insert({
+        event_name: eventName,
+        user_id: cachedUserId,
+        listing_id: listingId ?? null,
+        props: rest,
+      })
+      .then(({ error }: { error: unknown }) => {
+        if (error && import.meta.env?.DEV) {
+          console.warn('[analytics] event non enregistré:', eventName, error);
+        }
+      });
   }
 
   /**
@@ -371,6 +421,46 @@ class UserBehaviorService {
     scoredList.sort((a, b) => b.score - a.score);
 
     return scoredList.slice(0, limit);
+  }
+
+  /**
+   * Injecte les favoris Supabase dans l'historique local (persistance cross-device).
+   * Evite les doublons et préserve les interactions comportementales déjà enregistrées.
+   */
+  public hydrateFavorites(favorites: ListingEntity[]): void {
+    if (!favorites.length) return;
+
+    const existingFavIds = new Set(
+      this.interactions.filter((i) => i.type === 'favorite').map((i) => i.listingId)
+    );
+
+    let added = 0;
+    for (const fav of favorites) {
+      if (existingFavIds.has(fav.id)) continue;
+      // Timestamp distribué sur les 30 derniers jours pour simuler l'historique réel
+      const simulatedAge = Math.random() * 30 * 24 * 60 * 60 * 1000;
+      this.interactions.push({
+        type: 'favorite',
+        listingId: fav.id,
+        category: fav.category,
+        price: fav.price,
+        title: fav.title,
+        district: fav.district ?? undefined,
+        timestamp: Date.now() - simulatedAge,
+      });
+      added++;
+    }
+
+    if (added === 0) return;
+
+    if (this.interactions.length > MAX_INTERACTIONS) {
+      this.interactions = this.interactions
+        .sort((a, b) => a.timestamp - b.timestamp)
+        .slice(-MAX_INTERACTIONS);
+    }
+
+    this.profileDirty = true;
+    this.saveInteractions();
   }
 
   /**

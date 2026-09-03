@@ -265,7 +265,7 @@ export function useListingDetail(id: string | undefined, userId: string | undefi
         // Exécution de l'algorithme Machine Learning multi-critères
         const scoredSimilar = findSimilarListings(listingData, rawCandidates, {
           limit: 4,
-          minScore: 15,
+          minScore: 28,
         });
 
         finalSimilar = scoredSimilar.map((scored) => ({
