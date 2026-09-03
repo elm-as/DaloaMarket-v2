@@ -10,10 +10,15 @@ import type { LocationSearchResult } from "./LocationSearchInput";
 import LocationConfirmModal from "./LocationConfirmModal";
 import { customLocationPinIcon } from "./map-pin";
 
-// Tuiles Cartographiques Gratuites & HD
-// Esri World Street Map : rendu vectoriel rastérisé, doux, net et professionnel sans clé API
-const TILE_URL_STREET = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
-const TILE_URL_SATELLITE = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+const MAPBOX_TOKEN = (import.meta as any).env?.VITE_MAPBOX_TOKEN || '';
+
+const TILE_URL_STREET = MAPBOX_TOKEN
+  ? `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`
+  : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+
+const TILE_URL_SATELLITE = MAPBOX_TOKEN
+  ? `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`
+  : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 
 interface LocationPickerProps {
   initialLat?: number;
@@ -77,9 +82,15 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     }
   }, [mapReady]);
 
-  // Initialisation de la carte avec fond Esri World Street Map HD
+  // Initialisation de la carte avec fond Mapbox Streets HD ou CartoDB Voyager
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+
+    // Éviter le crash React 18 StrictMode "Map container is already initialized"
+    if ((containerRef.current as any)._leaflet_id) {
+      delete (containerRef.current as any)._leaflet_id;
+    }
+
     const map = L.map(containerRef.current, {
       center: [lat, lng],
       zoom,
@@ -88,8 +99,9 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     });
 
     const initialLayer = L.tileLayer(TILE_URL_STREET, {
-      maxZoom: 19,
-      attribution: '&copy; Esri &copy; OpenStreetMap contributors',
+      maxZoom: 20,
+      subdomains: 'abcd',
+      attribution: MAPBOX_TOKEN ? '&copy; Mapbox' : '&copy; CARTO',
     }).addTo(map);
 
     tileLayerRef.current = initialLayer;
@@ -108,22 +120,24 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
           return;
         }
 
-        marker.setLatLng([newLat, newLng]);
         setLat(newLat);
         setLng(newLng);
+        marker.setLatLng([newLat, newLng]);
         onLocationChange(newLat, newLng);
       });
 
       marker.on("dragend", () => {
-        const pos = marker.getLatLng();
-        if (userType === 'seller' && !isLocationInDaloa(pos.lat, pos.lng) && !isSuperOrAdmin) {
-          toast.error("Emplacement hors de Daloa. DaloaMarket est réservé aux vendeurs locaux.", { icon: "🚫" });
+        const position = marker.getLatLng();
+        
+        if (userType === 'seller' && !isLocationInDaloa(position.lat, position.lng) && !isSuperOrAdmin) {
+          toast.error("Emplacement déplacé hors de Daloa. Replacé au centre.", { icon: "⚠️" });
           marker.setLatLng([lat, lng]);
           return;
         }
-        setLat(pos.lat);
-        setLng(pos.lng);
-        onLocationChange(pos.lat, pos.lng);
+
+        setLat(position.lat);
+        setLng(position.lng);
+        onLocationChange(position.lat, position.lng);
       });
     }
 
@@ -132,14 +146,19 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     setMapReady(true);
 
     return () => {
-      map.remove();
-      mapRef.current = null;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+      if (containerRef.current && (containerRef.current as any)._leaflet_id) {
+        delete (containerRef.current as any)._leaflet_id;
+      }
       markerRef.current = null;
       tileLayerRef.current = null;
     };
   }, []);
 
-  // Bascule Mode Plan (Esri Street HD) / Satellite HD (Esri)
+  // Bascule Mode Plan (Mapbox / CartoDB HD) / Satellite HD
   const toggleMapMode = () => {
     if (!mapRef.current) return;
     const newMode = mapMode === 'street' ? 'satellite' : 'street';
@@ -152,13 +171,15 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     if (newMode === 'satellite') {
       tileLayerRef.current = L.tileLayer(TILE_URL_SATELLITE, {
         maxZoom: 19,
-        attribution: '&copy; Esri &copy; Maxar, Earthstar Geographics',
+        subdomains: 'abcd',
+        attribution: MAPBOX_TOKEN ? '&copy; Mapbox &copy; Maxar' : '&copy; Esri &copy; Maxar',
       }).addTo(mapRef.current);
       toast("Mode Satellite HD activé", { icon: "🛰️", duration: 2000 });
     } else {
       tileLayerRef.current = L.tileLayer(TILE_URL_STREET, {
-        maxZoom: 19,
-        attribution: '&copy; Esri &copy; OpenStreetMap contributors',
+        maxZoom: 20,
+        subdomains: 'abcd',
+        attribution: MAPBOX_TOKEN ? '&copy; Mapbox' : '&copy; CARTO',
       }).addTo(mapRef.current);
       toast("Mode Plan HD activé", { icon: "🗺️", duration: 2000 });
     }
