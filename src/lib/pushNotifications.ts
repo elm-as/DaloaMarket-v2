@@ -222,36 +222,26 @@ export async function broadcastPushNotification(params: {
 }): Promise<{ success: boolean; sent?: number; total?: number; error?: string }> {
   try {
     const headers = await authHeaders();
-    if (headers) {
-      // 1. Envoi unifié via Railway (qui dispatche WebPush + Expo Mobile)
-      const response = await fetch(`${PUSH_API_URL}/push/broadcast`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          title: params.title,
-          body: params.body,
-          url: params.url || '/',
-          image: params.image || null,
-        }),
-      });
-      if (response.ok) {
-        const data = await response.json().catch(() => ({ success: true }));
-        return data;
-      }
+    if (!headers) {
+      return { success: false, error: 'Session absente' };
     }
 
-    // 2. Fallback résilient vers l'Edge Function Supabase mobile si Railway est inaccessible
-    const { data: edgeData } = await supabase.functions.invoke('send-push', {
-      body: {
-        broadcast: true,
+    const response = await fetch(`${PUSH_API_URL}/push/broadcast`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
         title: params.title,
         body: params.body,
-        data: { url: params.url || '/' },
-      },
+        url: params.url || '/',
+        image: params.image || null,
+      }),
     });
-    return { success: true, sent: edgeData?.sent ?? 1 };
-  } catch (err) {
-    return { success: true };
+
+    const data = await response.json().catch(() => ({ success: response.ok }));
+    return data;
+  } catch (err: any) {
+    console.warn('[Push Broadcast] Erreur:', err?.message);
+    return { success: false, error: err?.message };
   }
 }
 
@@ -271,47 +261,31 @@ export async function notifyUserPush(params: {
 }): Promise<{ success: boolean; sent?: number; error?: string }> {
   try {
     const headers = await authHeaders();
-    if (headers) {
-      // 1. Envoi unifié via Railway (qui dispatche WebPush + Expo Mobile)
-      const response = await fetch(`${PUSH_API_URL}/push/notify-user`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          targetUserId: params.targetUserId,
-          title: params.title,
-          body: params.body,
-          url: params.url || '/',
-          tag: params.tag || 'user-alert',
-          image: params.image || null,
-          chatPartnerId: params.chatPartnerId || null,
-          listingId: params.listingId || null,
-          orderId: params.orderId || null,
-        }),
-      });
-      if (response.ok) {
-        const data = await response.json().catch(() => ({ success: true }));
-        return data;
-      }
+    if (!headers) {
+      return { success: false, error: 'Session absente' };
     }
 
-    // 2. Fallback résilient vers l'Edge Function Supabase mobile si Railway est inaccessible
-    const { data: edgeData } = await supabase.functions.invoke('send-push', {
-      body: {
-        userIds: [params.targetUserId],
+    const response = await fetch(`${PUSH_API_URL}/push/notify-user`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        targetUserId: params.targetUserId,
         title: params.title,
         body: params.body,
-        data: {
-          url: params.url || '/',
-          tag: params.tag,
-          chatPartnerId: params.chatPartnerId,
-          listingId: params.listingId,
-          orderId: params.orderId,
-        },
-      },
+        url: params.url || '/',
+        tag: params.tag || 'user-alert',
+        image: params.image || null,
+        chatPartnerId: params.chatPartnerId || null,
+        listingId: params.listingId || null,
+        orderId: params.orderId || null,
+      }),
     });
-    return { success: true, sent: edgeData?.sent ?? 1 };
-  } catch (err) {
-    return { success: true };
+
+    const data = await response.json().catch(() => ({ success: response.ok }));
+    return data;
+  } catch (err: any) {
+    console.warn('[Push NotifyUser] Erreur:', err?.message);
+    return { success: false, error: err?.message };
   }
 }
 
