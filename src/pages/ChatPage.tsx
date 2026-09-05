@@ -38,7 +38,7 @@ interface OtherUser {
 const ChatPage: React.FC = () => {
   const { listingId, userId: otherUserId } = useParams<{ listingId: string; userId: string }>();
   const navigate = useNavigate();
-  const { user } = useSupabase();
+  const { user, userProfile } = useSupabase();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
@@ -297,7 +297,13 @@ const ChatPage: React.FC = () => {
 
       if (insertedData) {
         // Envoi de la notification push au destinataire
-        const senderName = (user?.user_metadata?.full_name || user?.user_metadata?.name || 'Un utilisateur') as string;
+        const senderName = (
+          userProfile?.shop_name?.trim() ||
+          userProfile?.full_name?.trim() ||
+          user?.user_metadata?.full_name ||
+          user?.user_metadata?.name ||
+          'Un utilisateur'
+        ) as string;
         notifyUserPush({
           targetUserId: otherUserId,
           title: `💬 Nouveau message de ${senderName}`,

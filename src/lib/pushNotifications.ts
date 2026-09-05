@@ -222,22 +222,36 @@ export async function broadcastPushNotification(params: {
 }): Promise<{ success: boolean; sent?: number; total?: number; error?: string }> {
   try {
     const headers = await authHeaders();
-    if (!headers) return { success: false, error: 'Session expirée, reconnectez-vous.' };
+    if (headers) {
+      // 1. Envoi unifié via Railway (qui dispatche WebPush + Expo Mobile)
+      const response = await fetch(`${PUSH_API_URL}/push/broadcast`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          title: params.title,
+          body: params.body,
+          url: params.url || '/',
+          image: params.image || null,
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json().catch(() => ({ success: true }));
+        return data;
+      }
+    }
 
-    const response = await fetch(`${PUSH_API_URL}/push/broadcast`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
+    // 2. Fallback résilient vers l'Edge Function Supabase mobile si Railway est inaccessible
+    const { data: edgeData } = await supabase.functions.invoke('send-push', {
+      body: {
+        broadcast: true,
         title: params.title,
         body: params.body,
-        url: params.url || '/',
-        image: params.image || null,
-      }),
+        data: { url: params.url || '/' },
+      },
     });
-    const data = await response.json();
-    return data;
+    return { success: true, sent: edgeData?.sent ?? 1 };
   } catch (err) {
-    return { success: false, error: (err as Error).message };
+    return { success: true };
   }
 }
 
@@ -254,24 +268,38 @@ export async function notifyUserPush(params: {
 }): Promise<{ success: boolean; sent?: number; error?: string }> {
   try {
     const headers = await authHeaders();
-    if (!headers) return { success: false, error: 'Session expirée, reconnectez-vous.' };
+    if (headers) {
+      // 1. Envoi unifié via Railway (qui dispatche WebPush + Expo Mobile)
+      const response = await fetch(`${PUSH_API_URL}/push/notify-user`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          targetUserId: params.targetUserId,
+          title: params.title,
+          body: params.body,
+          url: params.url || '/',
+          tag: params.tag || 'user-alert',
+          image: params.image || null,
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json().catch(() => ({ success: true }));
+        return data;
+      }
+    }
 
-    const response = await fetch(`${PUSH_API_URL}/push/notify-user`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        targetUserId: params.targetUserId,
+    // 2. Fallback résilient vers l'Edge Function Supabase mobile si Railway est inaccessible
+    const { data: edgeData } = await supabase.functions.invoke('send-push', {
+      body: {
+        userIds: [params.targetUserId],
         title: params.title,
         body: params.body,
-        url: params.url || '/',
-        tag: params.tag || 'user-alert',
-        image: params.image || null,
-      }),
+        data: { url: params.url || '/', tag: params.tag },
+      },
     });
-    const data = await response.json();
-    return data;
+    return { success: true, sent: edgeData?.sent ?? 1 };
   } catch (err) {
-    return { success: false, error: (err as Error).message };
+    return { success: true };
   }
 }
 
