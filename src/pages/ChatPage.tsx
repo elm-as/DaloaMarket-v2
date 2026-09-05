@@ -310,6 +310,8 @@ const ChatPage: React.FC = () => {
           body: censoredText.length > 80 ? censoredText.slice(0, 77) + '...' : censoredText,
           url: `/messages/${listingId}/${currentUserId}`,
           tag: `chat-${listingId}-${currentUserId}`,
+          chatPartnerId: currentUserId,
+          listingId: listingId,
         }).catch((e) => console.warn('[Push Chat Notification Warning]:', e));
 
         setMessages((prev) => {

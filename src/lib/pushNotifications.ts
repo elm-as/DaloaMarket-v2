@@ -265,6 +265,9 @@ export async function notifyUserPush(params: {
   url?: string;
   tag?: string;
   image?: string;
+  chatPartnerId?: string;
+  listingId?: string;
+  orderId?: string;
 }): Promise<{ success: boolean; sent?: number; error?: string }> {
   try {
     const headers = await authHeaders();
@@ -280,6 +283,9 @@ export async function notifyUserPush(params: {
           url: params.url || '/',
           tag: params.tag || 'user-alert',
           image: params.image || null,
+          chatPartnerId: params.chatPartnerId || null,
+          listingId: params.listingId || null,
+          orderId: params.orderId || null,
         }),
       });
       if (response.ok) {
@@ -294,7 +300,13 @@ export async function notifyUserPush(params: {
         userIds: [params.targetUserId],
         title: params.title,
         body: params.body,
-        data: { url: params.url || '/', tag: params.tag },
+        data: {
+          url: params.url || '/',
+          tag: params.tag,
+          chatPartnerId: params.chatPartnerId,
+          listingId: params.listingId,
+          orderId: params.orderId,
+        },
       },
     });
     return { success: true, sent: edgeData?.sent ?? 1 };
