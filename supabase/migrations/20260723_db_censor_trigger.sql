@@ -28,15 +28,24 @@ BEGIN
     END IF;
   END IF;
 
-  -- 2. Censure des mots-clés de contact direct & réseaux sociaux
+  -- 2. Censure des mots-clés de contact direct & réseaux sociaux avec frontières de mots (\y)
+  -- Évite les faux positifs sur des mots français normaux ("installé", "instant", "snapshot", etc.)
   clean_content := regexp_replace(
     clean_content,
-    'whatsapp|wa\.me|insta(?:gram)?|snap(?:chat)?|telegram|t\.me|facebook|fb|messenger|tiktok|appel(?:le)?[- ]moi|mon num(?:[ée]ro)?|mon contact',
+    '\y(?:whatsapp|wa\.me|insta(?:gram)?|snap(?:chat)?|telegram|t\.me|facebook|fb|messenger|tiktok)\y|\y(?:appel(?:le)?[- ]moi|mon num(?:[ée]ro)?|mon contact|mon phone|mon t[ée]l|contacte?[- ]moi (?:sur|au|par)|viens sur (?:wa|whatsapp))\y',
     censor_replacement,
     'gi'
   );
 
-  NEW.content := clean_content;
+  -- 3. Nettoyer les répétitions successives de messages de censure
+  clean_content := regexp_replace(
+    clean_content,
+    '(?:\[Coordonnées masquées par sécurité\]\s*)+',
+    censor_replacement || ' ',
+    'g'
+  );
+
+  NEW.content := trim(clean_content);
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
