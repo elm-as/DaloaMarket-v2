@@ -21,6 +21,7 @@ http://www.daloamarket.com/*    https://daloamarket.com/:splat  301!
 /sitemap.xml      /sitemap.xml           200
 /robots.txt       /robots.txt            200
 /917afbced62346469f16dc92320fc541.txt /917afbced62346469f16dc92320fc541.txt 200
+/.well-known/*     /.well-known/:splat    200
 /api/*            /.netlify/functions/:splat  200
 
 # Single Page Application (SPA Fallback)
