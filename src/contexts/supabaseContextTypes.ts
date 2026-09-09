@@ -15,8 +15,9 @@ export interface SupabaseContextType {
   isAdmin: boolean;
   signUp: (
     email: string,
-    password: string
-  ) => Promise<{ error: unknown; requiresConfirmation?: boolean; session?: Session | null }>;
+    password: string,
+    metadata?: { full_name?: string; name?: string; phone?: string; role?: string; district?: string }
+  ) => Promise<{ error: unknown; requiresConfirmation?: boolean; session?: Session | null; user?: User | null }>;
   signIn: (email: string, password: string) => Promise<{ error: unknown }>;
   signOut: () => Promise<{ error: unknown }>;
   createUserProfile: (

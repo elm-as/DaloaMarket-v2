@@ -178,10 +178,22 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => { subscription.unsubscribe(); clearTimeout(timeout); };
   }, [checkSession]);
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    metadata?: { full_name?: string; name?: string; phone?: string; role?: string; district?: string }
+  ) => {
     if (!isSupabaseConfigured) return { error: new Error('Base de données Supabase non configurée.') };
-    try { const res = await supabase.auth.signUp({ email, password }); return { error: res.error, session: res.data?.session ?? null }; }
-    catch (error) { return { error }; }
+    try {
+      const res = await supabase.auth.signUp({
+        email,
+        password,
+        options: metadata ? { data: metadata } : undefined,
+      });
+      return { error: res.error, session: res.data?.session ?? null, user: res.data?.user ?? null };
+    } catch (error) {
+      return { error };
+    }
   };
 
   const signIn = async (email: string, password: string) => {
