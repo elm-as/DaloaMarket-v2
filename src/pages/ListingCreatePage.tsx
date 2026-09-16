@@ -265,6 +265,10 @@ const ListingCreatePage: React.FC = () => {
     } else if (currentStep === 2) {
       const isValid = await trigger(['price', 'stock']);
       if (isValid) {
+        if (isNaN(priceNum) || priceNum < 300) {
+          toast.error("Le montant minimum d'une annonce est de 300 FCFA.");
+          return;
+        }
         if (variants.length > 0) {
           if (variants.some((v) => !v.label && !v.size && !v.color)) {
             toast.error('Chaque déclinaison doit avoir au moins une couleur, taille ou libellé.');
