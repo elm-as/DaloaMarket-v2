@@ -2,9 +2,10 @@ import React from 'react';
 import { Shield, UserCheck, Database, Share2, Lock, FileKey, Cookie, RefreshCw, Globe, Eye, Trash2, Server, Mail, ShieldAlert } from 'lucide-react';
 import { useSEO } from '../hooks/useSEO';
 import { Card } from '../components/ui/Card';
+import { CONTACT, PAYMENT_NETWORKS, LEGAL_LAST_UPDATED } from '../content/legalFacts';
 
 export default function PrivacyPage() {
-  useSEO('Politique de Confidentialité — Protección de Vos Données', {
+  useSEO('Politique de Confidentialité — Protection de vos données', {
     description: 'Découvrez comment DaloaMarket protège vos données personnelles et votre vie privée.',
     canonical: 'https://daloamarket.com/privacy'
   });
@@ -21,7 +22,7 @@ export default function PrivacyPage() {
             Politique de Confidentialité
           </h1>
           <p className="text-xs sm:text-sm text-orange-100 max-w-lg mx-auto">
-            Dernière mise à jour : 2 juillet 2026 — DaloaMarket s'engage à protéger vos données personnelles.
+            Dernière mise à jour : {LEGAL_LAST_UPDATED} — DaloaMarket s'engage à protéger vos données personnelles.
           </p>
         </div>
 
@@ -51,9 +52,9 @@ export default function PrivacyPage() {
                 <Database className="w-5 h-5 text-[var(--color-primary)]" />
               </div>
               <div>
-                <h2 className="text-lg font-bold mb-3">2. données collectées</h2>
+                <h2 className="text-lg font-bold mb-3">2. Données collectées</h2>
                 <div className="space-y-2 text-sm text-[var(--color-on-surface-variant)] leading-relaxed">
-                  <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">2.1 données fournies par l'utilisateur</h4>
+                  <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">2.1 Données fournies par l'utilisateur</h4>
                   <p>Lors de votre inscription et de l'utilisation de la Plateforme, nous collectons :</p>
                   <ul className="list-disc pl-5 space-y-1">
                     <li><strong className="text-[var(--color-on-surface)]">Identifiants :</strong> adresse email, mot de passe (chiffré)</li>
@@ -62,20 +63,26 @@ export default function PrivacyPage() {
                     <li><strong className="text-[var(--color-on-surface)]">Messages :</strong> contenu des échanges entre utilisateurs via notre messagerie intégrée</li>
                     <li><strong className="text-[var(--color-on-surface)]">Avis :</strong> évaluations et commentaires laissés sur les profils vendeurs</li>
                     <li><strong className="text-[var(--color-on-surface)]">Boutique :</strong> nom de boutique, bannière, logo, description, couleur de thème</li>
-                    <li><strong className="text-[var(--color-on-surface)]">Commandes et livraison :</strong> adresse de livraison, coordonnées GPS (pendant la durée de la livraison uniquement), photos de livraison</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Commandes et livraison :</strong> adresse de livraison, coordonnées GPS du point de livraison, photos de livraison</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Coordonnées de versement (vendeurs et livreurs) :</strong> réseau Mobile Money choisi et numéro de téléphone sur lequel vos gains doivent être versés</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Retours et signalements :</strong> avis envoyés via le formulaire de retour, signalements d'annonces ou d'utilisateurs, messages adressés au support</li>
                   </ul>
 
-                  <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">2.2 données collectées automatiquement</h4>
+                  <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">2.2 Données collectées automatiquement</h4>
                   <p>Lors de votre navigation, nous collectons automatiquement :</p>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li><strong className="text-[var(--color-on-surface)]">Données de navigation :</strong> pages visitées, annonces consultées, recherches effectuées</li>
-                    <li><strong className="text-[var(--color-on-surface)]">Données techniques :</strong> adresse IP, type de navigateur, système d'exploitation, identifiant de l'appareil</li>
-                    <li><strong className="text-[var(--color-on-surface)]">Données de localisation :</strong> position GPS approximative (uniquement lorsque vous utilisez les fonctionnalités de livraison ou de géolocalisation, et avec votre consentement explicite)</li>
-                    <li><strong className="text-[var(--color-on-surface)]">Cookies essentiels :</strong> pour maintenir votre session et vos préférences</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Consultation des annonces :</strong> nombre de vues par annonce. Si vous n'êtes pas connecté, un identifiant aléatoire est enregistré dans votre navigateur pour éviter de compter plusieurs fois la même visite ; il n'est rattaché à aucune identité.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Adresse IP :</strong> nous enregistrons l'adresse IP utilisée lors de votre inscription ainsi que la dernière adresse IP de connexion, afin de détecter les comptes frauduleux et les abus. Une adresse IP à l'origine d'abus répétés peut être bloquée.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Données techniques :</strong> type de navigateur, système d'exploitation, identifiant de l'appareil</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Données de localisation :</strong> position GPS, uniquement lorsque vous utilisez les fonctionnalités de livraison ou de géolocalisation, et après autorisation de votre appareil. Les coordonnées du point de livraison et, le cas échéant, celles de votre boutique ou de votre annonce sont conservées avec la commande ou l'annonce concernée.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Empreinte d'identifiant :</strong> à la suppression d'un compte, nous conservons une empreinte cryptographique irréversible (SHA-256) de son adresse e-mail et de son identifiant de connexion — jamais l'adresse elle-même, et l'empreinte ne permet pas de la retrouver. Elle sert uniquement à reconnaître la réinscription d'une personne dont le compte avait été banni ou signalé.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Notifications :</strong> si vous les activez, un jeton de notification propre à votre appareil, nécessaire pour vous envoyer les alertes de commande et de message. Vous pouvez les désactiver à tout moment dans les réglages de votre appareil.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Cookies et stockage local essentiels :</strong> pour maintenir votre session et vos préférences d'affichage</li>
                   </ul>
 
-                  <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">2.3 données de paiement</h4>
-                  <p>Pour les commandes avec paiement sécurisé, les transactions sont traitées via notre partenaire Money Fusion. DaloaMarket ne stocke pas vos coordonnées bancaires ou vos informations de paiement Mobile Money. Nous conservons uniquement l'historique des transactions (montant, date, type de service) pour la gestion de votre compte et la résolution d'éventuels litiges.</p>
+                  <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">2.3 Données de paiement</h4>
+                  <p>Pour les commandes avec paiement sécurisé, les transactions sont traitées par notre partenaire Money Fusion. <strong>DaloaMarket ne collecte ni ne stocke vos identifiants de paiement</strong> : code secret Mobile Money, code PIN, identifiants bancaires ou numéro de carte ne transitent jamais par nos serveurs. La saisie s'effectue exclusivement sur l'interface de notre prestataire de paiement.</p>
+                  <p>Nous conservons en revanche l'historique de vos transactions (montant, date, statut, type de service) pour la gestion de votre compte et la résolution d'éventuels litiges. Si vous vendez ou livrez sur la Plateforme, nous conservons également le numéro Mobile Money que vous avez renseigné pour recevoir vos versements : il nous est indispensable pour vous payer.</p>
                 </div>
               </div>
             </div>
@@ -137,22 +144,23 @@ export default function PrivacyPage() {
               <div>
                 <h2 className="text-lg font-bold mb-3">4. Partage et divulgation des données</h2>
                 <div className="space-y-2 text-sm text-[var(--color-on-surface-variant)] leading-relaxed">
-                  <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">4.1 données publiques</h4>
+                  <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">4.1 Données publiques</h4>
                   <p>Certaines informations de votre profil sont publiques et visibles par les autres utilisateurs : votre nom complet, votre photo de profil, votre quartier, vos évaluations, et le contenu de vos annonces. Ne publiez pas d'informations que vous souhaitez garder privées.</p>
                   
                   <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">4.2 Prestataires de services & Livreurs Affiliés</h4>
-                  <p>Nous partageons des données avec les prestataires et partenaires suivants, strictly dans le cadre du fonctionnement de la Plateforme :</p>
+                  <p>Nous partageons des données avec les prestataires et partenaires suivants, strictement dans le cadre du fonctionnement de la Plateforme :</p>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li><strong className="text-[var(--color-on-surface)]">Livreurs Affiliés & DaloaDelivery :</strong> lorsqu'une commande est passée (en paiement sécurisé ou à la livraison), les coordonnées de l'acheteur (nom, téléphone, quartier/adresse) sont partagées avec le livreur désigné (public ou affilié au Vendeur Pro) pour la réalisation de la livraison.</li>
-                    <li><strong className="text-[var(--color-on-surface)]">Supabase :</strong> hébergement de la base de données et du stockage des fichiers (photos d'annonces, avatars)</li>
-                    <li><strong className="text-[var(--color-on-surface)]">Resend :</strong> envoi des emails transactionnels (confirmation, réinitialisation de mot de passe)</li>
-                    <li><strong className="text-[var(--color-on-surface)]">Money Fusion :</strong> traitement des paiements sécurisés (Mobile Money Orange, MTN, Wave, Moov et cartes bancaires)</li>
-                    <li><strong className="text-[var(--color-on-surface)]">Railway & Netlify :</strong> hébergement des serveurs de la Plateforme</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Livreurs (réseau DaloaDelivery ou livreurs affiliés à un vendeur) :</strong> lorsqu'une commande est passée, les coordonnées nécessaires à la livraison (nom, téléphone, adresse et point GPS) sont transmises au livreur désigné, pour la seule durée de la course.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Supabase :</strong> hébergement de la base de données, authentification et stockage des fichiers (photos d'annonces, avatars, bannières de boutique). Les e-mails transactionnels — confirmation d'inscription, réinitialisation de mot de passe — sont également expédiés via ce service.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Money Fusion :</strong> traitement des paiements et des versements Mobile Money ({PAYMENT_NETWORKS})</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Mapbox :</strong> affichage des cartes et calcul des itinéraires de livraison</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Expo (Apple et Google pour l'acheminement) :</strong> envoi des notifications push vers l'application mobile, si vous les avez activées</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Netlify et Render :</strong> hébergement du site et du service de paiement</li>
                   </ul>
-                  <p>Ces prestataires sont tenus de protéger vos données et de ne les utiliser que pour les services spécifiés.</p>
+                  <p>Ces prestataires sont tenus de protéger vos données et de ne les utiliser que pour les services spécifiés. Certains d'entre eux hébergent des données en dehors de la Côte d'Ivoire, notamment en Europe ; les transferts sont encadrés par les engagements contractuels de ces prestataires.</p>
 
                   <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">4.3 Obligations légales</h4>
-                  <p>Nous pouvons divulguer vos données si la loi ivoirienne nous y oblige, notamment sûr demande des autorités judiciaires compétentes, dans le cadre d'une procédure légale, ou pour protéger les droits, la propriété ou la sécurité de DaloaMarket, de ses utilisateurs ou du public.</p>
+                  <p>Nous pouvons divulguer vos données si la loi ivoirienne nous y oblige, notamment sur demande des autorités judiciaires compétentes, dans le cadre d'une procédure légale, ou pour protéger les droits, la propriété ou la sécurité de DaloaMarket, de ses utilisateurs ou du public.</p>
 
                   <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">4.4 Pas de vente de données</h4>
                   <p><strong className="text-[var(--color-on-surface)]">DaloaMarket ne vend pas vos données personnelles.</strong> Nous ne monnayons pas vos informations auprès d'annonceurs, de courtiers en données, ou de tiers commerciaux.</p>
@@ -168,7 +176,7 @@ export default function PrivacyPage() {
                 <Lock className="w-5 h-5 text-[var(--color-primary)]" />
               </div>
               <div>
-                <h2 className="text-lg font-bold mb-3">5. sécurité des données</h2>
+                <h2 className="text-lg font-bold mb-3">5. Sécurité des données</h2>
                 <div className="space-y-2 text-sm text-[var(--color-on-surface-variant)] leading-relaxed">
                   <p>Nous mettons en œuvre des mesures de sécurité techniques et organisationnelles appropriées pour protéger vos données :</p>
                   <ul className="list-disc pl-5 space-y-1">
@@ -192,13 +200,14 @@ export default function PrivacyPage() {
               <div>
                 <h2 className="text-lg font-bold mb-3">6. Cookies et technologies similaires</h2>
                 <div className="space-y-2 text-sm text-[var(--color-on-surface-variant)] leading-relaxed">
-                  <p>Nous utilisons des cookies strictement nécessaires au fonctionnement de la Plateforme :</p>
+                  <p>Nous n'utilisons que des cookies et du stockage local strictement nécessaires au fonctionnement de la Plateforme :</p>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li><strong className="text-[var(--color-on-surface)]">Cookie de session :</strong> maintient votre connexion active pendant votre navigation. Il expire à la fermeture du navigateur.</li>
-                    <li><strong className="text-[var(--color-on-surface)]">Cookie de préférence :</strong> mémorise vos préférences d'affichage (thème, langue).</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Session :</strong> maintient votre connexion active d'une page à l'autre et d'une visite à l'autre.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Préférences :</strong> mémorise vos préférences d'affichage.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Identifiant de visite anonyme :</strong> un identifiant aléatoire stocké dans votre navigateur, servant uniquement à ne pas comptabiliser plusieurs fois la même consultation d'annonce. Il n'est rattaché à aucune identité et n'est transmis à aucun tiers.</li>
                   </ul>
-                  <p><strong className="text-[var(--color-on-surface)]">Nous n'utilisons pas de cookies publicitaires</strong>, de cookies de tracking tiers, ni de pixels de suivi à des fins de profilage commercial.</p>
-                  <p>Vous pouvez configurer votre navigateur pour bloquer les cookies. Cependant, celà pourrait affecter le bon fonctionnement de la Plateforme (notamment la connexion à votre compte).</p>
+                  <p><strong className="text-[var(--color-on-surface)]">Nous n'utilisons aucun cookie publicitaire, aucun traceur tiers et aucun pixel de suivi</strong> à des fins de profilage commercial ou de mesure d'audience publicitaire. Aucune donnée de navigation n'est transmise à une régie publicitaire ou à un réseau social.</p>
+                  <p>Vous pouvez configurer votre navigateur pour bloquer les cookies. Cela peut toutefois affecter le bon fonctionnement de la Plateforme, notamment la connexion à votre compte.</p>
                 </div>
               </div>
             </div>
@@ -213,14 +222,16 @@ export default function PrivacyPage() {
               <div>
                 <h2 className="text-lg font-bold mb-3">7. Conservation des données</h2>
                 <div className="space-y-2 text-sm text-[var(--color-on-surface-variant)] leading-relaxed">
-                  <p>Nous conservons vos données personnelles uniquement pendant la durée nécessaire aux finalités pour lesquelles elles ont été collectées :</p>
+                  <p>Nous conservons vos données personnelles pendant la durée nécessaire aux finalités pour lesquelles elles ont été collectées, sans excéder les durées suivantes :</p>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li><strong className="text-[var(--color-on-surface)]">données de compte :</strong> pendant toute la durée de vie de votre compte, puis 90 jours après sa suppression (délai de rétention légal).</li>
-                    <li><strong className="text-[var(--color-on-surface)]">Annonces :</strong> jusqu'à leur suppression par vous ou leur désactivation automatique. Les annonces supprimées sont définitivement effacées sous 30 jours.</li>
-                    <li><strong className="text-[var(--color-on-surface)]">Messages :</strong> conservés pendant la durée de vie de votre compte pour l'historique des échanges.</li>
-                    <li><strong className="text-[var(--color-on-surface)]">données de paiement :</strong> conservées 10 ans conformément aux obligations comptables et fiscales ivoiriennes.</li>
-                    <li><strong className="text-[var(--color-on-surface)]">Logs techniques :</strong> conservés 12 mois pour la sécurité et le diagnostic.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Données de compte :</strong> pendant toute la durée de vie de votre compte. La suppression prend effet immédiatement : nom, téléphone, adresse e-mail, photos et documents sont effacés ou rendus anonymes sans délai, et l'accès est révoqué définitivement.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Annonces :</strong> jusqu'à leur suppression par vos soins. Une annonce supprimée cesse immédiatement d'être visible des autres utilisateurs.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Messages :</strong> 24 mois au maximum, afin de vous donner accès à l'historique de vos échanges et de permettre au support d'instruire un éventuel litige. Une purge automatique hebdomadaire efface les plus anciens.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Empreintes d'identifiants de comptes supprimés :</strong> 3 ans, au titre de la prévention de la fraude, puis effacement automatique.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Données de transaction :</strong> jusqu'à 10 ans, conformément aux obligations comptables et fiscales ivoiriennes. Cette conservation s'impose à nous et survit à la suppression de votre compte.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Adresses IP et journaux techniques :</strong> 12 mois au plus, pour la sécurité, la prévention de la fraude et le diagnostic d'incidents.</li>
                   </ul>
+                  <p>Si vous souhaitez connaître précisément les données que nous détenons encore à votre sujet à un instant donné, écrivez-nous à {CONTACT.support}.</p>
                 </div>
               </div>
             </div>
@@ -256,7 +267,7 @@ export default function PrivacyPage() {
                       <Trash2 className="w-5 h-5 text-[var(--color-error)] flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="font-semibold text-sm text-[var(--color-on-surface)]">Droit à l'effacement</p>
-                        <p className="text-xs">Vous pouvez demander la suppression de vos données, sous réserve des obligations légales de conservation.</p>
+                        <p className="text-xs">Vous pouvez supprimer votre compte vous-même depuis l'application mobile (Paramètres → Supprimer mon compte), ou nous en faire la demande par e-mail, sous réserve des obligations légales de conservation.</p>
                       </div>
                     </div>
                     <div className="flex gap-3 p-3 rounded-xl bg-gray-50">
@@ -321,7 +332,7 @@ export default function PrivacyPage() {
                 <Mail className="w-5 h-5 text-[var(--color-primary)]" />
               </div>
               <div>
-                <h2 className="text-lg font-bold mb-3">11. Contact et reclamations</h2>
+                <h2 className="text-lg font-bold mb-3">11. Contact et réclamations</h2>
                 <div className="space-y-2 text-sm text-[var(--color-on-surface-variant)] leading-relaxed">
                   <p>Pour toute question, demande d'exercice de vos droits, ou réclamation relative à la protection de vos données :</p>
                   <ul className="space-y-2 mt-2">

@@ -232,6 +232,7 @@ function AppContent() {
           <Route path="/electronique" element={<AppLayout><CategoryPage /></AppLayout>} />
           <Route path="/vehicules" element={<AppLayout><CategoryPage /></AppLayout>} />
           <Route path="/mode" element={<AppLayout><CategoryPage /></AppLayout>} />
+          <Route path="/cosmetiques" element={<AppLayout><CategoryPage /></AppLayout>} />
           <Route path="/maison-deco" element={<AppLayout><CategoryPage /></AppLayout>} />
           <Route path="/sports-loisirs" element={<AppLayout><CategoryPage /></AppLayout>} />
           <Route path="/livres" element={<AppLayout><CategoryPage /></AppLayout>} />
@@ -250,6 +251,11 @@ function AppContent() {
             </PrivateRoute>
           } />
           <Route path="/messages/:listingId/:userId" element={
+            <PrivateRoute requireProfile={true}>
+              <AppLayout><ChatPage /></AppLayout>
+            </PrivateRoute>
+          } />
+          <Route path="/messages/:userId" element={
             <PrivateRoute requireProfile={true}>
               <AppLayout><ChatPage /></AppLayout>
             </PrivateRoute>
@@ -362,6 +368,7 @@ function AppContent() {
           {/* Admin routes */}
           <Route path="/admin" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
           <Route path="/admin/kpis" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
+          <Route path="/admin/ambassadeurs" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
           <Route path="/admin/feedbacks" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
           <Route path="/admin/features" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
           <Route path="/admin/reports" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />

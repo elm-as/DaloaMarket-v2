@@ -28,9 +28,12 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation }) => 
     locale: fr,
   });
 
+  const isSupport = listing_id === 'support' || !listing_id;
+  const targetUrl = isSupport ? `/messages/support/${other_user.id}` : `/messages/${listing_id}/${other_user.id}`;
+
   return (
     <Link
-      to={`/messages/${listing_id}/${other_user.id}`}
+      to={targetUrl}
       className={`flex items-center gap-3 px-4 py-4 bg-white rounded-3xl border active:scale-[0.98] transition-all shadow-lg shadow-gray-200/50 ${
         unread_count > 0 ? 'border-orange-200 bg-orange-50/40' : 'border-gray-100 hover:bg-gray-50'
       }`}
@@ -58,7 +61,9 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation }) => 
           </span>
         </div>
         <p className="text-xs text-gray-500 truncate mt-0.5">
-          <span className="text-orange-600 font-bold">Re: {listing_title}</span>
+          <span className="text-orange-600 font-bold">
+            {isSupport ? listing_title : `Re: ${listing_title}`}
+          </span>
           {' · '}
           {last_message}
         </p>

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Star, MessageCircle, ChevronRight, Store } from 'lucide-react';
 import { formatDate, getSellerPath, getListingShareUrl, formatWhatsAppPhone } from '../../../lib/utils';
 import Avatar from '../../profile/Avatar';
+import ProBadge from '../../profile/ProBadge';
 import WhatsAppIcon from '../../ui/WhatsAppIcon';
 import type { ListingFull } from '../../../types/listing';
 
@@ -32,9 +33,7 @@ const SellerCard: React.FC<SellerCardProps> = ({ listing, isPro, currentUserId, 
             className="ring-2 ring-orange-500/30 shadow-md"
           />
           {isPro && (
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-amber-400 ring-2 ring-white flex items-center justify-center shadow-xs">
-              <Star className="w-2.5 h-2.5 text-amber-950 fill-amber-950" />
-            </div>
+            <ProBadge iconOnly size="sm" className="absolute -bottom-1 -right-1" />
           )}
         </div>
 
@@ -43,11 +42,7 @@ const SellerCard: React.FC<SellerCardProps> = ({ listing, isPro, currentUserId, 
             <span className="font-black text-sm sm:text-base text-gray-900 truncate group-hover:text-orange-600 transition-colors">
               {shopName}
             </span>
-            {isPro && (
-              <span className="text-[9px] font-black text-amber-800 bg-amber-50 px-2 py-0.2 rounded-full border border-amber-200">
-                PRO
-              </span>
-            )}
+            {isPro && <ProBadge size="xs" className="flex-shrink-0" />}
           </div>
           <div className="flex items-center gap-1 mt-0.5">
             <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />

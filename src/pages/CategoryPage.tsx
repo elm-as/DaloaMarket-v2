@@ -24,6 +24,21 @@ const CATEGORY_MAP: Record<string, { id: string; label: string; description: str
     label: 'Auto & Moto',
     description: 'Voitures, motos, pièces détachées et accessoires auto/moto à vendre à Daloa.',
   },
+  'cosmetiques': {
+    id: 'beauty',
+    label: 'Beauté & Cosmétiques',
+    description: 'Crèmes, soins du visage et du corps, cheveux, perruques, maquillage et parfums à Daloa.',
+  },
+  'beaute': {
+    id: 'beauty',
+    label: 'Beauté & Cosmétiques',
+    description: 'Crèmes, soins du visage et du corps, cheveux, perruques, maquillage et parfums à Daloa.',
+  },
+  'beauty': {
+    id: 'beauty',
+    label: 'Beauté & Cosmétiques',
+    description: 'Crèmes, soins du visage et du corps, cheveux, perruques, maquillage et parfums à Daloa.',
+  },
   'mode': {
     id: 'fashion',
     label: 'Mode & Accessoires',

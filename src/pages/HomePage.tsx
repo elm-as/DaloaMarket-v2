@@ -42,6 +42,7 @@ const CATEGORY_STYLE: Record<string, { icon: React.ReactNode; bg: string; border
   electronics: { icon: <Monitor className="h-4 w-4" />, bg: 'bg-blue-50 text-blue-600', border: 'border-blue-200', emoji: '📱' },
   home: { icon: <Home className="h-4 w-4" />, bg: 'bg-amber-50 text-amber-600', border: 'border-amber-200', emoji: '🛋️' },
   vehicles: { icon: <Car className="h-4 w-4" />, bg: 'bg-red-50 text-red-600', border: 'border-red-200', emoji: '🚗' },
+  beauty: { icon: <Sparkles className="h-4 w-4" />, bg: 'bg-fuchsia-50 text-fuchsia-600', border: 'border-fuchsia-200', emoji: '💄' },
   sports: { icon: <Dumbbell className="h-4 w-4" />, bg: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-200', emoji: '⚽' },
   books: { icon: <BookOpen className="h-4 w-4" />, bg: 'bg-cyan-50 text-cyan-600', border: 'border-cyan-200', emoji: '📚' },
   food: { icon: <UtensilsCrossed className="h-4 w-4" />, bg: 'bg-orange-50 text-orange-600', border: 'border-orange-200', emoji: '🍲' },
@@ -52,6 +53,7 @@ const CATEGORY_SYNONYMS: Record<string, string[]> = {
   electronics: ['electronics', 'electronique', 'Électronique & High-tech', 'high-tech', 'telephone', 'informatique'],
   home: ['home', 'maison', 'maison-deco', 'Maison & Jardin', 'meubles', 'electromenager'],
   vehicles: ['vehicles', 'vehicules', 'Auto & Moto', 'voiture', 'moto'],
+  beauty: ['beauty', 'beaute', 'cosmetiques', 'Beauté & Cosmétiques', 'cosmetique', 'maquillage', 'parfum', 'perruque', 'soins', 'creme'],
   sports: ['sports', 'sports-loisirs', 'Sports & Loisirs', 'sport'],
   books: ['books', 'livres', 'Livres & Culture', 'scolaire', 'culture'],
   food: ['food', 'alimentaire', 'Alimentaire', 'Alimentaire & Produits locaux', 'nourriture', 'produits locaux'],
@@ -215,7 +217,7 @@ const HomePage: React.FC = () => {
           .from('listings')
           .select('*, users!listings_user_id_fkey(full_name, avatar_url)')
           .eq('status', 'active')
-          .order('created_at', { ascending: false })
+          .order('sort_at', { ascending: false })
           .limit(30);
 
         if (fetchError) throw fetchError;
@@ -236,7 +238,7 @@ const HomePage: React.FC = () => {
           .select('*, users!listings_user_id_fkey(full_name, avatar_url)')
           .eq('status', 'active')
           .in('category', synonyms)
-          .order('created_at', { ascending: false })
+          .order('sort_at', { ascending: false })
           .limit(30);
 
         if (fetchError) throw fetchError;

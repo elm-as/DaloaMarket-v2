@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSupabase } from '../../hooks/useSupabase';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
+import ProBadge from '../profile/ProBadge';
 import { friendlyError } from '../../lib/messages';
 import { usePhase } from '../../contexts/PhaseContext';
 import { Button } from '../ui/Button';
@@ -184,11 +185,7 @@ export const ShopTab: React.FC = () => {
               <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">
                 Identité de la vitrine
               </p>
-              {isPro && (
-                <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
-                  ⭐ Vendeur Pro
-                </span>
-              )}
+              {isPro && <ProBadge tone="soft" size="sm" label="VENDEUR PRO" />}
             </div>
 
             <div>

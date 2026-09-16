@@ -8,6 +8,7 @@ import './styles/design-tokens.css';
 import './styles/global.css';
 import './styles/flutter.css';
 import { Toaster } from 'react-hot-toast';
+import { captureReferralCode } from './services/referralService';
 
 // Handle Vite dynamic import chunk load errors (automatically reload page after a deployment update)
 if (typeof window !== 'undefined') {
@@ -20,6 +21,11 @@ if (typeof window !== 'undefined') {
     }
   });
 }
+
+// Le code ambassadeur peut arriver sur n'importe quelle page (une annonce
+// partagee, la page d'accueil). On le met de cote avant tout rendu ; il sera
+// consomme a la creation du compte, quel que soit le mode d'inscription.
+captureReferralCode();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

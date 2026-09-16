@@ -1,0 +1,78 @@
+-- =============================================================================
+-- Reclassification des annonces cosmétiques : 'fashion' -> 'beauty'
+-- Date        : 2026-09-14
+-- Origine     : suggestion de Skin Glow CI (user_feedbacks, 26/08/2026)
+--               « Veuillez crée une catégorie pour les produits cosmétiques »
+-- Contexte    : la catégorie 'fashion' contenait 62 annonces actives dont 32
+--               relevaient en réalité de la beauté (crèmes, sérums, déodorants
+--               Balea, parfums, savons). Les 3 premières boutiques organiques
+--               de la plateforme vendent toutes de la cosmétique.
+-- Prérequis   : aucune contrainte CHECK sur listings.category — pas de DDL.
+-- Appliqué    : oui, 32 lignes (voir la liste de rollback plus bas).
+-- =============================================================================
+
+-- ----------------------------------------------------------------------------
+-- AVANT (forward) — déjà exécuté le 2026-09-14
+-- ----------------------------------------------------------------------------
+-- WITH cible AS (
+--   SELECT id FROM listings
+--   WHERE category = 'fashion' AND status = 'active'
+--     AND title ~* '(cr[eè]me|pommade|s[eé]rum|gommage|masque|nettoyant|mousse'
+--               || '|kit (de )?(visage|corps)|visage|acn[eé]|anti[- ]?tache'
+--               || '|anti[- ]?bouton|d[eé]odorant|deospray|parfum|eau de toilette'
+--               || '|savon|gel douche|lait corporel|beauty|balea|cien|huile'
+--               || '|brosse de visage|alpha arbutin|curcuma|collag[eè]ne'
+--               || '|vitamine c|q10|perruque|m[eè]che|tissage|maquillage|gloss'
+--               || '|rouge [aà] l[eè]vres|fond de teint)'
+-- )
+-- UPDATE listings l SET category = 'beauty'
+-- FROM cible c WHERE l.id = c.id;
+
+-- ----------------------------------------------------------------------------
+-- ROLLBACK — remet EXACTEMENT les 32 annonces déplacées dans 'fashion'.
+-- Liste d'identifiants figée au moment de l'exécution : sûre même si d'autres
+-- annonces ont été classées en 'beauty' depuis (elles ne sont pas touchées).
+-- ----------------------------------------------------------------------------
+-- UPDATE listings SET category = 'fashion' WHERE id IN (
+--   '2ec8e7cf-9511-426e-992f-70cc8fae247d',
+--   '068310bf-bdfc-41c2-a191-facd3b0a07d4',
+--   '87cd5f1d-03a8-4126-868b-33e4c5f0a0a0',
+--   '0f480adc-0d04-4546-9de5-9c81825b8636',
+--   'dd7ac000-5775-47ff-8467-5afdd0e211df',
+--   '473b6e74-7b7d-4d92-afb4-977498acca78',
+--   'a1634f50-376c-4390-ab6f-1da7815a16eb',
+--   'b3728274-e7f3-43d4-a6d4-dfeb4e1dfbcb',
+--   '02dc1085-1c30-4075-86b7-fbc1d1dd4b08',
+--   '116db74a-c7bb-439f-9439-72de6922a518',
+--   'd0d1945e-aeb5-448b-b764-1756c4e24d24',
+--   'cf7b26a1-7ba4-4760-9906-63745a3c224d',
+--   'b38bed42-02d2-40fe-92cc-e782a2fa56c6',
+--   '5ce3ca44-e912-4bc1-a40c-851b46be21c2',
+--   'b74e3436-9c1d-4001-90b4-416ba9511d63',
+--   'f40f648d-1ce9-42ec-9182-614ad8718dab',
+--   '6d2a2987-9225-42fd-9682-cdcaf729b46a',
+--   '776a06fa-1a18-4684-a338-5a31e44d02c9',
+--   '6776863b-1bcd-44c2-877b-a1f84e467d9a',
+--   'aa220519-ca86-437a-a34f-72205f092189',
+--   '1b8d74c7-385f-464c-98fe-dbcd1cf04032',
+--   'ed5410c0-ff51-4ad6-8ec4-4ad208db527c',
+--   '33f81781-34b8-440e-a6a5-a3e02f4de9b0',
+--   '0a9c9d23-6003-4b2b-9f65-7332225c89d3',
+--   '08cc9af0-7e30-4245-9019-849ab1b47b00',
+--   'be5afb69-9ea1-40b0-a06d-d1f0ccf25e53',
+--   'c9ae8cbb-29f6-45ee-8e4a-0c5e9558c439',
+--   '04521fff-3bdd-4b39-9731-ba64a3219b8b',
+--   '9a022d89-dcd7-40f8-9fcb-4511b256de7f',
+--   '49f432c2-695c-4e30-a692-47c5e7adcb14',
+--   '92f432cd-51d0-40e0-beb1-58d97b5b4dc4',
+--   'ceaa2561-a5a2-4dd2-898e-d0dd0f754c04'
+-- );
+
+-- ----------------------------------------------------------------------------
+-- Correction jointe du même jour : orthographe d'un quartier
+-- Signalée par M.TOURE (user_feedbacks, 25/08/2026, note 5/5).
+-- Déjà appliquée en base et dans les 6 fichiers de code.
+--   UPDATE users    SET district = 'Odjenecourani' WHERE district = 'Hodjinninkloni';
+--   UPDATE listings SET district = 'Odjenecourani' WHERE district = 'Hodjinninkloni';
+-- Rollback : remplacer 'Odjenecourani' par 'Hodjinninkloni' dans les deux sens.
+-- ----------------------------------------------------------------------------

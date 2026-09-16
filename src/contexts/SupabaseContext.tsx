@@ -3,6 +3,7 @@ import type { Session, User } from '@supabase/auth-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { Database } from '../lib/database.types';
 import { SupabaseContext, type UserProfile } from './supabaseContextTypes';
+import { redeemPendingReferral } from '../services/referralService';
 
 const isProfileFullyFilled = (profile: UserProfile): boolean => {
   if (!profile) return false;
@@ -115,6 +116,15 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           return data;
         });
       }
+
+      // Seul endroit traversé par toutes les inscriptions — email, Google,
+      // reprise de session. C'est donc ici que le code ambassadeur mis de côté
+      // au démarrage est consommé, et nulle part ailleurs.
+      //
+      // Conditionné à l'existence de la ligne `users` : au tout début d'une
+      // inscription elle peut manquer une fraction de seconde, et un
+      // rattachement tenté trop tôt serait refusé — code perdu pour rien.
+      if (data != null) void redeemPendingReferral(userId);
     } catch (error) {
       console.error('Fetch user profile error:', error);
     } finally {

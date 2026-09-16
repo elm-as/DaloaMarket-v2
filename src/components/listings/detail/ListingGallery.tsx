@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
+  Home,
   Flag,
   Pencil,
   Share2,
@@ -53,6 +54,7 @@ const ListingGallery: React.FC<ListingGalleryProps> = ({
       <div className="relative w-full aspect-[4/3] md:aspect-[16/9] lg:aspect-[4/3] lg:max-h-none max-h-[460px] bg-gray-900 overflow-hidden group rounded-b-[36px] lg:rounded-3xl shadow-lg">
         {/* TOP FLOATING BAR */}
         <div className="absolute top-3 left-3 right-3 z-30 flex items-center justify-between pointer-events-none">
+          <div className="flex items-center">
           <button
             onClick={() => navigate(-1)}
             className="pointer-events-auto w-10 h-10 rounded-2xl bg-black/45 backdrop-blur-md text-white flex items-center justify-center shadow-lg hover:bg-black/70 active:scale-95 transition-all"
@@ -60,6 +62,20 @@ const ListingGallery: React.FC<ListingGalleryProps> = ({
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
+
+          {/* Raccourci accueil : apres avoir enchaine plusieurs articles, il evite
+              de remonter la chaine un par un. Contrairement au mobile, le web ne
+              peut pas vider l'historique du navigateur : on pose simplement une
+              nouvelle entree vers l'accueil. */}
+          <button
+            onClick={() => navigate('/')}
+            className="pointer-events-auto ml-2 w-10 h-10 rounded-2xl bg-black/45 backdrop-blur-md text-white flex items-center justify-center shadow-lg hover:bg-black/70 active:scale-95 transition-all"
+            aria-label="Retour à l'accueil"
+            title="Retour à l'accueil"
+          >
+            <Home className="h-[18px] w-[18px]" />
+          </button>
+          </div>
 
           <div className="pointer-events-auto flex items-center gap-2">
             <button

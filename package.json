@@ -14,7 +14,7 @@
     "cap:open:ios": "cap open ios"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.2.0",
+    "@capacitor/cli": "^8.5.1",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.7.0",
@@ -44,7 +44,7 @@
     "framer-motion": "^12.42.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.344.0",
-    "netlify-cli": "^27.4.1",
+    "netlify-cli": "^23.15.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-dropzone": "^14.4.1",

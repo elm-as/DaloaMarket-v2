@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { UserCheck } from 'lucide-react';
+import { UserCheck, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { useSupabase } from '../hooks/useSupabase';
@@ -10,7 +10,11 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { cn, validateIvorianPhone, DISTRICTS } from '../lib/utils';
-import { trackCompleteRegistration } from '../lib/analytics';
+import {
+  getPendingReferralCode,
+  captureReferralCode,
+  redeemPendingReferral,
+} from '../services/referralService';
 
 interface ProfileFormData {
   full_name: string;
@@ -18,6 +22,7 @@ interface ProfileFormData {
   district: string;
   payout_network?: string;
   payout_number?: string;
+  referral_code?: string;
 }
 
 export default function CompleteProfilePage() {
@@ -35,6 +40,11 @@ export default function CompleteProfilePage() {
   const prefillName = userProfile?.full_name || googleMeta?.full_name || googleMeta?.name || '';
   const nameFromGoogle = !userProfile?.full_name && !!(googleMeta?.full_name || googleMeta?.name);
 
+  // Une inscription Google ne passe jamais par le formulaire d'inscription :
+  // c'est donc ici, et seulement ici, que la personne peut voir son code de
+  // parrainage et le corriger — ou le saisir si le lien ne l'a pas porté.
+  const pendingRef = useMemo(() => getPendingReferralCode() || '', []);
+
   const {
     register,
     handleSubmit,
@@ -42,6 +52,7 @@ export default function CompleteProfilePage() {
   } = useForm<ProfileFormData>({
     defaultValues: {
       full_name: prefillName,
+      referral_code: pendingRef,
     },
   });
 
@@ -82,7 +93,14 @@ export default function CompleteProfilePage() {
           ? (googleMeta.avatar_url || googleMeta.picture)
           : undefined,
       });
-      trackCompleteRegistration({ content_name: 'CompleteProfile' });
+
+      // Un code saisi ici prime sur celui gardé en mémoire : c'est l'intention
+      // la plus récente. Le rattachement est tenté tout de suite, sans bloquer
+      // la navigation si la base le refuse — elle a ses propres règles.
+      const saisi = (data.referral_code || '').trim();
+      if (saisi) captureReferralCode(new URLSearchParams({ ref: saisi }).toString());
+      await redeemPendingReferral(user.id);
+
       navigate(from);
     } catch (err: any) {
       setErrorMsg(friendlyError(err));
@@ -246,6 +264,27 @@ export default function CompleteProfilePage() {
                   )}
                 </div>
               </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900 mb-1 pl-1 flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-orange-500" />
+                Code parrain
+              </h3>
+              <p className="text-xs text-gray-400 mb-4 pl-1 leading-relaxed">
+                {pendingRef
+                  ? 'Code reconnu — votre ambassadeur sera crédité. Vous pouvez le corriger.'
+                  : 'Optionnel — uniquement si un ambassadeur DaloaMarket vous a donné un code.'}
+              </p>
+
+              <input
+                {...register('referral_code')}
+                type="text"
+                autoComplete="off"
+                spellCheck={false}
+                className="w-full px-4 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-colors font-medium text-sm uppercase tracking-wider"
+                placeholder="Le code de votre ambassadeur"
+              />
             </div>
 
             <button

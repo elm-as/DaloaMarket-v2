@@ -1,10 +1,11 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Flag, Bell, FileText, Users, Truck, MessageSquare, Lightbulb, Sliders } from 'lucide-react';
+import { BarChart3, Flag, Bell, FileText, Users, Truck, MessageSquare, Lightbulb, Sliders, Award } from 'lucide-react';
 import { useSupabase } from '../hooks/useSupabase';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { ErrorState } from '../components/ui/ErrorState';
 import { cn } from '../lib/utils';
+import { useAdminPendingCounts } from '../hooks/useAdminPendingCounts';
 
 import { AdminKpisTab } from '../components/admin/AdminKpisTab';
 import { AdminReportsTab } from '../components/admin/AdminReportsTab';
@@ -15,9 +16,11 @@ import { AdminDeliveriesTab } from '../components/admin/AdminDeliveriesTab';
 import { AdminSettingsTab } from '../components/admin/AdminSettingsTab';
 import { AdminFeedbacksTab } from '../components/admin/AdminFeedbacksTab';
 import { AdminFeaturesTab } from '../components/admin/AdminFeaturesTab';
+import { AdminAmbassadorsTab } from '../components/admin/AdminAmbassadorsTab';
 
 const TABS = [
   { key: 'kpis', label: 'KPIs', icon: BarChart3, paths: ['/admin', '/admin/kpis'] },
+  { key: 'ambassadeurs', label: 'Ambassadeurs', icon: Award, paths: ['/admin/ambassadeurs'] },
   { key: 'feedbacks', label: 'Feedbacks & Avis', icon: MessageSquare, paths: ['/admin/feedbacks'] },
   { key: 'features', label: 'Idées Features', icon: Lightbulb, paths: ['/admin/features'] },
   { key: 'reports', label: 'Signalements', icon: Flag, paths: ['/admin/reports'] },
@@ -33,6 +36,7 @@ export default function AdminDashboardPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, userProfile, isAdmin } = useSupabase();
+  const { byTab, total: totalAttente } = useAdminPendingCounts(Boolean(isAdmin));
 
   const role =
     userProfile?.role?.toLowerCase() ||
@@ -40,7 +44,7 @@ export default function AdminDashboardPage() {
     (user?.app_metadata as any)?.role?.toLowerCase() ||
     'user';
   const visibleTabs = TABS.filter((tab) => {
-    if (tab.key === 'kpis' || tab.key === 'utilisateurs' || tab.key === 'settings') {
+    if (tab.key === 'kpis' || tab.key === 'utilisateurs' || tab.key === 'settings' || tab.key === 'ambassadeurs') {
       return ['superadmin', 'admin'].includes(role);
     }
     return true;
@@ -50,6 +54,7 @@ export default function AdminDashboardPage() {
 
   const switchTab = (tabKey: string) => {
     if (tabKey === 'kpis') navigate('/admin/kpis');
+    else if (tabKey === 'ambassadeurs') navigate('/admin/ambassadeurs');
     else if (tabKey === 'feedbacks') navigate('/admin/feedbacks');
     else if (tabKey === 'features') navigate('/admin/features');
     else if (tabKey === 'reports') navigate('/admin/reports');
@@ -87,7 +92,11 @@ export default function AdminDashboardPage() {
         <div>
           <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-orange-100">Espace sécurisé</p>
           <h1 className="text-lg font-extrabold tracking-tight leading-tight">Administration</h1>
-          <p className="text-xs text-orange-100">Modération, paiements et opérations.</p>
+          <p className="text-xs text-orange-100">
+            {totalAttente > 0
+              ? `${totalAttente} élément${totalAttente > 1 ? 's' : ''} en attente de traitement`
+              : 'Rien en attente. Modération, paiements et opérations.'}
+          </p>
         </div>
         </div>
       </div>
@@ -102,7 +111,14 @@ export default function AdminDashboardPage() {
             onChange={(event) => switchTab(event.target.value)}
             className="h-11 w-full appearance-none rounded-xl bg-gray-50 px-3 text-sm font-extrabold text-gray-900 outline-none"
           >
-            {visibleTabs.map((tab) => <option key={tab.key} value={tab.key}>{tab.label}</option>)}
+            {visibleTabs.map((tab) => {
+              const n = byTab[tab.key] || 0;
+              return (
+                <option key={tab.key} value={tab.key}>
+                  {n > 0 ? `${tab.label} (${n})` : tab.label}
+                </option>
+              );
+            })}
           </select>
         </div>
       </div>
@@ -127,7 +143,15 @@ export default function AdminDashboardPage() {
                 )}
               >
                 <Icon size={18} className={isActive ? 'text-[var(--color-primary)]' : 'text-gray-400'} />
-                <span>{tab.label}</span>
+                <span className="flex-1">{tab.label}</span>
+                {(byTab[tab.key] || 0) > 0 && (
+                  <span
+                    className="min-w-[20px] rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white"
+                    aria-label={`${byTab[tab.key]} en attente`}
+                  >
+                    {byTab[tab.key]}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -136,6 +160,7 @@ export default function AdminDashboardPage() {
         {/* Content Area */}
         <div className="flex-1 min-w-0">
           {currentTab === 'kpis' && <AdminKpisTab />}
+          {currentTab === 'ambassadeurs' && <AdminAmbassadorsTab />}
           {currentTab === 'feedbacks' && <AdminFeedbacksTab />}
           {currentTab === 'features' && <AdminFeaturesTab />}
           {currentTab === 'reports' && <AdminReportsTab />}

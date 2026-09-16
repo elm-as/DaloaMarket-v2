@@ -11,7 +11,7 @@ import { Avatar } from '../components/profile/Avatar';
 import { ChatBubble } from '../components/chat/ChatBubble';
 import { ChatInput } from '../components/chat/ChatInput';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, MessageSquare } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Lock } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMessageRead } from '../contexts/MessageReadContext';
 import { censorMessageContent } from '../lib/censor';
@@ -20,7 +20,7 @@ import { notifyUserPush } from '../lib/pushNotifications';
 
 interface Message {
   id: string;
-  listing_id: string;
+  listing_id: string | null;
   sender_id: string;
   receiver_id: string;
   content: string;
@@ -32,13 +32,17 @@ interface Message {
 interface OtherUser {
   id: string;
   full_name: string | null;
+  shop_name?: string | null;
   avatar_url: string | null;
 }
 
 const ChatPage: React.FC = () => {
   const { listingId, userId: otherUserId } = useParams<{ listingId: string; userId: string }>();
+  const isSupport = !listingId || listingId === 'support' || listingId === 'null';
   const navigate = useNavigate();
   const { user, userProfile } = useSupabase();
+  const isAdmin = userProfile?.role === 'admin';
+  const isReadOnly = isSupport && !isAdmin;
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
@@ -52,7 +56,7 @@ const ChatPage: React.FC = () => {
 
   const { refreshUnread } = useMessageRead();
 
-  usePageTitle(otherUser?.full_name || 'Chat');
+  usePageTitle(otherUser?.shop_name?.trim() || otherUser?.full_name?.trim() || 'Chat');
 
   const currentUserId = user?.id;
 
@@ -61,16 +65,17 @@ const ChatPage: React.FC = () => {
   }, []);
 
   const fetchMessages = useCallback(async () => {
-    if (!currentUserId || !otherUserId || !listingId) return;
+    if (!currentUserId || !otherUserId) return;
+    if (!isSupport && !listingId) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      let activeListingId = listingId;
+      let activeListingId = listingId || 'support';
       let activeOtherUserId = otherUserId;
 
-      if (!extractUuid(activeListingId)) {
+      if (!isSupport && !extractUuid(activeListingId)) {
         const cleanId = activeListingId.split('-').pop()?.slice(0, 8) || activeListingId.slice(0, 8);
         const { data: listings } = await supabase
           .from('listings')
@@ -98,24 +103,30 @@ const ChatPage: React.FC = () => {
         }
       }
 
-      if (!extractUuid(activeListingId) || !extractUuid(activeOtherUserId)) {
+      if ((!isSupport && !extractUuid(activeListingId)) || !extractUuid(activeOtherUserId)) {
         setError('Impossible de charger la conversation.');
         setLoading(false);
         return;
       }
 
-      if (activeListingId !== listingId || activeOtherUserId !== otherUserId) {
+      if (!isSupport && activeListingId !== listingId) {
         navigate(`/messages/${activeListingId}/${activeOtherUserId}`, { replace: true });
       }
 
-      const { data: msgs, error: msgError } = await supabase
+      let msgQuery = supabase
         .from('messages')
         .select('*')
         .or(
           `and(sender_id.eq.${currentUserId},receiver_id.eq.${activeOtherUserId}),and(sender_id.eq.${activeOtherUserId},receiver_id.eq.${currentUserId})`
-        )
-        .eq('listing_id', activeListingId)
-        .order('created_at', { ascending: true });
+        );
+
+      if (isSupport) {
+        msgQuery = msgQuery.is('listing_id', null);
+      } else {
+        msgQuery = msgQuery.eq('listing_id', activeListingId);
+      }
+
+      const { data: msgs, error: msgError } = await msgQuery.order('created_at', { ascending: true });
 
       if (msgError) throw msgError;
 
@@ -123,21 +134,25 @@ const ChatPage: React.FC = () => {
 
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, full_name, avatar_url')
+        .select('id, full_name, shop_name, avatar_url')
         .eq('id', activeOtherUserId)
         .single();
 
       if (userError && userError.code !== 'PGRST116') throw userError;
       if (userData) setOtherUser(userData);
 
-      const { data: listingData, error: listingError } = await supabase
-        .from('listings')
-        .select('title')
-        .eq('id', activeListingId)
-        .single();
+      if (isSupport) {
+        setListingTitle('Support & Équipe DaloaMarket');
+      } else {
+        const { data: listingData, error: listingError } = await supabase
+          .from('listings')
+          .select('title')
+          .eq('id', activeListingId)
+          .single();
 
-      if (listingError && listingError.code !== 'PGRST116') throw listingError;
-      if (listingData) setListingTitle(listingData.title);
+        if (listingError && listingError.code !== 'PGRST116') throw listingError;
+        if (listingData) setListingTitle(listingData.title);
+      }
 
       // Mark unread messages from this conversation as read
       const unreadIds = (msgs || [])
@@ -177,20 +192,27 @@ const ChatPage: React.FC = () => {
 
   // Real-time subscription
   useEffect(() => {
-    if (!currentUserId || !otherUserId || !listingId || !extractUuid(listingId) || !extractUuid(otherUserId)) return;
+    if (!currentUserId || !otherUserId) return;
+    if (!isSupport && (!listingId || !extractUuid(listingId))) return;
+    if (!extractUuid(otherUserId)) return;
+
+    const channelName = isSupport
+      ? `chat:support:${currentUserId}:${otherUserId}`
+      : `chat:${listingId}:${currentUserId}:${otherUserId}`;
 
     const channel = supabase
-      .channel(`chat:${listingId}:${currentUserId}:${otherUserId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'messages',
-          filter: `listing_id=eq.${listingId}`,
+          ...(isSupport ? {} : { filter: `listing_id=eq.${listingId}` }),
         },
         (payload) => {
           const newMsg = payload.new as Message;
+          if (isSupport && newMsg.listing_id !== null) return;
 
           const isRelevant =
             (newMsg.sender_id === currentUserId && newMsg.receiver_id === otherUserId) ||
@@ -253,7 +275,7 @@ const ChatPage: React.FC = () => {
   }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSend = useCallback(async (text: string) => {
-    if (!currentUserId || !otherUserId || !listingId || sending || !text.trim()) return;
+    if (isReadOnly || !currentUserId || !otherUserId || sending || !text.trim()) return;
 
     setSending(true);
 
@@ -264,7 +286,7 @@ const ChatPage: React.FC = () => {
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     const optimisticMsg: Message = {
       id: tempId,
-      listing_id: listingId,
+      listing_id: isSupport ? null : listingId,
       sender_id: currentUserId,
       receiver_id: otherUserId,
       content: censoredText,
@@ -280,7 +302,7 @@ const ChatPage: React.FC = () => {
       const { data: insertedData, error: sendError } = await supabase
         .from('messages')
         .insert({
-          listing_id: listingId,
+          listing_id: isSupport ? null : listingId,
           sender_id: currentUserId,
           receiver_id: otherUserId,
           content: censoredText,
@@ -308,10 +330,10 @@ const ChatPage: React.FC = () => {
           targetUserId: otherUserId,
           title: `💬 Nouveau message de ${senderName}`,
           body: censoredText.length > 80 ? censoredText.slice(0, 77) + '...' : censoredText,
-          url: `/messages/${listingId}/${currentUserId}`,
-          tag: `chat-${listingId}-${currentUserId}`,
+          url: isSupport ? `/messages/support/${currentUserId}` : `/messages/${listingId}/${currentUserId}`,
+          tag: isSupport ? `chat-support-${currentUserId}` : `chat-${listingId}-${currentUserId}`,
           chatPartnerId: currentUserId,
-          listingId: listingId,
+          listingId: isSupport ? undefined : listingId,
         }).catch((e) => console.warn('[Push Chat Notification Warning]:', e));
 
         setMessages((prev) => {
@@ -431,7 +453,7 @@ const ChatPage: React.FC = () => {
                 <div className="relative shrink-0">
                   <Avatar
                     src={otherUser.avatar_url}
-                    name={otherUser.full_name}
+                    name={otherUser.shop_name?.trim() || otherUser.full_name}
                     size="sm"
                     className="ring-2 ring-white/80 shadow-xs w-9 h-9 rounded-full object-cover"
                   />
@@ -439,11 +461,11 @@ const ChatPage: React.FC = () => {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-black text-white truncate leading-tight">
-                    {otherUser.full_name || 'Utilisateur'}
+                    {otherUser.shop_name?.trim() || otherUser.full_name || 'Utilisateur'}
                   </p>
                   {listingTitle ? (
                     <p className="text-[11px] font-semibold text-orange-100/90 truncate flex items-center gap-1">
-                      <span>Re :</span>
+                      {!isSupport && <span>Re :</span>}
                       <span className="truncate">{listingTitle}</span>
                     </p>
                   ) : (
@@ -454,7 +476,7 @@ const ChatPage: React.FC = () => {
             )}
           </div>
 
-          {listingId && (
+          {!isSupport && listingId && (
             <Link
               to={`/listings/${listingId}`}
               className="shrink-0 text-[11px] font-black text-orange-700 bg-white/90 hover:bg-white px-2.5 py-1.5 rounded-xl shadow-xs border border-white/40 transition-all active:scale-95 flex items-center gap-1"
@@ -470,7 +492,7 @@ const ChatPage: React.FC = () => {
             <EmptyState
               icon={<MessageSquare className="w-14 h-14 opacity-30 text-orange-500" />}
               title="Aucun message"
-              description="Envoyez le premier message pour démarrer la conversation avec le vendeur."
+              description={isSupport ? "Échangez directement avec l'équipe d'assistance DaloaMarket." : "Envoyez le premier message pour démarrer la conversation avec le vendeur."}
             />
           </div>
         ) : (
@@ -512,7 +534,18 @@ const ChatPage: React.FC = () => {
 
         {/* Input Bar docked cleanly at bottom */}
         <div className="flex-shrink-0 w-full">
-          <ChatInput onSend={handleSend} disabled={sending} />
+          {isReadOnly ? (
+            <div className="bg-white/95 backdrop-blur-sm border-t border-gray-100 px-4 py-3.5 flex items-center justify-center gap-2.5 text-gray-500 shadow-sm">
+              <div className="w-7 h-7 rounded-full bg-amber-50 border border-amber-200/80 flex items-center justify-center shrink-0">
+                <Lock className="w-3.5 h-3.5 text-amber-600" />
+              </div>
+              <p className="text-xs text-gray-600 font-medium text-center">
+                Message officiel de l’équipe DaloaMarket. Ce canal informatif ne reçoit pas de réponse directe.
+              </p>
+            </div>
+          ) : (
+            <ChatInput onSend={handleSend} disabled={sending} />
+          )}
         </div>
       </div>
     </div>

@@ -16,6 +16,7 @@ import toast from 'react-hot-toast';
 import { useSupabase } from '../hooks/useSupabase';
 import { useSystemSettings } from '../hooks/useSystemSettings';
 import { usePageTitle } from '../hooks/usePageTitle';
+import ProBadge from '../components/profile/ProBadge';
 import { useSEO } from '../hooks/useSEO';
 import { Button } from '../components/ui/Button';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -204,13 +205,13 @@ export default function AffiliatedDeliverersPage() {
             </div>
           </div>
 
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-black border border-white/25 shadow-2xs">
-            {isPro ? (
-              <><Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" /> Vendeur Pro</>
-            ) : (
-              <><Sparkles className="w-3.5 h-3.5 fill-emerald-300 text-emerald-300" /> Phase de Lancement</>
-            )}
-          </span>
+          {isPro ? (
+            <ProBadge size="md" label="VENDEUR PRO" className="ring-2 ring-white/40" />
+          ) : (
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-black border border-white/25 shadow-2xs">
+              <Sparkles className="w-3.5 h-3.5 fill-emerald-300 text-emerald-300" /> Phase de Lancement
+            </span>
+          )}
         </div>
       </header>
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, ShoppingBag, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { formatPrice, CATEGORIES, CONDITIONS } from '../../../lib/utils';
+import ProBadge from '../../profile/ProBadge';
 
 interface ListingLivePreviewProps {
   title: string;
@@ -124,11 +125,7 @@ export const ListingLivePreview: React.FC<ListingLivePreviewProps> = ({
 
             <div className="flex items-center gap-1 shrink-0">
               <span className="text-gray-800 font-bold">{sellerName}</span>
-              {isPro && (
-                <span className="w-3.5 h-3.5 rounded-full bg-orange-500 text-white flex items-center justify-center text-[8px] font-black">
-                  ✓
-                </span>
-              )}
+              {isPro && <ProBadge iconOnly size="xs" />}
             </div>
           </div>
         </div>

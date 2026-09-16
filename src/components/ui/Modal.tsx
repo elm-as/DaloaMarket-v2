@@ -110,7 +110,7 @@ export const Modal: React.FC<ModalProps> = ({
                 className={cn(
                   'w-full',
                   sizeClass,
-                  'bg-[var(--color-surface)] rounded-3xl shadow-2xl overflow-hidden flex flex-col',
+                  'bg-[var(--color-surface)] rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]',
                 )}
                 initial={{ opacity: 0, scale: 0.92, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -139,7 +139,7 @@ export const Modal: React.FC<ModalProps> = ({
                 )}
 
                 {/* Content */}
-                <div className={cn('px-6 py-4', !title && 'pt-6')}>
+                <div className={cn('px-6 py-4 overflow-y-auto', !title && 'pt-6')}>
                   {children}
                 </div>
               </motion.div>

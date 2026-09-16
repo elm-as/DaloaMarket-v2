@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, Globe, Shield, Mail, MapPin, User, Phone, Server } from 'lucide-react';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { Card } from '../components/ui/Card';
+import { PUBLISHER } from '../content/legalFacts';
 
 export default function MentionsLegalesPage() {
   const navigate = useNavigate();
@@ -42,7 +43,7 @@ export default function MentionsLegalesPage() {
                     <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
                       <User className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
                       <div>
-                        <p className="font-bold text-xs text-gray-900">Fondateur & Lead Dev</p>
+                        <p className="font-bold text-xs text-gray-900">Directeur de la publication</p>
                         <p className="text-xs text-gray-600">OULOBO Elmas Tresor (Elmas)</p>
                       </div>
                     </div>
@@ -56,8 +57,22 @@ export default function MentionsLegalesPage() {
                     <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
                       <MapPin className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
                       <div>
-                        <p className="font-bold text-xs text-gray-900">Implantation & Activité</p>
-                        <p className="text-xs text-gray-600">Daloa / Abidjan, Côte d'Ivoire</p>
+                        <p className="font-bold text-xs text-gray-900">Forme juridique</p>
+                        <p className="text-xs text-gray-600">Entreprise individuelle — non immatriculée au RCCM à ce jour</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
+                      <MapPin className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
+                      <div>
+                        <p className="font-bold text-xs text-gray-900">Adresse de l'éditeur</p>
+                        <p className="text-xs text-gray-600">{PUBLISHER.address}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
+                      <MapPin className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
+                      <div>
+                        <p className="font-bold text-xs text-gray-900">Zone d'activité</p>
+                        <p className="text-xs text-gray-600">{PUBLISHER.activityZone}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
@@ -87,7 +102,7 @@ export default function MentionsLegalesPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                     <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
                       <p className="text-xs font-bold text-gray-900">Frontend Marketplace & CDN</p>
-                      <p className="text-xs text-gray-600 mt-0.5">Netlify / Vercel (Edge Distribution)</p>
+                      <p className="text-xs text-gray-600 mt-0.5">Netlify (distribution Edge)</p>
                       <a href="https://daloamarket.com" className="text-[11px] text-[var(--color-primary)] hover:underline">daloamarket.com</a>
                     </div>
                     <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
@@ -97,7 +112,7 @@ export default function MentionsLegalesPage() {
                     </div>
                     <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
                       <p className="text-xs font-bold text-gray-900">Microservice Paiements (Escrow)</p>
-                      <p className="text-xs text-gray-600 mt-0.5">Railway / Render (Node.js API)</p>
+                      <p className="text-xs text-gray-600 mt-0.5">Render (API Node.js)</p>
                       <a href="https://api.daloamarket.com" className="text-[11px] text-[var(--color-primary)] hover:underline">api.daloamarket.com</a>
                     </div>
                     <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-100">

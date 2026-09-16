@@ -253,7 +253,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ defaultCategory, categoryLabel 
         break;
       case 'recent':
       default:
-        q = q.order('created_at', { ascending: false });
+        q = q.order('sort_at', { ascending: false });
         break;
     }
 
@@ -327,7 +327,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ defaultCategory, categoryLabel 
         if (filters.priceMin) fallbackQuery = fallbackQuery.gte('price', parseInt(filters.priceMin, 10));
         if (filters.priceMax) fallbackQuery = fallbackQuery.lte('price', parseInt(filters.priceMax, 10));
 
-        const { data: allActive } = await fallbackQuery.order('created_at', { ascending: false }).limit(100);
+        const { data: allActive } = await fallbackQuery.order('sort_at', { ascending: false }).limit(100);
 
         if (allActive && allActive.length > 0) {
           const ranked = rankFuzzySearchResults(allActive as any[], debouncedQuery.trim());

@@ -21,6 +21,9 @@ import {
   Calendar,
   Layers,
   Sparkles,
+  Flag,
+  Trash2,
+  Repeat,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
@@ -31,9 +34,22 @@ import { Button } from '../ui/Button';
 import { cn, formatDate } from '../../lib/utils';
 import { useSupabase } from '../../hooks/useSupabase';
 import { BanUserModal } from './BanUserModal';
+import { FlagUserModal } from './FlagUserModal';
 import Avatar from '../profile/Avatar';
 
-type PlatformFilter = 'all' | 'market_only' | 'delivery' | 'both' | 'banned' | 'appeals';
+type PlatformFilter =
+  | 'all'
+  | 'market_only'
+  | 'delivery'
+  | 'both'
+  | 'banned'
+  | 'appeals'
+  /** Signales sans etre bloques. */
+  | 'suspect'
+  /** Comptes anonymises : la ligne survit a la suppression, porteuse de l'historique. */
+  | 'deleted'
+  /** Comptes dont l'empreinte correspond a un compte supprime. */
+  | 'rejoins';
 
 export const AdminUsersTab: React.FC = () => {
   const { user, userProfile } = useSupabase();
@@ -51,6 +67,9 @@ export const AdminUsersTab: React.FC = () => {
 
   // Modal state for banning
   const [userToBan, setUserToBan] = useState<{ id: string; email: string; name?: string | null; ip?: string | null } | null>(null);
+
+  // Modal state for flagging (suspect)
+  const [userToFlag, setUserToFlag] = useState<{ id: string; email: string; name?: string | null; reason?: string | null } | null>(null);
 
   const fetchUsers = useCallback(async (page = 0) => {
     setLoading(true);
@@ -74,12 +93,13 @@ export const AdminUsersTab: React.FC = () => {
       // 2. Récupération des profils livreurs associés (dans delivery_persons)
       const deliveryMap = new Map<string, any>();
       const listingCountMap = new Map<string, number>();
+      const rejoinMap = new Map<string, any>();
 
       if (userIds.length > 0) {
         try {
           const { data: deliveryList } = await (supabase as any)
             .from('delivery_persons')
-            .select('id, user_id, is_available, is_verified, vehicle_type, created_at, payout_network')
+            .select('id, user_id, name, phone, is_available, is_verified, vehicle_type, created_at, payout_network')
             .in('user_id', userIds);
 
           if (deliveryList) {
@@ -105,6 +125,21 @@ export const AdminUsersTab: React.FC = () => {
           }
         } catch (listingErr) {
           console.warn('Erreur non-bloquante listings:', listingErr);
+        }
+
+        try {
+          // Réinscriptions détectées : un compte dont l'empreinte correspond à
+          // celle d'un compte supprimé. La table n'est lisible que par un admin.
+          const { data: rejoinData } = await (supabase as any)
+            .from('account_rejoin_flags')
+            .select('new_user_id, previous_user_id, matched_kind, auto_banned, auto_suspect, previous_state, created_at')
+            .in('new_user_id', userIds);
+
+          if (rejoinData) {
+            rejoinData.forEach((r: any) => rejoinMap.set(r.new_user_id, r));
+          }
+        } catch (rejoinErr) {
+          console.warn('Erreur non-bloquante réinscriptions:', rejoinErr);
         }
       }
 
@@ -134,6 +169,13 @@ export const AdminUsersTab: React.FC = () => {
           isBoth,
           isDeliveryOnly,
           isMarketOnly,
+          rejoin: rejoinMap.get(u.id) || null,
+          // Repli d'affichage : faute de nom de compte, on montre l'enseigne du
+          // coursier — en signalant d'ou elle vient (voir displayNameFromDriver).
+          displayName:
+            (u.full_name || '').trim() || (deliveryData?.name || '').trim() || null,
+          displayNameFromDriver:
+            !(u.full_name || '').trim() && Boolean((deliveryData?.name || '').trim()),
         };
       });
 
@@ -159,7 +201,7 @@ export const AdminUsersTab: React.FC = () => {
     setUserToBan({
       id: u.id,
       email: u.email || 'N/A',
-      name: u.full_name,
+      name: u.displayName,
       ip: u.last_ip || u.registration_ip || null,
     });
   };
@@ -213,6 +255,57 @@ export const AdminUsersTab: React.FC = () => {
     fetchUsers(userPage);
   };
 
+  /**
+   * Signalement sans blocage. Se propage : si ce compte est supprimé puis
+   * recréé avec les mêmes identifiants, le nouveau est marqué à son tour.
+   */
+  const handleOpenFlagModal = (u: any) => {
+    setUserToFlag({
+      id: u.id,
+      email: u.email || 'N/A',
+      name: u.displayName,
+      reason: u.suspect ? u.suspect_reason : null,
+    });
+  };
+
+  const handleConfirmFlag = async (reason: string) => {
+    if (!userToFlag) return;
+
+    const { error: err } = await supabase
+      .from('users')
+      .update({
+        suspect: true,
+        suspect_reason: reason,
+        suspect_at: new Date().toISOString(),
+      } as any)
+      .eq('id', userToFlag.id);
+
+    if (err) {
+      toast.error('Erreur lors du signalement');
+      return;
+    }
+
+    toast.success('Compte signalé');
+    fetchUsers(userPage);
+  };
+
+  const handleRemoveFlag = async () => {
+    if (!userToFlag) return;
+
+    const { error: err } = await supabase
+      .from('users')
+      .update({ suspect: false, suspect_reason: null, suspect_at: null } as any)
+      .eq('id', userToFlag.id);
+
+    if (err) {
+      toast.error('Erreur lors du retrait');
+      return;
+    }
+
+    toast.success('Signalement retiré');
+    fetchUsers(userPage);
+  };
+
   const handleResetCancellations = async (userId: string) => {
     setResettingUser(userId);
     try {
@@ -252,6 +345,8 @@ export const AdminUsersTab: React.FC = () => {
       const matchSearch =
         !query ||
         u.full_name?.toLowerCase().includes(query) ||
+        u.delivery_person?.name?.toLowerCase().includes(query) ||
+        u.delivery_person?.phone?.toLowerCase().includes(query) ||
         u.email?.toLowerCase().includes(query) ||
         u.phone?.toLowerCase().includes(query) ||
         u.last_ip?.toLowerCase().includes(query) ||
@@ -264,6 +359,9 @@ export const AdminUsersTab: React.FC = () => {
       if (platformFilter === 'both') return u.isBoth;
       if (platformFilter === 'banned') return u.banned;
       if (platformFilter === 'appeals') return u.ban_appeal_status === 'pending';
+      if (platformFilter === 'suspect') return u.suspect;
+      if (platformFilter === 'deleted') return Boolean(u.deleted_at);
+      if (platformFilter === 'rejoins') return Boolean(u.rejoin);
 
       return true;
     });
@@ -276,6 +374,9 @@ export const AdminUsersTab: React.FC = () => {
     let bothCount = 0;
     let bannedCount = 0;
     let appealCount = 0;
+    let suspectCount = 0;
+    let deletedCount = 0;
+    let rejoinCount = 0;
 
     allUsers.forEach((u) => {
       if (u.isMarketOnly) marketCount++;
@@ -283,9 +384,12 @@ export const AdminUsersTab: React.FC = () => {
       if (u.isBoth) bothCount++;
       if (u.banned) bannedCount++;
       if (u.ban_appeal_status === 'pending') appealCount++;
+      if (u.suspect) suspectCount++;
+      if (u.deleted_at) deletedCount++;
+      if (u.rejoin) rejoinCount++;
     });
 
-    return { marketCount, deliveryCount, bothCount, bannedCount, appealCount };
+    return { marketCount, deliveryCount, bothCount, bannedCount, appealCount, suspectCount, deletedCount, rejoinCount };
   }, [allUsers]);
 
   if (loading && allUsers.length === 0) {
@@ -421,6 +525,51 @@ export const AdminUsersTab: React.FC = () => {
               </button>
             )}
 
+            {counts.suspectCount > 0 && (
+              <button
+                onClick={() => setPlatformFilter('suspect')}
+                className={cn(
+                  'px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5',
+                  platformFilter === 'suspect'
+                    ? 'bg-orange-600 text-white shadow-xs'
+                    : 'bg-orange-50 text-orange-700 hover:bg-orange-100/70 border border-orange-100'
+                )}
+              >
+                <Flag className="w-3.5 h-3.5" />
+                <span>Signalés ({counts.suspectCount})</span>
+              </button>
+            )}
+
+            {counts.rejoinCount > 0 && (
+              <button
+                onClick={() => setPlatformFilter('rejoins')}
+                className={cn(
+                  'px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5',
+                  platformFilter === 'rejoins'
+                    ? 'bg-fuchsia-600 text-white shadow-xs'
+                    : 'bg-fuchsia-50 text-fuchsia-700 hover:bg-fuchsia-100/70 border border-fuchsia-100'
+                )}
+              >
+                <Repeat className="w-3.5 h-3.5" />
+                <span>Réinscriptions ({counts.rejoinCount})</span>
+              </button>
+            )}
+
+            {counts.deletedCount > 0 && (
+              <button
+                onClick={() => setPlatformFilter('deleted')}
+                className={cn(
+                  'px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5',
+                  platformFilter === 'deleted'
+                    ? 'bg-gray-700 text-white shadow-xs'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200/70 border border-gray-200'
+                )}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Comptes supprimés ({counts.deletedCount})</span>
+              </button>
+            )}
+
             {counts.appealCount > 0 && (
               <button
                 onClick={() => setPlatformFilter('appeals')}
@@ -486,7 +635,7 @@ export const AdminUsersTab: React.FC = () => {
                           {/* Avatar Circle */}
                           <Avatar
                             src={u.avatar_url}
-                            name={u.full_name || u.email}
+                            name={u.displayName || u.email}
                             size="sm"
                             className="w-9 h-9 rounded-xl shadow-2xs border border-gray-200/80 shrink-0"
                           />
@@ -494,9 +643,20 @@ export const AdminUsersTab: React.FC = () => {
                           {/* Info Text */}
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-gray-900 truncate max-w-[180px]">
-                                {u.full_name || 'Sans nom'}
+                              <span className={cn(
+                                'font-bold truncate max-w-[180px]',
+                                u.displayName ? 'text-gray-900' : 'text-gray-400 italic'
+                              )}>
+                                {u.displayName || 'Sans nom'}
                               </span>
+                              {u.displayNameFromDriver && (
+                                <span
+                                  className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md font-bold shrink-0 cursor-help"
+                                  title="Nom de la fiche livreur — le compte lui-même n'a pas de nom renseigné."
+                                >
+                                  nom livreur
+                                </span>
+                              )}
                               {u.shop_name && (
                                 <span className="text-[10px] bg-orange-100 text-orange-800 px-1.5 py-0.2 rounded-md font-bold">
                                   {u.shop_name}
@@ -652,6 +812,36 @@ export const AdminUsersTab: React.FC = () => {
                               Contestation en attente
                             </span>
                           )}
+
+                          {u.suspect && (
+                            <span
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-100 text-orange-900 border border-orange-200 text-[10px] font-bold cursor-help"
+                              title={u.suspect_reason || 'Compte signalé'}
+                            >
+                              <Flag size={10} />
+                              Signalé
+                            </span>
+                          )}
+
+                          {u.rejoin && (
+                            <span
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-fuchsia-100 text-fuchsia-900 border border-fuchsia-200 text-[10px] font-bold cursor-help"
+                              title={`Même ${u.rejoin.matched_kind === 'identity' ? 'compte Google' : 'adresse e-mail'} qu'un compte supprimé (état à l'époque : ${u.rejoin.previous_state || 'inconnu'})`}
+                            >
+                              <Repeat size={10} />
+                              Réinscription
+                            </span>
+                          )}
+
+                          {u.deleted_at && (
+                            <span
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-200 text-gray-700 border border-gray-300 text-[10px] font-bold cursor-help"
+                              title={`Compte anonymisé le ${formatDate(u.deleted_at)}. La ligne est conservée : elle porte les commandes, paiements et signalements.`}
+                            >
+                              <Trash2 size={10} />
+                              Compte supprimé
+                            </span>
+                          )}
                         </div>
                       </td>
 
@@ -665,7 +855,28 @@ export const AdminUsersTab: React.FC = () => {
 
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right">
-                        <div className="flex justify-end">
+                        <div className="flex justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outlined"
+                            disabled={isLocked || isSelf}
+                            onClick={() => handleOpenFlagModal(u)}
+                            title={
+                              u.suspect
+                                ? 'Retirer le signalement'
+                                : 'Signaler sans bloquer. Suit la personne si elle supprime puis recrée son compte.'
+                            }
+                            className={cn(
+                              'rounded-xl text-xs font-extrabold px-3 py-1.5 shadow-2xs active:scale-[0.97] transition-all flex items-center justify-center gap-1',
+                              u.suspect
+                                ? 'bg-orange-50 text-orange-700 border border-orange-300 hover:bg-orange-100'
+                                : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                            )}
+                          >
+                            <Flag size={13} />
+                            <span>{u.suspect ? 'Signalé' : 'Signaler'}</span>
+                          </Button>
+
                           <Button
                             size="sm"
                             variant={u.banned ? 'tonal' : 'outlined'}
@@ -720,11 +931,21 @@ export const AdminUsersTab: React.FC = () => {
                         {u.avatar_url ? (
                           <img src={u.avatar_url} alt="" className="w-full h-full object-cover rounded-xl" />
                         ) : (
-                          (u.full_name || u.email || 'U').charAt(0).toUpperCase()
+                          (u.displayName || u.email || 'U').charAt(0).toUpperCase()
                         )}
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-bold text-gray-900 text-sm truncate">{u.full_name || 'Sans nom'}</h4>
+                        <h4 className={cn(
+                          'font-bold text-sm truncate',
+                          u.displayName ? 'text-gray-900' : 'text-gray-400 italic'
+                        )}>
+                          {u.displayName || 'Sans nom'}
+                          {u.displayNameFromDriver && (
+                            <span className="ml-1.5 text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md font-bold align-middle">
+                              nom livreur
+                            </span>
+                          )}
+                        </h4>
                         <p className="text-xs text-gray-500 truncate">{u.email}</p>
                       </div>
                     </div>
@@ -753,6 +974,27 @@ export const AdminUsersTab: React.FC = () => {
                         <Bike className="w-3.5 h-3.5 text-emerald-600" />
                         DaloaDelivery
                         {deliveryData?.vehicle_type && <span className="text-gray-500 font-normal">({deliveryData.vehicle_type})</span>}
+                      </span>
+                    )}
+                    {u.suspect && (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-100 text-orange-900 border border-orange-200 text-[10px] font-black"
+                        title={u.suspect_reason || 'Compte signalé'}
+                      >
+                        <Flag className="w-3 h-3" />
+                        Signalé
+                      </span>
+                    )}
+                    {u.rejoin && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-fuchsia-100 text-fuchsia-900 border border-fuchsia-200 text-[10px] font-black">
+                        <Repeat className="w-3 h-3" />
+                        Réinscription
+                      </span>
+                    )}
+                    {u.deleted_at && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-200 text-gray-700 border border-gray-300 text-[10px] font-black">
+                        <Trash2 className="w-3 h-3" />
+                        Compte supprimé
                       </span>
                     )}
                     {u.isBoth && (
@@ -805,16 +1047,34 @@ export const AdminUsersTab: React.FC = () => {
                       </select>
                     </div>
 
-                    <Button
-                      size="sm"
-                      variant={u.banned ? 'tonal' : 'outlined'}
-                      color={u.banned ? 'success' : 'error'}
-                      disabled={isLocked || isSelf}
-                      onClick={() => (u.banned ? handleUnban(u.id) : handleOpenBanModal(u))}
-                      className="rounded-xl font-bold text-xs px-4"
-                    >
-                      {u.banned ? 'Débannir' : 'Bannir'}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outlined"
+                        disabled={isLocked || isSelf}
+                        onClick={() => handleOpenFlagModal(u)}
+                        className={cn(
+                          'rounded-xl font-bold text-xs px-3 flex items-center gap-1',
+                          u.suspect
+                            ? 'bg-orange-50 text-orange-700 border border-orange-300'
+                            : 'border-gray-300 text-gray-600'
+                        )}
+                      >
+                        <Flag className="w-3.5 h-3.5" />
+                        {u.suspect ? 'Signalé' : 'Signaler'}
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant={u.banned ? 'tonal' : 'outlined'}
+                        color={u.banned ? 'success' : 'error'}
+                        disabled={isLocked || isSelf}
+                        onClick={() => (u.banned ? handleUnban(u.id) : handleOpenBanModal(u))}
+                        className="rounded-xl font-bold text-xs px-4"
+                      >
+                        {u.banned ? 'Débannir' : 'Bannir'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );
@@ -858,6 +1118,17 @@ export const AdminUsersTab: React.FC = () => {
         userIp={userToBan?.ip}
         onClose={() => setUserToBan(null)}
         onConfirm={handleConfirmBan}
+      />
+
+      {/* Flag (suspect) User Modal */}
+      <FlagUserModal
+        isOpen={!!userToFlag}
+        userEmail={userToFlag?.email || ''}
+        userName={userToFlag?.name}
+        currentReason={userToFlag?.reason}
+        onClose={() => setUserToFlag(null)}
+        onConfirm={handleConfirmFlag}
+        onRemove={userToFlag?.reason ? handleRemoveFlag : undefined}
       />
     </div>
   );

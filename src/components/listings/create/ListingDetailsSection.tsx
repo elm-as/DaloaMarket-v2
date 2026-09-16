@@ -17,6 +17,7 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   electronics: <Monitor className="w-4 h-4" />,
   home: <Home className="w-4 h-4" />,
   vehicles: <Car className="w-4 h-4" />,
+  beauty: <Sparkles className="w-4 h-4" />,
   sports: <Dumbbell className="w-4 h-4" />,
   books: <BookOpen className="w-4 h-4" />,
   food: <UtensilsCrossed className="w-4 h-4" />,

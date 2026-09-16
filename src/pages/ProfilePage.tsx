@@ -240,7 +240,7 @@ const ProfilePage: React.FC = () => {
               />
               {isPro && (
                 <div className="absolute -bottom-1 -right-1">
-                  <ProBadge size="sm" />
+                  <ProBadge iconOnly size="sm" ring />
                 </div>
               )}
             </div>
@@ -510,7 +510,7 @@ const ProfilePage: React.FC = () => {
         isOpen={isFeedbackModalOpen}
         onClose={() => setIsFeedbackModalOpen(false)}
         title="Votre avis compte !"
-        size="md"
+        size="lg"
       >
         <FeedbackForm
           userId={currentUserId!}

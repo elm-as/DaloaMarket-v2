@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { Eye, EyeOff, LogIn, ShieldCheck, Truck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { useSupabase } from '../hooks/useSupabase';
@@ -41,6 +41,18 @@ export default function LoginPage() {
       const { error } = await signIn(data.email, data.password);
       if (error) throw error;
     } catch (err: any) {
+      try {
+        const { data: provInfo } = await (supabase.rpc as any)('get_auth_provider_for_email', {
+          p_email: data.email.trim(),
+        });
+        const info = provInfo as { exists?: boolean; has_password?: boolean; provider?: string } | null;
+        if (info?.exists && !info?.has_password && info?.provider === 'google') {
+          setAuthError(
+            "Ce compte a été créé avec Google. Aucun mot de passe n'est configuré : veuillez cliquer sur « Continuer avec Google »."
+          );
+          return;
+        }
+      } catch {}
       setAuthError(friendlyError(err));
     } finally {
       setLoading(false);
@@ -88,14 +100,18 @@ export default function LoginPage() {
 
               <div className="space-y-4">
                 <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/10">
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center font-bold text-white text-lg">🔒</div>
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
                   <div>
                     <h4 className="font-bold text-sm text-white">Paiement Escrow Sécurisé</h4>
                     <p className="text-xs text-orange-100">Votre argent reste protégé jusqu'à la livraison contrôlée par OTP.</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/10">
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center font-bold text-white text-lg">🛵</div>
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white">
+                    <Truck className="w-5 h-5" />
+                  </div>
                   <div>
                     <h4 className="font-bold text-sm text-white">Livraison Express Locale</h4>
                     <p className="text-xs text-orange-100">Recevez vos colis directement chez vous ou en boutique partenaire.</p>

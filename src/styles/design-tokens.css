@@ -50,7 +50,15 @@
   /* Gradients */
   --gradient-primary: linear-gradient(135deg, #FF7F00, #FF9800);
   --gradient-hero: linear-gradient(135deg, #E65100 0%, #FF7F00 50%, #0066CC 100%);
-  --gradient-pro: linear-gradient(135deg, #F59E0B, #D97706);
+  /* Badge Pro / Vérifié — bleu institutionnel.
+     Volontairement distinct de l'ambre des étoiles de notation, avec lequel
+     l'ancien dégradé doré se confondait. */
+  --gradient-pro: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 55%, #1E40AF 100%);
+  --color-pro: #1D4ED8;
+  --color-pro-dark: #1E40AF;
+  --color-pro-light: #EFF6FF;
+  --color-pro-border: #BFDBFE;
+  --shadow-pro: 0 2px 6px rgba(29, 78, 216, 0.28);
   --gradient-card: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(0,0,0,0.02) 100%);
 
   /* === ELEVATION (Material Design shadows) === */

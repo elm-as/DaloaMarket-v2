@@ -6,6 +6,7 @@ import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { Avatar } from '../components/profile/Avatar';
+import ProBadge from '../components/profile/ProBadge';
 import { ListingCard } from '../components/listings/ListingCard';
 import WhatsAppIcon from '../components/ui/WhatsAppIcon';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,7 +24,6 @@ import {
   ShieldCheck,
   Truck,
   Info,
-  CheckCircle2,
   HandCoins,
   Phone,
 } from 'lucide-react';
@@ -473,13 +473,7 @@ const SellerProfilePage: React.FC = () => {
               <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
                 {shopTitle}
               </h1>
-              <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: themeColor }} />
-              {isPro && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black text-amber-900 bg-gradient-to-r from-amber-200 via-amber-300 to-amber-400 border border-amber-300 shadow-2xs">
-                  <Star className="w-2.5 h-2.5 fill-amber-900" />
-                  PRO
-                </span>
-              )}
+              {isPro && <ProBadge size="sm" className="flex-shrink-0" />}
             </div>
 
             {/* Clean Inline Meta Pills */}

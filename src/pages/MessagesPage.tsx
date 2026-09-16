@@ -66,12 +66,13 @@ const MessagesPage: React.FC = () => {
 
       for (const msg of allMessages) {
         const otherUserId = msg.sender_id === currentUserId ? msg.receiver_id : msg.sender_id;
-        const key = `${msg.listing_id}:${otherUserId}`;
+        const convListingId = msg.listing_id || 'support';
+        const key = `${convListingId}:${otherUserId}`;
 
         const existing = conversationMap.get(key);
         if (!existing || new Date(msg.created_at) > new Date(existing.last_message_time)) {
           conversationMap.set(key, {
-            listing_id: msg.listing_id,
+            listing_id: convListingId,
             other_user_id: otherUserId,
             last_message_time: msg.created_at,
             messages: existing ? existing.messages : [],
@@ -83,22 +84,26 @@ const MessagesPage: React.FC = () => {
       const listingIds = new Set<string>();
       const userIds = new Set<string>();
       for (const [, conv] of conversationMap) {
-        listingIds.add(conv.listing_id);
+        if (conv.listing_id && conv.listing_id !== 'support') {
+          listingIds.add(conv.listing_id);
+        }
         userIds.add(conv.other_user_id);
       }
 
-      const { data: listings, error: listingsError } = await supabase
-        .from('listings')
-        .select('id, title')
-        .in('id', Array.from(listingIds));
+      let listingMap = new Map<string, string>();
+      if (listingIds.size > 0) {
+        const { data: listings, error: listingsError } = await supabase
+          .from('listings')
+          .select('id, title')
+          .in('id', Array.from(listingIds));
 
-      if (listingsError) throw listingsError;
-
-      const listingMap = new Map((listings || []).map((l) => [l.id, l.title]));
+        if (listingsError) throw listingsError;
+        listingMap = new Map((listings || []).map((l) => [l.id, l.title]));
+      }
 
       const { data: users, error: usersError } = await supabase
         .from('users')
-        .select('id, full_name, avatar_url')
+        .select('id, full_name, shop_name, avatar_url')
         .in('id', Array.from(userIds));
 
       if (usersError) throw usersError;
@@ -119,17 +124,20 @@ const MessagesPage: React.FC = () => {
           new Date(m.created_at) > new Date(latest.created_at) ? m : latest
         , conv.messages[0]);
 
+        const isSupport = !conv.listing_id || conv.listing_id === 'support';
+        const partnerName = otherUser.shop_name?.trim() || otherUser.full_name?.trim() || (isSupport ? 'DaloaMarket' : 'Utilisateur');
+
         result.push({
           other_user: {
             id: otherUser.id,
-            full_name: otherUser.full_name || 'Utilisateur',
+            full_name: partnerName,
             avatar: otherUser.avatar_url || null,
           },
           last_message: lastMessage.content,
           last_message_time: lastMessage.created_at,
           unread_count: unreadCount,
-          listing_title: listingMap.get(conv.listing_id) || 'Annonce',
-          listing_id: conv.listing_id,
+          listing_title: isSupport ? 'Support & Équipe DaloaMarket' : (listingMap.get(conv.listing_id) || 'Annonce'),
+          listing_id: isSupport ? 'support' : conv.listing_id,
         });
       }
 

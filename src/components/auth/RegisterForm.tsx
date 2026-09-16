@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { User, Phone, Mail, Lock, Eye, EyeOff, UserPlus } from 'lucide-react';
+import { User, Phone, Mail, Lock, Eye, EyeOff, UserPlus, Award } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSupabase } from '../../hooks/useSupabase';
 import { supabase } from '../../lib/supabase';
 import { friendlyError } from '../../lib/messages';
 import { isDisposableEmail } from '../../lib/antiSpam';
-import { trackCompleteRegistration } from '../../lib/analytics';
 import { Button } from '../ui/Button';
 import { cn } from '../../lib/utils';
+import {
+  captureReferralCode,
+  getPendingReferralCode,
+  redeemPendingReferral,
+} from '../../services/referralService';
 
 export interface RegisterFormValues {
   fullName: string;
@@ -17,22 +21,43 @@ export interface RegisterFormValues {
   email: string;
   password: string;
   confirmPassword: string;
+  referralCode?: string;
   cguAccepted: boolean;
 }
 
 export const RegisterForm: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signUp } = useSupabase();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
+  // Le code a normalement ete capture au demarrage de l'application ; on le
+  // relit ici pour le montrer, et on repasse par la capture au cas ou l'on
+  // arrive directement sur /register avec un ?ref=.
+  const [refCode, setRefCode] = useState(
+    () => captureReferralCode() || getPendingReferralCode() || ''
+  );
+
+  useEffect(() => {
+    const captured = captureReferralCode(searchParams.toString());
+    if (captured) setRefCode(captured);
+  }, [searchParams]);
+
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<RegisterFormValues>();
+
+  useEffect(() => {
+    if (refCode) {
+      setValue('referralCode', refCode);
+    }
+  }, [refCode, setValue]);
 
   const onSubmit = async (data: RegisterFormValues) => {
     if (data.password !== data.confirmPassword) {
@@ -71,12 +96,37 @@ export const RegisterForm: React.FC = () => {
         } catch {
           // Géré par le trigger Supabase en amont
         }
+
+        // Un code saisi a la main prime sur celui garde en memoire : c'est
+        // l'intention la plus recente. Le rattachement lui-meme passe par le
+        // service, seul a connaitre les regles de stockage et de reessai.
+        const saisi = (data.referralCode || '').trim();
+        if (saisi) captureReferralCode(new URLSearchParams({ ref: saisi }).toString());
+        await redeemPendingReferral(res.user.id);
       }
 
-      trackCompleteRegistration({ content_name: 'Register' });
       toast.success('Compte créé avec succès ! Bienvenue sur DaloaMarket.');
       navigate('/');
     } catch (err: any) {
+      try {
+        const { data: provInfo } = await (supabase.rpc as any)('get_auth_provider_for_email', {
+          p_email: data.email.trim(),
+        });
+        const info = provInfo as { exists?: boolean; has_password?: boolean; provider?: string } | null;
+        if (info?.exists && !info?.has_password && info?.provider === 'google') {
+          setAuthError(
+            "Ce compte a été créé avec Google. Aucun mot de passe n'est configuré : veuillez cliquer sur « Continuer avec Google »."
+          );
+          setLoading(false);
+          return;
+        } else if (info?.exists) {
+          setAuthError(
+            "Un compte existe déjà avec cette adresse email (par ex. sur DaloaDelivery). Veuillez vous connecter avec votre mot de passe."
+          );
+          setLoading(false);
+          return;
+        }
+      } catch {}
       setAuthError(friendlyError(err));
       toast.error('Échec de l’inscription');
     } finally {
@@ -238,6 +288,27 @@ export const RegisterForm: React.FC = () => {
             />
           </div>
           {errors.confirmPassword && <p className="text-red-500 text-xs mt-1.5 pl-1">{errors.confirmPassword.message}</p>}
+        </div>
+
+        {/* Code Ambassadeur / Parrain (Optionnel) */}
+        <div>
+          <label className="block text-sm font-bold text-gray-900 mb-1.5 pl-1">
+            Code Ambassadeur / Parrain <span className="font-normal text-gray-400">(Optionnel)</span>
+          </label>
+          <div className="relative">
+            <Award className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              {...register('referralCode')}
+              type="text"
+              placeholder="Ex: DALOA-1234"
+              className="w-full pl-12 pr-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 focus:bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all text-sm font-medium uppercase tracking-wider"
+            />
+          </div>
+          {refCode && (
+            <p className="text-xs text-green-600 font-medium mt-1 pl-1">
+              ✨ Code ambassadeur détecté : {refCode}
+            </p>
+          )}
         </div>
 
         {/* CGU */}

@@ -34,6 +34,9 @@ export default defineConfig({
   server: {
     port: Number(process.env.VITE_PORT) || 5173,
     strictPort: false,
+    watch: {
+      ignored: ['**/.netlify/**', '**/.git/**', '**/dist/**'],
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:8888',

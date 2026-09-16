@@ -3,63 +3,80 @@ import { ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSEO } from '../hooks/useSEO';
 import { Card } from '../components/ui/Card';
+import {
+  FEES,
+  DELIVERY,
+  PRO_PASS,
+  VISIBILITY,
+  CONTACT,
+  PAYMENT_NETWORKS,
+  MAX_CONSECUTIVE_CANCELLATIONS,
+} from '../content/legalFacts';
 
 const FAQ_ITEMS = [
   {
-    question: "Comment installer l'application sur mon téléphone (iPhone & Android) ?",
-    answer: "Sur Android (Chrome) : Cliquez sur le bouton 'Installer' qui apparaît en bas de l'écran.\n\nSur iPhone (Safari) : Appuyez sur l'icône de Partage 📤 (en bas de votre écran Safari), défilez vers le bas, appuyez sur « Sur l'écran d'accueil » ➕, puis validez avec « Ajouter » en haut à droite. L'application apparaîtra comme une vraie application native !",
+    question: "Publier une annonce, ça coûte quelque chose ?",
+    answer: `Non. Pendant la phase de lancement, la publication est gratuite et sans plafond : vous pouvez mettre en ligne autant d'annonces actives que vous le souhaitez, et DaloaMarket ne prélève aucune commission sur vos ventes.\n\nÀ la fin de cette phase, une commission vendeur de ${FEES.sellerStandardPct} s'appliquera sur le prix des articles vendus (${FEES.sellerProPct} pour les Vendeurs Pro). Vous serez prévenu avant toute mise en application.`,
   },
   {
-    question: 'Comment publier une annonce ?',
-    answer: "Cliquez sur \"Vendre\" dans la barre de navigation, remplissez le formulaire avec les détails de votre article, ajoutez des photos et publiez. C'est simple et rapide !",
+    question: "Quels frais l'acheteur paie-t-il exactement ?",
+    answer: `Au moment de la commande, l'acheteur règle : le prix de l'article, les frais de livraison s'il y a lieu, et des frais de service de ${FEES.buyerPct} du prix de l'article. Ces ${FEES.buyerPct} couvrent la sécurisation du paiement et l'infrastructure de la plateforme.\n\nLe détail complet est affiché ligne par ligne sur la page de paiement avant toute validation : vous voyez le total exact avant de payer, aucun frais n'est ajouté ensuite.`,
   },
   {
-    question: 'Comment contacter un vendeur ?',
-    answer: "Ouvrez l'annonce qui vous intéresse et cliquez sur le bouton \"Contacter le vendeur\". Vous pourrez alors échanger par message directement sur la plateforme.",
+    question: "Comment fonctionne le paiement sécurisé ?",
+    answer: `Quand vous payez en ligne, l'argent n'est pas versé immédiatement au vendeur. Il est conservé par notre prestataire de paiement jusqu'à ce que vous confirmiez la réception de votre colis en communiquant votre code OTP au livreur.\n\nTant que ce code n'a pas été donné, les fonds ne partent pas. Si l'article est non conforme, endommagé, ou n'arrive jamais, ne donnez pas votre code : signalez le problème au support et vous êtes remboursé.`,
   },
   {
-    question: 'Est-ce gratuit ?',
-    answer: 'La publication est gratuite jusqu\'à 10 annonces actives simultanément pour les comptes Vendeurs Standards. Pour publier des annonces en illimité, gérer vos propres livreurs affiliés et activer le paiement à la livraison (COD), souscrivez au Pass Vendeur Pro (2 500 FCFA / mois).',
+    question: "Quels moyens de paiement sont acceptés ?",
+    answer: `Le paiement Mobile Money est accepté via ${PAYMENT_NETWORKS}, à travers notre agrégateur Money Fusion.\n\nLe paiement en espèces à la livraison est également disponible : pendant la phase de lancement, il est ouvert à tous les vendeurs et proposé par défaut. En espèces, le règlement se fait directement entre vous et le livreur ou le vendeur, sans passer par le paiement sécurisé.`,
   },
   {
-    question: 'Comment fonctionnent le Pass Vendeur Pro et ses tarifs ?',
-    answer: "Le Pass Vendeur Pro coûte 2 500 FCFA / mois (ou 25 000 FCFA / an avec 2 mois offerts). Il débloque le stock illimité, le badge Pro vérifié, l'espace Livreurs Affiliés, le paiement à la livraison (COD), le retrait en boutique et réduit la commission de vente à 2,5%.",
+    question: "Combien coûte la livraison ?",
+    answer: `Pour le réseau DaloaDelivery, la course est à ${DELIVERY.basePrice} jusqu'à ${DELIVERY.baseKm} km, puis ${DELIVERY.perKm} par kilomètre supplémentaire. La distance est calculée par GPS entre le point de retrait et l'adresse de livraison, et le montant exact s'affiche avant que vous validiez.\n\nSi vous choisissez le retrait sur place chez le vendeur, il n'y a pas de frais de livraison. Un vendeur qui passe par ses propres livreurs affiliés peut appliquer ses propres modalités.`,
   },
   {
-    question: 'Comment fonctionnent les Livreurs Affiliés ?',
-    answer: "Chaque Vendeur Pro dispose d'un espace 'Mes livreurs affiliés' pour inviter ses propres livreurs de confiance via leur numéro de téléphone. Le vendeur peut leur attribuer ses courses privées et autoriser l'encaissement du paiement en espèces à la livraison.",
+    question: "Combien touche le livreur sur une course ?",
+    answer: `Le livreur perçoit ${FEES.driverNetPct} du montant de la course. La plateforme retient ${FEES.driverPlatformPct} au titre de la mise en relation, du suivi GPS et du traitement du paiement.\n\nCette retenue porte uniquement sur les frais de livraison, jamais sur le prix de l'article.`,
   },
   {
-    question: 'Que se passe-t-il en cas de problème ou vol avec un livreur affilié ?',
-    answer: "En cas de litige, perte, casse ou non-remise du colis par un livreur affilié, l'acheteur est intégralement remboursé ou conserve son argent. Le Vendeur Pro est responsable des agissements de ses livreurs affiliés et gère le règlement du problème directement avec son livreur.",
+    question: "Que se passe-t-il si le colis est abîmé ou ne correspond pas ?",
+    answer: `Ne communiquez pas votre code OTP au livreur. C'est ce code, et lui seul, qui débloque le versement au vendeur — tant que vous ne l'avez pas donné, votre argent reste bloqué.\n\nSignalez ensuite le litige depuis le suivi de commande ou auprès du support. Après vérification, vous êtes remboursé. Une fois le code OTP validé, en revanche, la transaction est considérée comme finalisée : passez par le support pour tout problème constaté après coup.`,
   },
   {
-    question: 'Comment fonctionne le paiement sécurisé (Escrow) ?',
-    answer: "DaloaMarket propose un service de paiement sécurisé via Money Fusion (Orange Money, Wave, MTN MoMo, Moov). L'acheteur paie en ligne, les fonds restent bloqués jusqu'à confirmation de livraison par code OTP, puis sont versés automatiquement sur le Mobile Money du vendeur.",
+    question: "Puis-je annuler une commande ?",
+    answer: `Oui, tant que le livreur n'a pas encore récupéré le colis chez le vendeur. Si vous aviez payé en ligne, le montant vous est restitué.\n\nAu-delà de ${MAX_CONSECUTIVE_CANCELLATIONS} annulations consécutives, votre compte ne peut plus annuler seul et vous devez passer par le support : chaque annulation génère des frais de transaction pour la plateforme.`,
   },
   {
-    question: 'Quels sont les frais de livraison ?',
-    answer: "Pour le réseau public DaloaDelivery, les frais sont calculés selon la distance (base de 500 FCFA, puis 85 FCFA par km au-delà de 1,5 km). Pour le retrait en boutique ou la livraison par un livreur affilié au vendeur, des modalités spécifiques ou la gratuité peuvent s'appliquer.",
+    question: "À quoi sert le Pass Vendeur Pro ?",
+    answer: `Le Pass Vendeur Pro est à ${PRO_PASS.monthly} par mois, ou ${PRO_PASS.yearly} par an (deux mois offerts). Il donne le badge Pro vérifié sur votre profil et vos annonces, une priorité de classement, et une commission vendeur réduite à ${FEES.sellerProPct} au lieu de ${FEES.sellerStandardPct} lorsque la grille de commission entrera en vigueur.\n\nÀ noter pendant la phase de lancement : les annonces illimitées, le paiement à la livraison, le retrait sur place et les livreurs affiliés sont ouverts à tous les vendeurs, Pro ou non. Ces fonctionnalités redeviendront des avantages Pro à la fin de la phase.`,
   },
   {
-    question: 'Comment fonctionnent les annulations et remboursements ?',
-    answer: "Si le vendeur annule ou si l'acheteur refuse le colis à la livraison avant la remise du code OTP, l'acheteur est intégralement remboursé. Une fois le code OTP validé, la transaction est définitive.",
+    question: "Comment fonctionnent les livreurs affiliés ?",
+    answer: `Un vendeur peut inviter ses propres livreurs de confiance depuis l'espace « Mes livreurs affiliés », en renseignant leur numéro de téléphone. Il leur attribue ensuite ses courses et peut les autoriser à encaisser en espèces à la livraison.\n\nEn cas de perte, de casse ou de non-remise par un livreur affilié, l'acheteur est remboursé ou conserve son argent. Le vendeur est responsable des livreurs qu'il a lui-même affiliés et règle le différend directement avec eux.`,
   },
   {
-    question: 'Comment créer ma boutique ?',
-    answer: "Allez dans \"Paramètres\" puis \"Boutique\" pour personnaliser votre boutique avec nom, description, bannière, logo et couleur de thème.",
+    question: "Comment mettre mon annonce en avant ?",
+    answer: `Deux options payantes : le Boost à ${VISIBILITY.boost} place votre annonce en tête de liste avec un badge « Sponsorisé » pendant ${VISIBILITY.boostDays} jours ; le Bump à ${VISIBILITY.bump} la fait simplement remonter en tête, sans badge ni durée.\n\nCes deux options sont indépendantes du Pass Vendeur Pro et s'achètent à l'unité.`,
   },
   {
-    question: 'Quels sont les services payants disponibles ?',
-    answer: "Pass Vendeur Pro (2 500 FCFA/mois ou 25 000 FCFA/an), Boost d'annonce (500 FCFA/7j), et Bumps de visibilité (200 FCFA).",
+    question: "Comment créer et personnaliser ma boutique ?",
+    answer: "Rendez-vous dans « Paramètres », puis « Boutique ». Vous pouvez y définir le nom de votre enseigne, une description, un logo, une bannière de couverture, votre quartier, un numéro WhatsApp et une couleur de thème.\n\nVotre boutique dispose alors de sa propre adresse partageable, qui regroupe toutes vos annonces en un seul endroit.",
   },
   {
-    question: 'Puis-je modifier ou supprimer mon annonce ?',
-    answer: "Oui, vous pouvez modifier ou supprimer votre annonce à tout moment depuis votre profil dans la section \"Mes annonces\".",
+    question: "Comment contacter un vendeur ?",
+    answer: "Ouvrez l'annonce et utilisez le bouton « Contacter le vendeur » : la conversation se déroule dans la messagerie intégrée à la plateforme.\n\nNous vous recommandons de garder vos échanges dans cette messagerie. En cas de litige, c'est la seule trace que le support peut consulter pour vous aider.",
   },
   {
-    question: 'Comment supprimer mon compte ?',
-    answer: "Contactez le support à l'adresse support@daloamarket.com avec votre demande. Nous traiterons votre requête sous 48 heures.",
+    question: "Puis-je modifier ou supprimer une annonce publiée ?",
+    answer: "Oui, à tout moment, depuis votre profil dans la section « Mes annonces ». Une annonce supprimée cesse immédiatement d'être visible des autres utilisateurs.",
+  },
+  {
+    question: "Comment installer l'application sur mon téléphone ?",
+    answer: "DaloaMarket s'installe directement depuis votre navigateur, sans passer par un magasin d'applications.\n\nSur Android (Chrome) : appuyez sur le bouton « Installer » qui apparaît en bas de l'écran.\n\nSur iPhone (Safari) : appuyez sur l'icône de partage en bas de l'écran, faites défiler jusqu'à « Sur l'écran d'accueil », puis validez avec « Ajouter ». L'application apparaît ensuite comme une application classique.",
+  },
+  {
+    question: "Comment supprimer mon compte ?",
+    answer: `Écrivez à ${CONTACT.support} depuis l'adresse e-mail associée à votre compte, en demandant la suppression. Nous traitons la demande sous 30 jours.\n\nLa suppression retire vos annonces, votre boutique et vos favoris. Certaines données liées à vos commandes sont conservées au-delà, lorsque la loi ivoirienne nous impose de le faire pour des raisons comptables et fiscales.`,
   },
 ];
 
@@ -92,7 +109,7 @@ function FaqItem({ question, answer, isOpen, onToggle }: {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <p className="pb-3 text-[13px] sm:text-sm text-[var(--color-on-surface-variant)] leading-7">
+            <p className="whitespace-pre-line pb-3 text-[13px] sm:text-sm text-[var(--color-on-surface-variant)] leading-7">
               {answer}
             </p>
           </motion.div>
@@ -117,7 +134,7 @@ export default function FAQPage() {
   };
 
   useSEO('Foire Aux Questions (FAQ) — Réponses à vos questions', {
-    description: 'Toutes les réponses à vos questions sur l\'utilisation de DaloaMarket : installation PWA, publication d\'annonces, statut Pro, sécurité et paiements.',
+    description: 'Toutes les réponses à vos questions sur l\'utilisation de DaloaMarket : frais, paiement sécurisé, livraison, Pass Vendeur Pro et gestion de votre compte.',
     keywords: 'FAQ DaloaMarket, aide Daloa, paiement Mobile Money Daloa, livraison DaloaDelivery',
     canonical: 'https://daloamarket.com/faq',
     jsonLd: faqSchema,

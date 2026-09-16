@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useSEO } from '../hooks/useSEO';
 import { Card } from '../components/ui/Card';
+import { PUBLISHER, CONTACT } from '../content/legalFacts';
 
 export default function AboutPage() {
   const schemaOrg = {
@@ -25,7 +26,7 @@ export default function AboutPage() {
     },
     contactPoint: {
       '@type': 'ContactPoint',
-      telephone: '+2250788000831',
+      telephone: '+2250173801559',
       contactType: 'customer support',
       email: 'support@daloamarket.com',
       areaServed: 'CI'
@@ -208,9 +209,9 @@ export default function AboutPage() {
                 <Server className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-xs font-bold text-gray-900">Reversements Instantanés</h3>
+                <h3 className="text-xs font-bold text-gray-900">Reversements Mobile Money</h3>
                 <p className="text-xs text-gray-500 mt-0.5 leading-relaxed font-medium">
-                  Les gains des vendeurs et livreurs sont transférés automatiquement sur leur compte Mobile Money en moins de 10 minutes.
+                  Les gains des vendeurs et des livreurs sont versés sur le compte Mobile Money enregistré sur leur profil, une fois la livraison validée par code OTP.
                 </p>
               </div>
             </div>
@@ -227,17 +228,22 @@ export default function AboutPage() {
           <div className="space-y-3 text-xs text-gray-700 font-medium leading-relaxed">
             <div className="flex items-start gap-2">
               <span className="font-bold text-gray-900 min-w-[130px]">Projet & Éditeur :</span>
-              <span>Projet en cours d'immatriculation d'Entreprise Individuelle (Côte d'Ivoire), fondé par <strong>OULOBO Elmas Tresor</strong>.</span>
+              <span>Entreprise individuelle (Côte d'Ivoire), non immatriculée au RCCM à ce jour, fondée par <strong>OULOBO Elmas Tresor</strong>.</span>
             </div>
 
             <div className="flex items-start gap-2">
-              <span className="font-bold text-gray-900 min-w-[130px]">Siège Opérationnel :</span>
-              <span>Daloa / Abidjan, Côte d'Ivoire.</span>
+              <span className="font-bold text-gray-900 min-w-[130px]">Adresse de l'éditeur :</span>
+              <span>{PUBLISHER.address}</span>
             </div>
 
             <div className="flex items-start gap-2">
-              <span className="font-bold text-gray-900 min-w-[130px]">WhatsApp & Appel :</span>
-              <a href="tel:+2250788000831" className="text-primary font-bold hover:underline">+225 07 88 00 08 31</a>
+              <span className="font-bold text-gray-900 min-w-[130px]">Zone d'activité :</span>
+              <span>{PUBLISHER.activityZone}</span>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <span className="font-bold text-gray-900 min-w-[130px]">WhatsApp :</span>
+              <a href={CONTACT.whatsappHref} target="_blank" rel="noopener noreferrer" className="text-primary font-bold hover:underline">{CONTACT.whatsappDisplay}</a>
             </div>
 
             <div className="flex items-start gap-2">
