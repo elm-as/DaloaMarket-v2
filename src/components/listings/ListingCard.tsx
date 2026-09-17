@@ -12,6 +12,7 @@ import { useSupabase } from '../../hooks/useSupabase';
 import toast from 'react-hot-toast';
 import { getListingStartingPrice } from '../../types/listing';
 import type { ListingVariant } from '../../types/listing';
+import { getListingStock, getUnavailabilityReason, resolveListingPhoto } from '../../lib/availability';
 
 export interface ListingCardData {
   id: string;
@@ -51,9 +52,11 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, index = 0 }) => {
   const currentCartQty = hasVariants ? 0 : (listing.cart_qty || 0);
   const isOwner = user?.id === listing.listing_user_id;
   const existingItem = items.find((i) => i.listing_id === listing.id && !i.variant_id);
-  const maxQty = hasVariants
-    ? variants.reduce((sum, variant) => sum + Math.max(0, variant.stock || 0), 0)
-    : (listing.stock ?? 0);
+  // Règle de disponibilité partagée avec la fiche produit : la carte regardait
+  // `stock` et la fiche `status`, d'où une annonce « Épuisé » sur la carte mais
+  // parfaitement achetable sur la fiche.
+  const unavailableReason = getUnavailabilityReason(listing as any);
+  const maxQty = getListingStock(listing as any);
   const displayPrice = hasVariants ? getListingStartingPrice(listing.price, variants) : listing.price;
 
   const handleAddToCart = async (e: React.MouseEvent) => {
@@ -76,10 +79,8 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, index = 0 }) => {
     }
   };
 
-  const mainImageRaw =
-    listing.photos && listing.photos.length > 0
-      ? listing.photos[0]
-      : 'https://images.pexels.com/photos/4386321/pexels-photo-4386321.jpeg?auto=compress&cs=tinysrgb&w=320';
+  // Filtre aussi les URI locales d'appareil, que le navigateur refuse de charger.
+  const mainImageRaw = resolveListingPhoto(listing.photos);
   const mainImage = getOptimizedImageUrl(mainImageRaw, 320, 75);
 
   const isBoosted =
@@ -137,10 +138,10 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, index = 0 }) => {
             </div>
           </div>
 
-          {maxQty <= 0 && (
+          {unavailableReason && (
             <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
               <span className="bg-white/95 text-gray-900 text-[11px] font-black px-3 py-1 rounded-full shadow-md">
-                Épuisé
+                {unavailableReason === 'sold' ? 'Vendu' : 'Épuisé'}
               </span>
             </div>
           )}

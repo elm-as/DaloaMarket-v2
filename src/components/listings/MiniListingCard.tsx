@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Package, Zap, Edit3, CheckCircle2, Trash2 } from 'lucide-react';
 import { formatPrice, getListingPath } from '../../lib/utils';
+import { isDisplayablePhotoUrl } from '../../lib/availability';
 
 interface MiniListingCardProps {
   listing: {
@@ -45,9 +46,9 @@ const MiniListingCard: React.FC<MiniListingCardProps> = ({
           onClick={() => navigate(getListingPath(listing.id, listing.title))}
           className="cursor-pointer group relative aspect-[4/3] bg-gray-100 overflow-hidden"
         >
-          {listing.photos && listing.photos[0] ? (
+          {isDisplayablePhotoUrl(listing.photos?.[0]) ? (
             <img
-              src={listing.photos[0]}
+              src={listing.photos![0]}
               alt={listing.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
               loading="lazy"

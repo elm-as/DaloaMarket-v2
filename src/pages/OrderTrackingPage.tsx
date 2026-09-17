@@ -161,15 +161,18 @@ const OrderTrackingPage: React.FC = () => {
       if (orderData.seller_id) {
         const { data: sellerData } = await supabase
           .from('users')
-          .select('full_name, district, phone, latitude, longitude')
+          // `public.users` n'a pas de colonnes `latitude`/`longitude` : les demander
+          // faisait échouer toute la requête en 400 et le nom du vendeur restait vide.
+          // Les coordonnées de la boutique sont dans `shop_latitude`/`shop_longitude`.
+          .select('full_name, district, phone, shop_latitude, shop_longitude')
           .eq('id', orderData.seller_id)
           .single();
 
         if (sellerData) {
           orderData.seller_name = sellerData.full_name || 'Vendeur';
-          if (sellerData.latitude && sellerData.longitude) {
-            orderData.seller_lat = sellerData.latitude;
-            orderData.seller_lng = sellerData.longitude;
+          if (sellerData.shop_latitude && sellerData.shop_longitude) {
+            orderData.seller_lat = sellerData.shop_latitude;
+            orderData.seller_lng = sellerData.shop_longitude;
           }
         }
       }

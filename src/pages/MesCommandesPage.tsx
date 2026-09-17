@@ -22,6 +22,7 @@ import { formatPrice, formatDate, cn } from '../lib/utils';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
+import { isDisplayablePhotoUrl } from '../lib/availability';
 
 interface Order {
   id: string;
@@ -306,7 +307,7 @@ const MesCommandesPage: React.FC = () => {
                 const isPickup = order.delivery_mode === 'pickup' || order.delivery_mode === 'pickup_point';
                 const isCod = order.payment_method === 'cod';
                 const title = order.listing?.title || order.listing_title || 'Commande';
-                const photo = order.listing?.photos?.[0];
+                const photo = order.listing?.photos?.find(isDisplayablePhotoUrl);
 
                 return (
                   <motion.div

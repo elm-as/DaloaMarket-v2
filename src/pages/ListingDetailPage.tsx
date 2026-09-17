@@ -20,6 +20,7 @@ import ReportListingModal from '../components/listings/detail/ReportListingModal
 import DeleteListingModal from '../components/listings/detail/DeleteListingModal';
 import StickyBuyBar from '../components/listings/detail/StickyBuyBar';
 import type { ListingVariant } from '../types/listing';
+import { getUnavailabilityReason, isListingAvailable } from '../lib/availability';
 
 const ListingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -57,7 +58,11 @@ const ListingDetailPage: React.FC = () => {
 
   const isOwner = user?.id === listing?.user_id;
   const isPro = !!(listing?.users?.pro_until && new Date(listing.users.pro_until) > new Date());
-  const isSold = listing?.status === 'sold';
+  // Même règle que la carte : la fiche ne regardait que `status`, donc une annonce
+  // remise en vente sans restock (`active` + `stock: 0`) s'affichait comme achetable
+  // avant de se faire éjecter du panier.
+  const unavailableReason = getUnavailabilityReason(listing as any);
+  const isSold = unavailableReason !== null;
 
   const productSchema = listing
     ? {
@@ -73,7 +78,7 @@ const ListingDetailPage: React.FC = () => {
           priceCurrency: 'XOF',
           price: listing.price,
           itemCondition: listing.condition === 'new' ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition',
-          availability: listing.status === 'active' && listing.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+          availability: isListingAvailable(listing as any) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
           seller: {
             '@type': 'Person',
             name: listing.users?.full_name || 'Vendeur DaloaMarket',
@@ -131,8 +136,14 @@ const ListingDetailPage: React.FC = () => {
       {isSold && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="text-center">
-            <div className="text-white text-5xl font-black tracking-widest mb-2 uppercase drop-shadow-lg">VENDU</div>
-            <p className="text-gray-300 text-sm">Cette annonce n'est plus disponible sur le marché</p>
+            <div className="text-white text-5xl font-black tracking-widest mb-2 uppercase drop-shadow-lg">
+              {unavailableReason === 'sold' ? 'VENDU' : 'ÉPUISÉ'}
+            </div>
+            <p className="text-gray-300 text-sm">
+              {unavailableReason === 'sold'
+                ? "Cette annonce n'est plus disponible sur le marché"
+                : 'Le vendeur est en rupture de stock sur cet article'}
+            </p>
           </div>
         </div>
       )}
