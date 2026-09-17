@@ -115,6 +115,10 @@ const CheckoutPage: React.FC = () => {
       toast.error("Veuillez renseigner une adresse de livraison (Quartier, repère, etc.)");
       return;
     }
+    if (deliveryMode === 'delivery' && (deliveryLatitude == null || deliveryLongitude == null || isNaN(deliveryLatitude) || isNaN(deliveryLongitude))) {
+      toast.error("Veuillez positionner votre adresse sur la carte ou activer votre GPS.");
+      return;
+    }
     setStep(3);
   };
 
@@ -405,6 +409,11 @@ const CheckoutPage: React.FC = () => {
     if (deliveryMode === 'delivery' && !deliveryAddress.trim()) {
       setAddressError(true);
       toast.error("Veuillez renseigner une adresse de livraison (Quartier, repère, etc.)");
+      return;
+    }
+
+    if (deliveryMode === 'delivery' && (deliveryLatitude == null || deliveryLongitude == null || isNaN(deliveryLatitude) || isNaN(deliveryLongitude))) {
+      toast.error("Coordonnées GPS manquantes. Veuillez positionner votre repère de livraison.");
       return;
     }
 
