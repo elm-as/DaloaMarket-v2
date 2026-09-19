@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { PackageX } from 'lucide-react';
+import { PackageX, ShoppingBag } from 'lucide-react';
 
 import { useSupabase } from '../hooks/useSupabase';
 import { useSEO } from '../hooks/useSEO';
@@ -108,6 +108,8 @@ const ListingDetailPage: React.FC = () => {
     setReportOpen(true);
   };
 
+  const [dismissSoldOverlay, setDismissSoldOverlay] = useState(false);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -134,6 +136,41 @@ const ListingDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50/70 pb-32 lg:pb-8 relative">
+      {/* Écran Overlay Plein Écran VENDU avec Bouton de Retour aux Articles */}
+      {isSold && !dismissSoldOverlay && !isOwner && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="text-center max-w-sm w-full mx-auto">
+            <div className="text-white text-5xl sm:text-6xl font-black tracking-widest mb-3 uppercase drop-shadow-lg">
+              {unavailableReason === 'sold' ? 'VENDU' : 'ÉPUISÉ'}
+            </div>
+            <p className="text-gray-300 text-sm sm:text-base mb-8 leading-relaxed">
+              {unavailableReason === 'sold'
+                ? "Cette annonce n'est plus disponible sur le marché"
+                : 'Le vendeur est momentanément en rupture de stock'}
+            </p>
+
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="w-full h-13 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-bold text-sm shadow-lg flex items-center justify-center gap-2 active:scale-95 transition cursor-pointer"
+              >
+                <ShoppingBag className="w-5 h-5" />
+                Voir les autres articles
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDismissSoldOverlay(true)}
+                className="w-full h-11 bg-white/10 hover:bg-white/20 text-white/90 rounded-2xl font-semibold text-xs flex items-center justify-center gap-2 active:scale-95 transition cursor-pointer border border-white/15"
+              >
+                Consulter l'annonce
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="lg:px-6 lg:pt-6 lg:grid lg:grid-cols-[1fr_420px] lg:gap-8 lg:items-start">
         <ListingGallery
           listing={listing}
@@ -169,17 +206,27 @@ const ListingDetailPage: React.FC = () => {
                   </p>
                 </div>
               </div>
-              {similarListings.length > 0 && (
+              <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto flex-wrap">
                 <button
                   type="button"
-                  onClick={() => {
-                    document.getElementById('similar-listings-section')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="self-start sm:self-auto text-xs font-bold text-amber-900 bg-amber-200/80 hover:bg-amber-200 active:scale-95 px-3.5 py-2 rounded-xl transition-all shrink-0"
+                  onClick={() => navigate('/')}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 active:scale-95 px-3.5 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
                 >
-                  Voir les similaires
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  Voir les autres articles
                 </button>
-              )}
+                {similarListings.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      document.getElementById('similar-listings-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="text-xs font-bold text-amber-900 bg-amber-200/80 hover:bg-amber-200 active:scale-95 px-3.5 py-2 rounded-xl transition-all cursor-pointer"
+                  >
+                    Voir les similaires
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
