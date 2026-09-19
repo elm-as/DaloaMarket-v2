@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { PackageX } from 'lucide-react';
 
 import { useSupabase } from '../hooks/useSupabase';
 import { useSEO } from '../hooks/useSEO';
@@ -133,21 +134,6 @@ const ListingDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50/70 pb-32 lg:pb-8 relative">
-      {isSold && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="text-center">
-            <div className="text-white text-5xl font-black tracking-widest mb-2 uppercase drop-shadow-lg">
-              {unavailableReason === 'sold' ? 'VENDU' : 'ÉPUISÉ'}
-            </div>
-            <p className="text-gray-300 text-sm">
-              {unavailableReason === 'sold'
-                ? "Cette annonce n'est plus disponible sur le marché"
-                : 'Le vendeur est en rupture de stock sur cet article'}
-            </p>
-          </div>
-        </div>
-      )}
-
       <div className="lg:px-6 lg:pt-6 lg:grid lg:grid-cols-[1fr_420px] lg:gap-8 lg:items-start">
         <ListingGallery
           listing={listing}
@@ -156,9 +142,47 @@ const ListingDetailPage: React.FC = () => {
           onShare={handleShare}
           onReport={handleReportRequest}
           onOpenLightbox={(index) => setLightbox({ open: true, index })}
+          isSold={isSold}
+          unavailableReason={unavailableReason}
         />
 
         <div className="relative z-10 px-4 lg:px-0 -mt-8 lg:mt-0 py-4 space-y-5">
+          {isSold && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-800 flex items-center justify-center shrink-0">
+                  <PackageX className="w-5 h-5 text-amber-700" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="px-2 py-0.5 rounded-md bg-amber-600 text-white font-black text-[10px] uppercase tracking-wider">
+                      {unavailableReason === 'sold' ? 'Vendu' : 'Épuisé'}
+                    </span>
+                    <h2 className="text-sm sm:text-base font-black text-gray-900">
+                      {unavailableReason === 'sold' ? 'Cet article a déjà été vendu' : 'Article épuisé'}
+                    </h2>
+                  </div>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    {unavailableReason === 'sold'
+                      ? "Cette annonce n'est plus disponible à l'achat. Découvrez d'autres opportunités ci-dessous."
+                      : 'Le vendeur est momentanément en rupture de stock sur cet article.'}
+                  </p>
+                </div>
+              </div>
+              {similarListings.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    document.getElementById('similar-listings-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="self-start sm:self-auto text-xs font-bold text-amber-900 bg-amber-200/80 hover:bg-amber-200 active:scale-95 px-3.5 py-2 rounded-xl transition-all shrink-0"
+                >
+                  Voir les similaires
+                </button>
+              )}
+            </div>
+          )}
+
           <ListingInfoCard
             listing={listing}
             selectedVariant={selectedVariant}
