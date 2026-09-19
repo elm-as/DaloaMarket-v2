@@ -19,7 +19,7 @@ interface HelpFormData {
 }
 
 export default function HelpPage() {
-  useSEO('Aide & Support — Contacter l\'équipe DaloaMarket', {
+  useSEO("Aide & Support : Contacter l'équipe DaloaMarket", {
     description: 'Besoin d\'aide sur DaloaMarket ? Contactez notre support client, posez vos questions ou consultez nos guides d\'utilisation.',
     canonical: 'https://daloamarket.com/help'
   });

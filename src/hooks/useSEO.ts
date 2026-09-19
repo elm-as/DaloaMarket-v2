@@ -26,7 +26,7 @@ export function useSEO(title: string, options: SEOOptions = {}) {
   useEffect(() => {
     // 1. Update Title
     const prevTitle = document.title;
-    document.title = title ? `${title} | DaloaMarket` : 'DaloaMarket — Achetez et vendez à Daloa';
+    document.title = title ? `${title} | DaloaMarket` : 'DaloaMarket : Achetez et vendez à Daloa';
 
     // Helper to update or create meta tags
     const updateMetaTag = (nameOrProperty: string, content: string | undefined, isProperty = false) => {

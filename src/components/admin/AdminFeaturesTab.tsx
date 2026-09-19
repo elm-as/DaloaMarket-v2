@@ -271,7 +271,7 @@ export function AdminFeaturesTab() {
 
             <h2 className="text-xl font-black text-white flex items-center gap-2">
               <Crown className="w-5 h-5 text-amber-400 fill-amber-400" />
-              {activeSeason?.season_name || 'Saison 1'} — Boîte à Idées & Upvotes
+              {activeSeason?.season_name || 'Saison 1'} : Boîte à Idées & Upvotes
             </h2>
 
             <p className="text-xs text-slate-300 max-w-xl">
@@ -574,7 +574,7 @@ export function AdminFeaturesTab() {
                   required
                   value={newSeasonName}
                   onChange={(e) => setNewSeasonName(e.target.value)}
-                  placeholder="Ex: Saison 2 — Trimestre 2 2026"
+                  placeholder="Ex: Saison 2 : Trimestre 2 2026"
                   className="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 text-xs font-medium text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
                 />
               </div>

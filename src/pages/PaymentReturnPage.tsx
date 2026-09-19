@@ -103,7 +103,7 @@ export default function PaymentReturnPage() {
         </p>
         {attempts > 0 && (
           <p className="text-sm text-[var(--color-on-surface-variant)] opacity-60">
-            Tentative {attempts}/{MAX_ATTEMPTS} — en attente de confirmation MoneyFusion
+            Tentative {attempts}/{MAX_ATTEMPTS} : en attente de confirmation MoneyFusion
           </p>
         )}
       </div>

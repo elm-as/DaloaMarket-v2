@@ -221,7 +221,7 @@ ${listingUrl}
     const itemsText = activeListings
       .map(
         (l, i) =>
-          `${i + 1}. *${l.title}* — ${formatPrice(l.price)} (${l.district || 'Daloa'})\n👉 https://daloamarket.com${getListingPath(l.id)}`
+          `${i + 1}. *${l.title}* : ${formatPrice(l.price)} (${l.district || 'Daloa'})\n👉 https://daloamarket.com${getListingPath(l.id)}`
       )
       .join('\n\n');
 

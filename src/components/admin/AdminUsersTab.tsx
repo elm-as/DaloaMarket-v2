@@ -652,7 +652,7 @@ export const AdminUsersTab: React.FC = () => {
                               {u.displayNameFromDriver && (
                                 <span
                                   className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md font-bold shrink-0 cursor-help"
-                                  title="Nom de la fiche livreur — le compte lui-même n'a pas de nom renseigné."
+                                  title="Nom de la fiche livreur : le compte lui-même n'a pas de nom renseigné."
                                 >
                                   nom livreur
                                 </span>

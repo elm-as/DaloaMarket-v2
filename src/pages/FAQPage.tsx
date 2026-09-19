@@ -40,7 +40,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "Que se passe-t-il si le colis est abîmé ou ne correspond pas ?",
-    answer: `Ne communiquez pas votre code OTP au livreur. C'est ce code, et lui seul, qui débloque le versement au vendeur — tant que vous ne l'avez pas donné, votre argent reste bloqué.\n\nSignalez ensuite le litige depuis le suivi de commande ou auprès du support. Après vérification, vous êtes remboursé. Une fois le code OTP validé, en revanche, la transaction est considérée comme finalisée : passez par le support pour tout problème constaté après coup.`,
+    answer: `Ne communiquez pas votre code OTP au livreur. C'est ce code, et lui seul, qui débloque le versement au vendeur : tant que vous ne l'avez pas donné, votre argent reste bloqué.\n\nSignalez ensuite le litige depuis le suivi de commande ou auprès du support. Après vérification, vous êtes remboursé. Une fois le code OTP validé, en revanche, la transaction est considérée comme finalisée : passez par le support pour tout problème constaté après coup.`,
   },
   {
     question: "Puis-je annuler une commande ?",
@@ -133,7 +133,7 @@ export default function FAQPage() {
     })),
   };
 
-  useSEO('Foire Aux Questions (FAQ) — Réponses à vos questions', {
+  useSEO('Foire Aux Questions (FAQ) : Réponses à vos questions', {
     description: 'Toutes les réponses à vos questions sur l\'utilisation de DaloaMarket : frais, paiement sécurisé, livraison, Pass Vendeur Pro et gestion de votre compte.',
     keywords: 'FAQ DaloaMarket, aide Daloa, paiement Mobile Money Daloa, livraison DaloaDelivery',
     canonical: 'https://daloamarket.com/faq',

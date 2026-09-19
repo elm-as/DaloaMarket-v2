@@ -102,7 +102,7 @@ export default function MaintenancePage({
 
         {/* Copyright */}
         <p className="text-center text-xs text-[var(--color-on-surface-variant)] mt-6">
-          © {new Date().getFullYear()} DaloaMarket — La marketplace ivoirienne de proximité.
+          © {new Date().getFullYear()} DaloaMarket, la marketplace ivoirienne de proximité.
         </p>
       </motion.div>
     </div>

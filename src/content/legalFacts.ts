@@ -117,8 +117,8 @@ export const CONTACT = {
  */
 export const PUBLISHER = {
   name: 'OULOBO Elmas Tresor',
-  legalForm: 'Entreprise individuelle — non immatriculée au RCCM à ce jour',
-  address: 'RueO21,68 — Yopougon, Abidjan, Côte d’Ivoire',
+  legalForm: 'Entreprise individuelle, non immatriculée au RCCM à ce jour',
+  address: 'RueO21,68, Yopougon, Abidjan, Côte d’Ivoire',
   activityZone: 'Daloa et sa région, Côte d’Ivoire',
 } as const;
 

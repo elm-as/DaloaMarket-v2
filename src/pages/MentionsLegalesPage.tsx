@@ -7,7 +7,7 @@ import { PUBLISHER } from '../content/legalFacts';
 
 export default function MentionsLegalesPage() {
   const navigate = useNavigate();
-  usePageTitle('Mentions Légales — DaloaMarket');
+  usePageTitle('Mentions Légales : DaloaMarket');
 
   return (
     <div className="min-h-screen bg-gray-50/70 px-4 py-5 pb-28 sm:px-6 sm:py-8 lg:px-6">
@@ -58,7 +58,7 @@ export default function MentionsLegalesPage() {
                       <MapPin className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
                       <div>
                         <p className="font-bold text-xs text-gray-900">Forme juridique</p>
-                        <p className="text-xs text-gray-600">Entreprise individuelle — non immatriculée au RCCM à ce jour</p>
+                        <p className="text-xs text-gray-600">Entreprise individuelle, non immatriculée au RCCM à ce jour</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100">

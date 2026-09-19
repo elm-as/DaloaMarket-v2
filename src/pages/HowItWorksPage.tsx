@@ -54,7 +54,7 @@ export default function HowItWorksPage() {
     })),
   };
 
-  useSEO('Comment ça marche — Vendre et Acheter à Daloa', {
+  useSEO('Comment ça marche : Vendre et Acheter à Daloa', {
     description: 'Découvrez comment acheter et vendre facilement sur DaloaMarket. Publication d\'annonces gratuites, livraison sécurisée et astuces pour réussir.',
     keywords: 'comment vendre Daloa, publier annonce Daloa, achat occasion Daloa, marketplace Côte d\'Ivoire',
     canonical: 'https://daloamarket.com/how-it-works',

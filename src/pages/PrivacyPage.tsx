@@ -5,7 +5,7 @@ import { Card } from '../components/ui/Card';
 import { CONTACT, PAYMENT_NETWORKS, LEGAL_LAST_UPDATED } from '../content/legalFacts';
 
 export default function PrivacyPage() {
-  useSEO('Politique de Confidentialité — Protection de vos données', {
+  useSEO('Politique de Confidentialité : Protection de vos données', {
     description: 'Découvrez comment DaloaMarket protège vos données personnelles et votre vie privée.',
     canonical: 'https://daloamarket.com/privacy'
   });
@@ -22,7 +22,7 @@ export default function PrivacyPage() {
             Politique de Confidentialité
           </h1>
           <p className="text-xs sm:text-sm text-orange-100 max-w-lg mx-auto">
-            Dernière mise à jour : {LEGAL_LAST_UPDATED} — DaloaMarket s'engage à protéger vos données personnelles.
+            Dernière mise à jour : {LEGAL_LAST_UPDATED}. DaloaMarket s'engage à protéger vos données personnelles.
           </p>
         </div>
 
@@ -75,7 +75,7 @@ export default function PrivacyPage() {
                     <li><strong className="text-[var(--color-on-surface)]">Adresse IP :</strong> nous enregistrons l'adresse IP utilisée lors de votre inscription ainsi que la dernière adresse IP de connexion, afin de détecter les comptes frauduleux et les abus. Une adresse IP à l'origine d'abus répétés peut être bloquée.</li>
                     <li><strong className="text-[var(--color-on-surface)]">Données techniques :</strong> type de navigateur, système d'exploitation, identifiant de l'appareil</li>
                     <li><strong className="text-[var(--color-on-surface)]">Données de localisation :</strong> position GPS, uniquement lorsque vous utilisez les fonctionnalités de livraison ou de géolocalisation, et après autorisation de votre appareil. Les coordonnées du point de livraison et, le cas échéant, celles de votre boutique ou de votre annonce sont conservées avec la commande ou l'annonce concernée.</li>
-                    <li><strong className="text-[var(--color-on-surface)]">Empreinte d'identifiant :</strong> à la suppression d'un compte, nous conservons une empreinte cryptographique irréversible (SHA-256) de son adresse e-mail et de son identifiant de connexion — jamais l'adresse elle-même, et l'empreinte ne permet pas de la retrouver. Elle sert uniquement à reconnaître la réinscription d'une personne dont le compte avait été banni ou signalé.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Empreinte d'identifiant :</strong> à la suppression d'un compte, nous conservons une empreinte cryptographique irréversible (SHA-256) de son adresse e-mail et de son identifiant de connexion (jamais l'adresse elle-même, et l'empreinte ne permet pas de la retrouver). Elle sert uniquement à reconnaître la réinscription d'une personne dont le compte avait été banni ou signalé.</li>
                     <li><strong className="text-[var(--color-on-surface)]">Notifications :</strong> si vous les activez, un jeton de notification propre à votre appareil, nécessaire pour vous envoyer les alertes de commande et de message. Vous pouvez les désactiver à tout moment dans les réglages de votre appareil.</li>
                     <li><strong className="text-[var(--color-on-surface)]">Cookies et stockage local essentiels :</strong> pour maintenir votre session et vos préférences d'affichage</li>
                   </ul>
@@ -151,7 +151,7 @@ export default function PrivacyPage() {
                   <p>Nous partageons des données avec les prestataires et partenaires suivants, strictement dans le cadre du fonctionnement de la Plateforme :</p>
                   <ul className="list-disc pl-5 space-y-1">
                     <li><strong className="text-[var(--color-on-surface)]">Livreurs (réseau DaloaDelivery ou livreurs affiliés à un vendeur) :</strong> lorsqu'une commande est passée, les coordonnées nécessaires à la livraison (nom, téléphone, adresse et point GPS) sont transmises au livreur désigné, pour la seule durée de la course.</li>
-                    <li><strong className="text-[var(--color-on-surface)]">Supabase :</strong> hébergement de la base de données, authentification et stockage des fichiers (photos d'annonces, avatars, bannières de boutique). Les e-mails transactionnels — confirmation d'inscription, réinitialisation de mot de passe — sont également expédiés via ce service.</li>
+                    <li><strong className="text-[var(--color-on-surface)]">Supabase :</strong> hébergement de la base de données, authentification et stockage des fichiers (photos d'annonces, avatars, bannières de boutique). Les e-mails transactionnels (confirmation d'inscription, réinitialisation de mot de passe) sont également expédiés via ce service.</li>
                     <li><strong className="text-[var(--color-on-surface)]">Money Fusion :</strong> traitement des paiements et des versements Mobile Money ({PAYMENT_NETWORKS})</li>
                     <li><strong className="text-[var(--color-on-surface)]">Mapbox :</strong> affichage des cartes et calcul des itinéraires de livraison</li>
                     <li><strong className="text-[var(--color-on-surface)]">Expo (Apple et Google pour l'acheminement) :</strong> envoi des notifications push vers l'application mobile, si vous les avez activées</li>

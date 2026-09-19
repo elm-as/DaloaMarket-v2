@@ -121,7 +121,7 @@ export default function LoginPage() {
             </div>
 
             <div className="relative z-10 pt-6 border-t border-white/15 flex items-center justify-between text-xs text-orange-100 font-medium">
-              <span>© 2026 DaloaMarket — ElmasCore</span>
+              <span>© 2026 DaloaMarket, ElmasCore</span>
               <span>Support: +225 07 00 00 00</span>
             </div>
           </div>
