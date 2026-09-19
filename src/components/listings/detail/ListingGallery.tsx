@@ -23,6 +23,8 @@ interface ListingGalleryProps {
   onShare: () => void;
   onReport: () => void;
   onOpenLightbox: (index: number) => void;
+  isSold?: boolean;
+  unavailableReason?: 'sold' | 'out_of_stock' | null;
 }
 
 /**
@@ -36,6 +38,8 @@ const ListingGallery: React.FC<ListingGalleryProps> = ({
   onShare,
   onReport,
   onOpenLightbox,
+  isSold = false,
+  unavailableReason = null,
 }) => {
   const navigate = useNavigate();
   const [currentImage, setCurrentImage] = useState(0);
@@ -104,6 +108,13 @@ const ListingGallery: React.FC<ListingGalleryProps> = ({
             </button>
           </div>
         </div>
+
+        {isSold && (
+          <div className="absolute top-16 left-3 z-30 px-3 py-1.5 rounded-xl bg-black/75 backdrop-blur-md border border-white/20 text-white font-black text-xs tracking-wider uppercase flex items-center gap-1.5 shadow-lg">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            {unavailableReason === 'sold' ? 'VENDU' : 'ÉPUISÉ'}
+          </div>
+        )}
 
         {images.length > 0 ? (
           <>
