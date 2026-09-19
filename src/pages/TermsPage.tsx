@@ -13,7 +13,7 @@ import {
 } from '../content/legalFacts';
 
 export default function TermsPage() {
-  useSEO("Conditions Générales d'Utilisation — DaloaMarket", {
+  useSEO("Conditions Générales d'Utilisation : DaloaMarket", {
     description: "Conditions Générales d'Utilisation de la plateforme DaloaMarket.",
     canonical: 'https://daloamarket.com/terms'
   });
@@ -29,7 +29,7 @@ export default function TermsPage() {
             Conditions Générales d'Utilisation
           </h1>
           <p className="text-xs sm:text-sm text-orange-100 max-w-lg mx-auto">
-            Dernière mise à jour : {LEGAL_LAST_UPDATED} — Veuillez lire attentivement ces conditions avant d'utiliser DaloaMarket.
+            Dernière mise à jour : {LEGAL_LAST_UPDATED}. Veuillez lire attentivement ces conditions avant d'utiliser DaloaMarket.
           </p>
         </div>
 
@@ -219,7 +219,7 @@ export default function TermsPage() {
                 <h2 className="text-lg font-bold mb-3">6. Boutiques et statut Vendeur Pro</h2>
                 <div className="space-y-2 text-sm text-[var(--color-on-surface-variant)] leading-relaxed">
                   <p>La boutique personnalisée est accessible à tout vendeur : nom d'enseigne, description, logo, bannière, quartier, numéro WhatsApp et couleur de thème, regroupés sur une adresse partageable.</p>
-                  <p>Le statut « Vendeur Pro » est un service payant sous forme d'abonnement (mensuel à {PRO_PASS.monthly} ou annuel à {PRO_PASS.yearly}) qui donne le badge Pro vérifié, une priorité de classement et une commission de vente préférentielle. Pendant la phase de lancement, les autres avantages historiquement associés au statut Pro — publication illimitée, paiement à la livraison, retrait sur place et livreurs affiliés — sont ouverts à l'ensemble des vendeurs.</p>
+                  <p>Le statut « Vendeur Pro » est un service payant sous forme d'abonnement (mensuel à {PRO_PASS.monthly} ou annuel à {PRO_PASS.yearly}) qui donne le badge Pro vérifié, une priorité de classement et une commission de vente préférentielle. Pendant la phase de lancement, les autres avantages historiquement associés au statut Pro (publication illimitée, paiement à la livraison, retrait sur place et livreurs affiliés) sont ouverts à l'ensemble des vendeurs.</p>
                   <p>DaloaMarket se réserve le droit de retirer le statut Pro à tout vendeur dont le comportement ne respecte pas les règles de la plateforme ou les droits des consommateurs.</p>
                 </div>
               </div>
@@ -381,7 +381,7 @@ export default function TermsPage() {
         </div>
 
         <div className="mt-10 pt-6 border-t border-gray-100 text-center text-xs text-[var(--color-on-surface-variant)]">
-          <p>© {new Date().getFullYear()} DaloaMarket — ELMAS. Tous droits réservés.</p>
+          <p>© {new Date().getFullYear()} DaloaMarket, ELMAS. Tous droits réservés.</p>
         </div>
       </Card>
     </div>

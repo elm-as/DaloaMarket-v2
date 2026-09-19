@@ -135,7 +135,7 @@ const Footer: React.FC = () => {
             className="text-xs"
             style={{ color: 'var(--color-on-surface-variant)' }}
           >
-            © {currentYear} ElmasCore — Fondé par Elmas — Tous droits réservés
+            © {currentYear} ElmasCore, fondé par Elmas. Tous droits réservés
           </p>
         </div>
       </div>

@@ -47,7 +47,7 @@ export default function PricingPage() {
     ],
   };
 
-  useSEO('Tarifs & Transparence — Formule Lancement & Pass Pro', {
+  useSEO('Tarifs & Transparence : Formule Lancement & Pass Pro', {
     description: 'Découvrez la tarification transparente de DaloaMarket : 100% gratuit jusqu\'à 20 articles, commission au succès de 3,5% et Pass Vendeur Pro à 2 500 FCFA.',
     keywords: 'tarifs DaloaMarket, vendeur pro Daloa, commission marketplace Daloa, e-commerce Côte d\'Ivoire',
     canonical: 'https://daloamarket.com/pricing',

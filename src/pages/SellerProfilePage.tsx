@@ -135,7 +135,7 @@ const SellerProfilePage: React.FC = () => {
       }
     : undefined;
 
-  useSEO(`${shopTitle} — Boutique sur DaloaMarket`, {
+  useSEO(`${shopTitle} : Boutique sur DaloaMarket`, {
     description:
       seller?.shop_description ||
       `Découvrez les annonces et articles de la boutique ${shopTitle} sur DaloaMarket à Daloa (Côte d'Ivoire).`,

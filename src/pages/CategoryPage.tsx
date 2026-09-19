@@ -139,7 +139,7 @@ export default function CategoryPage() {
   useSEO(`${categoryName} à Daloa`, {
     description: categoryDesc,
     keywords: `${categoryName}, annonces ${categoryName} Daloa, acheter ${categoryName} Daloa, vente ${categoryName} Côte d'Ivoire`,
-    ogTitle: `${categoryName} à Daloa — DaloaMarket`,
+    ogTitle: `${categoryName} à Daloa : DaloaMarket`,
     ogDescription: categoryDesc,
     canonical: canonicalUrl,
     jsonLd: [collectionSchema, breadcrumbSchema],

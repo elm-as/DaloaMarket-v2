@@ -157,7 +157,7 @@ export interface ShopShareInfo {
 export const formatShopShareText = (shop: ShopShareInfo) => {
   const url = getSellerShareUrl(shop.id, shop.shop_slug);
   const shopTitle = shop.shop_name || shop.full_name || 'Boutique DaloaMarket';
-  const parts: string[] = [`🏪 *${shopTitle}* — Boutique à Daloa`];
+  const parts: string[] = [`🏪 *${shopTitle}* : Boutique à Daloa`];
 
   const meta: string[] = [];
   if (shop.listing_count != null && shop.listing_count > 0) meta.push(`📦 ${shop.listing_count} article${shop.listing_count > 1 ? 's' : ''} en ligne`);

@@ -299,7 +299,7 @@ export const ShopTab: React.FC = () => {
               Logo de la vitrine
             </p>
             <p className="text-xs text-gray-500 mb-3.5">
-              Distinct de votre avatar personnel — visible sur votre vitrine publique.
+              Distinct de votre avatar personnel, visible sur votre vitrine publique.
             </p>
             <div className="flex items-center gap-4">
               <div className="relative w-20 h-20 flex-shrink-0">

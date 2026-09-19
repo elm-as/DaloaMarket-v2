@@ -42,7 +42,7 @@ function getStatusConfig(status: RevenueItem['status']): StatusConfig {
 }
 
 const MesRevenusPage: React.FC = () => {
-  useSEO('Mes revenus — Portefeuille Vendeur', {
+  useSEO('Mes revenus : Portefeuille Vendeur', {
     description: 'Suivez vos gains de ventes d\'annonces, vos fonds sous séquestre Escrow et configurez votre numéro de retrait Mobile Money.',
     canonical: 'https://daloamarket.com/mes-revenus',
   });

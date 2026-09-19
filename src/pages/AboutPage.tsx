@@ -37,7 +37,7 @@ export default function AboutPage() {
     ]
   };
 
-  useSEO('À propos de DaloaMarket — Fondateur, Mission & Écosystème', {
+  useSEO('À propos de DaloaMarket : Fondateur, Mission & Écosystème', {
     description: 'Découvrez l\'histoire de DaloaMarket, la première marketplace et réseau de livraison de proximité à Daloa (Côte d\'Ivoire), conçue et développée par OULOBO Elmas Tresor.',
     canonical: 'https://daloamarket.com/about',
     jsonLd: schemaOrg,

@@ -221,7 +221,7 @@ export default function CompleteProfilePage() {
             <div className="pt-4 border-t border-gray-100">
               <h3 className="text-sm font-bold text-gray-900 mb-1 pl-1">Informations de paiement</h3>
               <p className="text-xs text-gray-400 mb-4 pl-1 leading-relaxed">
-                Optionnel — pour recevoir vos gains de vente via Mobile Money.
+                Optionnel : pour recevoir vos gains de vente via Mobile Money.
               </p>
 
               <div className="space-y-4">
@@ -273,8 +273,8 @@ export default function CompleteProfilePage() {
               </h3>
               <p className="text-xs text-gray-400 mb-4 pl-1 leading-relaxed">
                 {pendingRef
-                  ? 'Code reconnu — votre ambassadeur sera crédité. Vous pouvez le corriger.'
-                  : 'Optionnel — uniquement si un ambassadeur DaloaMarket vous a donné un code.'}
+                  ? 'Code reconnu : votre ambassadeur sera crédité. Vous pouvez le corriger.'
+                  : 'Optionnel : uniquement si un ambassadeur DaloaMarket vous a donné un code.'}
               </p>
 
               <input
