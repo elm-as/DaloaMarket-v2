@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Clock, MapPin, User, ExternalLink, CheckCircle2, AlertTriangle,
-  RefreshCw, WalletCards, ShieldCheck, ArrowRight, Phone
+  RefreshCw, WalletCards, ShieldCheck, ArrowRight, Phone, Store
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn, formatDate, formatPrice } from '../../../lib/utils';
 import { supabase } from '../../../lib/supabase';
-import type { AdminDeliveryItem } from './types';
+import { type AdminDeliveryItem, isDriverDelivery } from './types';
 
 interface DeliveryCardProps {
   item: AdminDeliveryItem;
@@ -156,73 +156,83 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
         </span>
       </div>
 
-      {/* BLOC DE SUIVI FINANCIER & RÉMUNÉRATION LIVREUR */}
-      <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-            <WalletCards className="w-4 h-4 text-amber-500" />
-            <span>Flux Financier Livreur</span>
+      {/* BLOC DE SUIVI FINANCIER & RÉMUNÉRATION LIVREUR OU RETRAIT BOUTIQUE */}
+      {!isDriverDelivery(item) ? (
+        <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 text-slate-700">
+            <Store className="w-4 h-4 text-slate-500" />
+            <span className="font-semibold">Retrait direct en boutique (aucun livreur requis)</span>
           </div>
-          <span className="text-[11px] font-mono tabular-nums text-slate-500">
-            Course : {formatPrice(deliveryFee)}
-          </span>
+          <span className="text-[11px] font-mono tabular-nums text-slate-500 font-bold">0 FCFA</span>
         </div>
-
-        {/* Breakdown */}
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="bg-white p-2 rounded-lg border border-slate-200/60">
-            <span className="text-[10px] text-slate-400 font-semibold block uppercase">Com. DaloaMarket (10%)</span>
-            <span className="font-mono tabular-nums font-bold text-slate-700">{formatPrice(platformFee)}</span>
-          </div>
-          <div className="bg-emerald-50/60 p-2 rounded-lg border border-emerald-200/60">
-            <span className="text-[10px] text-emerald-700 font-bold block uppercase">Net Dû Livreur (90%)</span>
-            <span className="font-mono tabular-nums font-black text-emerald-800 text-sm">
-              {formatPrice(driverNetFee)}
+      ) : (
+        <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+              <WalletCards className="w-4 h-4 text-amber-500" />
+              <span>Flux Financier Livreur</span>
+            </div>
+            <span className="text-[11px] font-mono tabular-nums text-slate-500">
+              Course : {formatPrice(deliveryFee)}
             </span>
           </div>
-        </div>
 
-        {/* Payout Status Indicator */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] uppercase font-bold text-slate-400">Versement :</span>
-            {isPayoutPaid ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md border border-emerald-300">
-                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                Payé via {payout?.withdraw_mode?.replace('-ci', '') || 'Mobile Money'}
+          {/* Breakdown */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-white p-2 rounded-lg border border-slate-200/60">
+              <span className="text-[10px] text-slate-400 font-semibold block uppercase">Com. DaloaMarket (10%)</span>
+              <span className="font-mono tabular-nums font-bold text-slate-700">{formatPrice(platformFee)}</span>
+            </div>
+            <div className="bg-emerald-50/60 p-2 rounded-lg border border-emerald-200/60">
+              <span className="text-[10px] text-emerald-700 font-bold block uppercase">Net Dû Livreur (90%)</span>
+              <span className="font-mono tabular-nums font-black text-emerald-800 text-sm">
+                {formatPrice(driverNetFee)}
               </span>
-            ) : isPayoutPending ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-300">
-                <Clock className="w-3 h-3 text-amber-600" />
-                En attente d'envoi
-              </span>
-            ) : isPayoutFailed ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md border border-rose-300">
-                <AlertTriangle className="w-3 h-3 text-rose-600" />
-                Échec versement
-              </span>
-            ) : isDelivered ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-800 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
-                Non généré
-              </span>
-            ) : (
-              <span className="text-[11px] text-slate-500 italic">En attente de livraison</span>
-            )}
+            </div>
           </div>
 
-          {/* Action to trigger or retry driver payout if needed */}
-          {isDelivered && !isPayoutPaid && (
-            <button
-              onClick={handleManualTriggerDriverPayout}
-              disabled={triggeringPayout}
-              className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-[11px] transition-all flex items-center justify-center gap-1 shadow-xs active:scale-95 disabled:opacity-50"
-            >
-              <RefreshCw className={cn('w-3 h-3', triggeringPayout && 'animate-spin')} />
-              <span>{triggeringPayout ? 'Génération...' : isPayoutFailed ? 'Réessayer virement' : 'Débloquer versement'}</span>
-            </button>
-          )}
+          {/* Payout Status Indicator */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] uppercase font-bold text-slate-400">Versement :</span>
+              {isPayoutPaid ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md border border-emerald-300">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  Payé via {payout?.withdraw_mode?.replace('-ci', '') || 'Mobile Money'}
+                </span>
+              ) : isPayoutPending ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-300">
+                  <Clock className="w-3 h-3 text-amber-600" />
+                  En attente d'envoi
+                </span>
+              ) : isPayoutFailed ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md border border-rose-300">
+                  <AlertTriangle className="w-3 h-3 text-rose-600" />
+                  Échec versement
+                </span>
+              ) : isDelivered && driverNetFee > 0 ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-800 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                  Non généré
+                </span>
+              ) : (
+                <span className="text-[11px] text-slate-500 italic">En attente de livraison</span>
+              )}
+            </div>
+
+            {/* Action to trigger or retry driver payout if needed */}
+            {isDelivered && driverNetFee > 0 && !isPayoutPaid && (
+              <button
+                onClick={handleManualTriggerDriverPayout}
+                disabled={triggeringPayout}
+                className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-[11px] transition-all flex items-center justify-center gap-1 shadow-xs active:scale-95 disabled:opacity-50"
+              >
+                <RefreshCw className={cn('w-3 h-3', triggeringPayout && 'animate-spin')} />
+                <span>{triggeringPayout ? 'Génération...' : isPayoutFailed ? 'Réessayer virement' : 'Débloquer versement'}</span>
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Actors Block */}
       <div className="bg-slate-50/70 rounded-xl p-3 space-y-1.5 text-xs border border-slate-100">

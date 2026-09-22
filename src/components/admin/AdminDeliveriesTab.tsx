@@ -9,6 +9,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { cn } from '../../lib/utils';
 import { DeliveryCard } from './deliveries/DeliveryCard';
 import type { AdminDeliveryItem, DeliveryTabFilter } from './deliveries/types';
+import { isDriverDelivery } from './deliveries/types';
 import type { PayoutItem } from './payouts/types';
 
 export const AdminDeliveriesTab: React.FC = () => {
@@ -18,8 +19,8 @@ export const AdminDeliveriesTab: React.FC = () => {
   const [deliveries, setDeliveries] = useState<AdminDeliveryItem[]>([]);
   const [filter, setFilter] = useState<DeliveryTabFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [processing, setProcessing] = useState<string | null>(null);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const [processing, setProcessing] = useState<string | null>(null);
 
   const fetchDeliveries = useCallback(async () => {
     setError(null);
@@ -40,7 +41,7 @@ export const AdminDeliveriesTab: React.FC = () => {
       const orderIds = [...new Set(((rawAssignments as any[]) || []).map((a) => a.order_id).filter(Boolean))];
       const { data: orders } = await supabase
         .from('orders')
-        .select('id, status, product_amount, delivery_fee, total_amount, delivery_address, buyer_id, seller_id')
+        .select('id, status, product_amount, delivery_fee, total_amount, delivery_mode, delivery_address, buyer_id, seller_id')
         .in('id', orderIds);
 
       const orderMap = new Map((orders || []).map((o: any) => [o.id, o]));
@@ -172,6 +173,7 @@ export const AdminDeliveriesTab: React.FC = () => {
     if (filter === 'delivered' && item.status !== 'delivered') return false;
     if (filter === 'active' && !['pending_seller_confirmation', 'awaiting_pickup', 'accepted', 'picked_up', 'in_transit'].includes(item.status)) return false;
     if (filter === 'unpaid_driver') {
+      if (!isDriverDelivery(item)) return false;
       if (item.status !== 'delivered') return false;
       const isPaid = item.driver_payout?.status === 'paid' || item.driver_payout?.status === 'completed';
       if (isPaid) return false;
@@ -190,7 +192,7 @@ export const AdminDeliveriesTab: React.FC = () => {
   });
 
   const unpaidCount = deliveries.filter(
-    (d) => d.status === 'delivered' && d.driver_payout?.status !== 'paid' && d.driver_payout?.status !== 'completed'
+    (d) => isDriverDelivery(d) && d.status === 'delivered' && d.driver_payout?.status !== 'paid' && d.driver_payout?.status !== 'completed'
   ).length;
 
   if (loading) {

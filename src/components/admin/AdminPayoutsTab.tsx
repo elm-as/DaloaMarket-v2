@@ -6,7 +6,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorState } from '../ui/ErrorState';
 import { cn } from '../../lib/utils';
 import type { PayoutItem, DisputeDeliveryItem, PayoutStats, FinancialAuditLogItem } from './payouts/types';
-import type { AdminDeliveryItem } from './deliveries/types';
+import { type AdminDeliveryItem, isDriverDelivery } from './deliveries/types';
 import { PayoutStatsCards } from './payouts/PayoutStatsCards';
 import { PayoutSyncActionCard } from './payouts/PayoutSyncActionCard';
 import { PayoutsTable } from './payouts/PayoutsTable';
@@ -114,7 +114,7 @@ export const AdminPayoutsTab: React.FC = () => {
         const orderIds = [...new Set(((rawAssignments as any[]) || []).map((a) => a.order_id).filter(Boolean))];
         const { data: orders } = await supabase
           .from('orders')
-          .select('id, status, product_amount, delivery_fee, total_amount, delivery_address, buyer_id, seller_id')
+          .select('id, status, product_amount, delivery_fee, total_amount, delivery_mode, delivery_address, buyer_id, seller_id')
           .in('id', orderIds);
 
         const orderMap = new Map((orders || []).map((o: any) => [o.id, o]));
@@ -224,7 +224,7 @@ export const AdminPayoutsTab: React.FC = () => {
 
   const openDisputeCount = disputes.filter((d) => d.status === 'disputed').length;
   const missingOrPendingDriverCount = deliveries.filter(
-    (d) => d.status === 'delivered' && (!d.driver_payout || (d.driver_payout.status !== 'paid' && d.driver_payout.status !== 'completed'))
+    (d) => isDriverDelivery(d) && d.status === 'delivered' && (!d.driver_payout || (d.driver_payout.status !== 'paid' && d.driver_payout.status !== 'completed'))
   ).length;
 
   return (

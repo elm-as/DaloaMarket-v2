@@ -3,7 +3,7 @@ import { Search, RefreshCw, CheckCircle2, Clock, AlertTriangle, Phone, WalletCar
 import toast from 'react-hot-toast';
 import { cn, formatPrice, formatDate } from '../../../lib/utils';
 import { supabase } from '../../../lib/supabase';
-import type { AdminDeliveryItem } from '../deliveries/types';
+import { type AdminDeliveryItem, isDriverDelivery } from '../deliveries/types';
 import type { PayoutItem } from './types';
 
 interface DriverPayoutsFlowTableProps {
@@ -21,9 +21,9 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'pending' | 'failed' | 'missing'>('all');
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  // Filtrer uniquement les courses où un livreur est ou a été impliqué (ou livrées)
+  // Filtrer uniquement les courses où un livreur est ou a été impliqué (exclut retraits en boutique)
   const driverDeliveries = deliveries.filter(
-    (d) => d.delivery_person_id != null || d.driver_payout != null || d.status === 'delivered'
+    (d) => isDriverDelivery(d) && (d.delivery_person_id != null || d.driver_payout != null || d.status === 'delivered')
   );
 
   // Calcul des métriques livreurs
@@ -37,14 +37,14 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
     .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
   const totalPlatformCommissions = deliveries
-    .filter((d) => d.status === 'delivered')
+    .filter((d) => isDriverDelivery(d) && d.status === 'delivered')
     .reduce((sum, d) => {
       const fee = d.delivery_price || d.order?.delivery_fee || 0;
       return sum + Math.ceil(fee * 0.10);
     }, 0);
 
   const missingPayoutsCount = deliveries.filter(
-    (d) => d.status === 'delivered' && !d.driver_payout
+    (d) => isDriverDelivery(d) && d.status === 'delivered' && !d.driver_payout
   ).length;
 
   const handleTriggerDriverPayout = async (item: AdminDeliveryItem) => {
@@ -84,21 +84,14 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
       if (insertErr) throw insertErr;
 
       toast.success('Versement programmé ! Synchronisation Railway en cours...');
-
-      // Déclencher sync
       try {
         const apiUrl = import.meta.env.VITE_PAYMENT_API_URL || 'https://api.daloamarket.com';
         const { data: sess } = await supabase.auth.getSession();
         const token = sess.session?.access_token;
-        if (token) {
-          await fetch(`${apiUrl}/process-payouts?force=true`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-        }
+        if (token) await fetch(`${apiUrl}/process-payouts?force=true`, { headers: { Authorization: `Bearer ${token}` } });
       } catch (e) {
         console.warn('Sync Railway warning:', e);
       }
-
       onRefresh();
     } catch (err: any) {
       toast.error(err.message || 'Erreur lors du versement livreur');
@@ -170,15 +163,27 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
           </span>
         </div>
 
-        <div className="bg-rose-50/60 border border-rose-200 rounded-2xl p-4">
-          <span className="text-[10px] font-bold text-rose-800 uppercase tracking-wider block">
+        <div className={cn(
+          'border rounded-2xl p-4 transition-colors',
+          missingPayoutsCount > 0 ? 'bg-rose-50/60 border-rose-200' : 'bg-slate-50 border-slate-200'
+        )}>
+          <span className={cn(
+            'text-[10px] font-bold uppercase tracking-wider block',
+            missingPayoutsCount > 0 ? 'text-rose-800' : 'text-slate-500'
+          )}>
             Versements Non Déclenchés
           </span>
-          <p className="mt-2 text-2xl font-black text-rose-950 font-mono tabular-nums">
+          <p className={cn(
+            'mt-2 text-2xl font-black font-mono tabular-nums',
+            missingPayoutsCount > 0 ? 'text-rose-950' : 'text-slate-900'
+          )}>
             {missingPayoutsCount}
           </p>
-          <span className="text-xs text-rose-700 font-semibold">
-            Courses livrées sans virement
+          <span className={cn(
+            'text-xs font-semibold',
+            missingPayoutsCount > 0 ? 'text-rose-700' : 'text-slate-500'
+          )}>
+            {missingPayoutsCount > 0 ? 'Courses livrées sans virement' : 'Tous les versements sont à jour'}
           </span>
         </div>
       </div>
@@ -290,48 +295,38 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
                       <td className="py-3 px-4">
                         {isPaid ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200">
-                            <CheckCircle2 className="w-3 h-3" />
-                            Payé ({p?.withdraw_mode?.replace('-ci', '') || 'Wave'})
+                            <CheckCircle2 className="w-3 h-3" /> Payé ({p?.withdraw_mode?.replace('-ci', '') || 'Wave'})
                           </span>
                         ) : isPending ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200">
-                            <Clock className="w-3 h-3" />
-                            En attente d'envoi
+                            <Clock className="w-3 h-3" /> En attente
                           </span>
                         ) : isFailed ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200">
-                            <AlertTriangle className="w-3 h-3" />
-                            Échec
+                            <AlertTriangle className="w-3 h-3" /> Échec
                           </span>
                         ) : isMissing ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-red-800 bg-red-100 border border-red-300">
                             Non généré
                           </span>
                         ) : (
-                          <span className="text-[11px] text-slate-400 italic">Course en cours</span>
+                          <span className="text-[11px] text-slate-400 italic">En cours</span>
                         )}
                       </td>
 
                       {/* Actions */}
                       <td className="py-3 px-4 text-right">
-                        {isMissing && (
+                        {(isMissing || isFailed) && (
                           <button
                             onClick={() => handleTriggerDriverPayout(item)}
                             disabled={isProcessing}
-                            className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-[11px] transition-all disabled:opacity-50 inline-flex items-center gap-1 shadow-xs"
+                            className={cn(
+                              'px-2.5 py-1 font-bold rounded-lg text-[11px] transition-all disabled:opacity-50 inline-flex items-center gap-1 shadow-xs',
+                              isMissing ? 'bg-amber-500 hover:bg-amber-400 text-slate-950' : 'bg-rose-600 hover:bg-rose-500 text-white'
+                            )}
                           >
                             <RefreshCw className={cn('w-3 h-3', isProcessing && 'animate-spin')} />
-                            <span>Déclencher versement</span>
-                          </button>
-                        )}
-                        {isFailed && (
-                          <button
-                            onClick={() => handleTriggerDriverPayout(item)}
-                            disabled={isProcessing}
-                            className="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-[11px] transition-all disabled:opacity-50 inline-flex items-center gap-1 shadow-xs"
-                          >
-                            <RefreshCw className={cn('w-3 h-3', isProcessing && 'animate-spin')} />
-                            <span>Réessayer</span>
+                            <span>{isMissing ? 'Déclencher' : 'Réessayer'}</span>
                           </button>
                         )}
                       </td>

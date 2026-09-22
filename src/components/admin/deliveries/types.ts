@@ -32,6 +32,7 @@ export interface AdminDeliveryItem {
     product_amount: number;
     delivery_fee: number;
     total_amount: number;
+    delivery_mode?: string | null;
     delivery_address?: string | null;
     buyer_id: string;
     seller_id: string;
@@ -41,3 +42,16 @@ export interface AdminDeliveryItem {
   mediator?: { id: string; full_name: string | null } | null;
   driver_payout?: PayoutItem | null;
 }
+
+/**
+ * Détermine si une course implique un livreur (exclut les retraits directs en boutique).
+ */
+export const isDriverDelivery = (item: AdminDeliveryItem): boolean => {
+  // Les retraits en boutique / point relais ne nécessitent aucun livreur
+  if (item.order?.delivery_mode === 'pickup_point') return false;
+  // Sans livreur affecté et avec 0 frais de livraison, aucun versement livreur requis
+  const fee = item.delivery_price ?? item.order?.delivery_fee ?? 0;
+  if (!item.delivery_person_id && !item.driver_payout && fee === 0) return false;
+  return true;
+};
+
