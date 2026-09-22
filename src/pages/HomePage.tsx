@@ -39,6 +39,8 @@ import ListingCard from '../components/listings/ListingCard';
 import ListingCardSkeleton from '../components/listings/ListingCardSkeleton';
 import { userBehaviorService } from '../services/userBehaviorService';
 import { getTrendingRecommendations } from '../lib/feedCuration';
+import { HomeTrendingSection } from '../components/home/HomeTrendingSection';
+import { HomeForYouSection } from '../components/home/HomeForYouSection';
 
 const CATEGORY_STYLE: Record<string, { icon: React.ReactNode; bg: string; border: string; emoji: string }> = {
   fashion: { icon: <Shirt className="h-4 w-4" />, bg: 'bg-pink-50 text-pink-600', border: 'border-pink-200', emoji: '👗' },
@@ -545,50 +547,14 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* SECTION POPULAIRE À DALOA */}
+      {/* SECTION POPULAIRE À DALOA (DA Top Chart / Ruban Vélocité) */}
       {selectedCategory === 'all' && trendingRecommendations.length > 0 && !loading && (
-        <section className="pt-2 pb-2">
-          <div className="px-4 lg:px-8 max-w-5xl mx-auto">
-            <SectionHeader title="Populaire à Daloa" />
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mt-1.5">
-              {trendingRecommendations.map((rec, idx) => (
-                <ListingCard
-                  key={`trending-${rec.item.id}`}
-                  listing={{
-                    ...mapToListingCard(rec.item as ListingData),
-                    similarityPercent: rec.similarityPercent,
-                    matchReason: rec.matchReason,
-                  }}
-                  index={idx}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
+        <HomeTrendingSection recommendations={trendingRecommendations} />
       )}
 
-      {/* SECTION RECOMMANDATIONS PERSONNALISÉES */}
+      {/* SECTION RECOMMANDATIONS PERSONNALISÉES (DA Curation Bento / Fiches Paysage) */}
       {selectedCategory === 'all' && personalizedRecommendations.length > 0 && !loading && (
-        <section className="pt-2 pb-2">
-          <div className="px-4 lg:px-8 max-w-5xl mx-auto">
-            <SectionHeader title="Pour vous" />
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mt-1.5">
-              {personalizedRecommendations.map((rec, idx) => (
-                <ListingCard
-                  key={`rec-${rec.item.id}`}
-                  listing={{
-                    ...mapToListingCard(rec.item as ListingData),
-                    similarityPercent: rec.similarityPercent,
-                    matchReason: rec.matchReason,
-                  }}
-                  index={idx}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
+        <HomeForYouSection recommendations={personalizedRecommendations} />
       )}
 
       {/* LISTINGS FEED */}
