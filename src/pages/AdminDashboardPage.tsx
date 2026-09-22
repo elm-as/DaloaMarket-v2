@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Flag, Bell, FileText, Users, Truck, MessageSquare, Lightbulb, Sliders, Award } from 'lucide-react';
+import { BarChart3, Flag, Bell, FileText, Users, Truck, MessageSquare, Lightbulb, Sliders, Award, Banknote } from 'lucide-react';
 import { useSupabase } from '../hooks/useSupabase';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -13,6 +13,7 @@ import { AdminNotificationsTab } from '../components/admin/AdminNotificationsTab
 import { AdminListingsTab } from '../components/admin/AdminListingsTab';
 import { AdminUsersTab } from '../components/admin/AdminUsersTab';
 import { AdminDeliveriesTab } from '../components/admin/AdminDeliveriesTab';
+import { AdminPayoutsTab } from '../components/admin/AdminPayoutsTab';
 import { AdminSettingsTab } from '../components/admin/AdminSettingsTab';
 import { AdminFeedbacksTab } from '../components/admin/AdminFeedbacksTab';
 import { AdminFeaturesTab } from '../components/admin/AdminFeaturesTab';
@@ -25,6 +26,7 @@ const TABS = [
   { key: 'features', label: 'Idées Features', icon: Lightbulb, paths: ['/admin/features'] },
   { key: 'reports', label: 'Signalements', icon: Flag, paths: ['/admin/reports'] },
   { key: 'livraisons', label: 'Livraisons & Litiges', icon: Truck, paths: ['/admin/livraisons', '/admin/litiges'] },
+  { key: 'payouts', label: 'Versements & Règlements', icon: Banknote, paths: ['/admin/payouts', '/admin/versements'] },
   { key: 'settings', label: 'Configuration & Urgences', icon: Sliders, paths: ['/admin/settings'] },
   { key: 'notifications', label: 'Notifications', icon: Bell, paths: ['/admin/notifications'] },
   { key: 'annonces', label: 'Annonces', icon: FileText, paths: ['/admin/listings'] },
@@ -44,7 +46,7 @@ export default function AdminDashboardPage() {
     (user?.app_metadata as any)?.role?.toLowerCase() ||
     'user';
   const visibleTabs = TABS.filter((tab) => {
-    if (tab.key === 'kpis' || tab.key === 'utilisateurs' || tab.key === 'settings' || tab.key === 'ambassadeurs') {
+    if (tab.key === 'kpis' || tab.key === 'utilisateurs' || tab.key === 'settings' || tab.key === 'ambassadeurs' || tab.key === 'payouts') {
       return ['superadmin', 'admin'].includes(role);
     }
     return true;
@@ -59,6 +61,7 @@ export default function AdminDashboardPage() {
     else if (tabKey === 'features') navigate('/admin/features');
     else if (tabKey === 'reports') navigate('/admin/reports');
     else if (tabKey === 'livraisons') navigate('/admin/livraisons');
+    else if (tabKey === 'payouts') navigate('/admin/payouts');
     else if (tabKey === 'settings') navigate('/admin/settings');
     else if (tabKey === 'notifications') navigate('/admin/notifications');
     else if (tabKey === 'annonces') navigate('/admin/listings');
@@ -165,6 +168,7 @@ export default function AdminDashboardPage() {
           {currentTab === 'features' && <AdminFeaturesTab />}
           {currentTab === 'reports' && <AdminReportsTab />}
           {currentTab === 'livraisons' && <AdminDeliveriesTab />}
+          {currentTab === 'payouts' && <AdminPayoutsTab />}
           {currentTab === 'settings' && <AdminSettingsTab />}
           {currentTab === 'notifications' && <AdminNotificationsTab />}
           {currentTab === 'annonces' && <AdminListingsTab />}

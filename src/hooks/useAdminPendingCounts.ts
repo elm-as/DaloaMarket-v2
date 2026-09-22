@@ -79,8 +79,9 @@ export function useAdminPendingCounts(enabled = true) {
     features: counts.suggestions,
     reports: counts.signalements,
     livraisons: counts.litiges + counts.kyc_a_verifier,
+    payouts: counts.payouts_en_attente,
     utilisateurs: counts.messages_contact,
-    settings: counts.paiements_en_attente + counts.payouts_en_attente,
+    settings: counts.paiements_en_attente,
   };
 
   const total = Object.values(byTab).reduce((a, b) => a + b, 0);
