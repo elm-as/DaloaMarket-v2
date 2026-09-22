@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -8,14 +8,9 @@ import {
 } from 'lucide-react';
 
 
-import { supabase } from '../lib/supabase';
+import { useListingFeed, type ListingFeedRow } from '../hooks/useListingFeed';
 import { useSEO } from '../hooks/useSEO';
-import {
-  getConditionLabel,
-  getCategoryLabel,
-  interleaveBoosted,
-  cn,
-} from '../lib/utils';
+import { getConditionLabel, getCategoryLabel, cn } from '../lib/utils';
 import { Chip } from '../components/ui/Chip';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useCart } from '../contexts/CartContext';
@@ -29,7 +24,7 @@ import type { FilterValues } from '../components/search/FilterSheet';
 import FilterPanel from '../components/search/FilterPanel';
 import type { ListingFull } from '../types/listing';
 import { userBehaviorService } from '../services/userBehaviorService';
-import { expandSmartSearch, rankFuzzySearchResults, type SmartSearchExpansion } from '../lib/smartSearchEngine';
+import { expandSmartSearch } from '../lib/smartSearchEngine';
 import { Sparkles } from 'lucide-react';
 
 const DEFAULT_FILTERS: FilterValues = {
@@ -40,22 +35,7 @@ const DEFAULT_FILTERS: FilterValues = {
   priceMax: '',
 };
 
-interface ListingData {
-  id: string;
-  title: string;
-  price: number;
-  photos: string[];
-  created_at: string;
-  district: string;
-  condition: string;
-  category: string;
-  boosted_until: string | null;
-  user_id: string;
-  stock: number;
-  users?: { full_name: string; avatar_url: string | null } | null;
-  original_price?: number | null;
-  variants?: { id: string; label: string; price: number | null; stock: number; active?: boolean }[];
-}
+type ListingData = ListingFeedRow;
 
 interface ListingCardMapped {
   id: string;
@@ -91,18 +71,7 @@ interface SearchPageProps {
   categoryLabel?: string;
 }
 
-interface SearchCacheEntry {
-  listings: ListingData[];
-  totalCount: number;
-  hasMore: boolean;
-  page: number;
-  fetchedIds: string[];
-  timestamp: number;
-}
 
-// In-memory cache for search results & pagination state
-const searchCache = new Map<string, SearchCacheEntry>();
-const SEARCH_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
 
 const SearchPage: React.FC<SearchPageProps> = ({ defaultCategory, categoryLabel }) => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -197,238 +166,25 @@ const SearchPage: React.FC<SearchPageProps> = ({ defaultCategory, categoryLabel 
     return expandSmartSearch(debouncedQuery);
   }, [debouncedQuery]);
 
-  // Compute cache key based on search parameters
-  const currentCacheKey = useMemo(() => {
-    return JSON.stringify({ q: debouncedQuery.trim(), f: filters, s: sort });
-  }, [debouncedQuery, filters, sort]);
+  const {
+    listings,
+    loading,
+    loadingMore,
+    error,
+    totalCount,
+    hasMore,
+    loadMore,
+    refetch,
+  } = useListingFeed({
+    filters,
+    sort,
+    pageSize: PAGE_SIZE,
+    query: debouncedQuery,
+    ftsQueryString: searchExpansion.ftsQueryString,
+  });
 
-  const cachedInitial = searchCache.get(currentCacheKey);
-
-  const [listings, setListings] = useState<ListingData[]>(() => cachedInitial?.listings || []);
-  const [loading, setLoading] = useState(() => !cachedInitial);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(() => cachedInitial ? cachedInitial.hasMore : true);
-  const [totalCount, setTotalCount] = useState(() => cachedInitial ? cachedInitial.totalCount : 0);
-
-  const pageRef = useRef(cachedInitial ? cachedInitial.page : 0);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const fetchedIdsRef = useRef<Set<string>>(new Set(cachedInitial ? cachedInitial.fetchedIds : []));
-
-  // Build Supabase query avec FTS étendu
-  const buildQuery = useCallback(() => {
-    let q = supabase
-      .from('listings')
-      .select('*, users!listings_user_id_fkey(full_name, avatar_url)', { count: 'exact' })
-      .eq('status', 'active');
-
-    if (debouncedQuery.trim()) {
-      const ftsTerm = searchExpansion.ftsQueryString || debouncedQuery.trim();
-      q = q.textSearch(`fts`, ftsTerm, { type: `websearch`, config: `french` });
-    }
-
-    if (filters.category) {
-      q = q.eq('category', filters.category);
-    }
-    if (filters.condition) {
-      q = q.eq('condition', filters.condition);
-    }
-    if (filters.district) {
-      q = q.eq('district', filters.district);
-    }
-    if (filters.priceMin) {
-      q = q.gte('price', parseInt(filters.priceMin, 10));
-    }
-    if (filters.priceMax) {
-      q = q.lte('price', parseInt(filters.priceMax, 10));
-    }
-
-    switch (sort) {
-      case 'price_asc':
-        q = q.order('price', { ascending: true });
-        break;
-      case 'price_desc':
-        q = q.order('price', { ascending: false });
-        break;
-      case 'recent':
-      default:
-        q = q.order('sort_at', { ascending: false });
-        break;
-    }
-
-    return q;
-  }, [debouncedQuery, searchExpansion, filters, sort]);
-
-  // Initial fetch with cache checking & smart fuzzy fallback
-  const fetchListings = useCallback(async () => {
-    const cacheKey = JSON.stringify({ q: debouncedQuery.trim(), f: filters, s: sort });
-    const cached = searchCache.get(cacheKey);
-    const isFresh = cached && (Date.now() - cached.timestamp < SEARCH_CACHE_TTL_MS);
-
-    if (cached) {
-      setListings(cached.listings);
-      setTotalCount(cached.totalCount);
-      setHasMore(cached.hasMore);
-      pageRef.current = cached.page;
-      fetchedIdsRef.current = new Set(cached.fetchedIds);
-      setLoading(false);
-      if (isFresh) return;
-    } else {
-      setLoading(true);
-    }
-
-    setError(null);
-    pageRef.current = 0;
-    try {
-      const localFetchedIds = new Set<string>();
-      
-      // 1. Récupérer les annonces boostées actives
-      let bq = supabase
-        .from('listings')
-        .select('*, users!listings_user_id_fkey(full_name, avatar_url)')
-        .eq('status', 'active')
-        .gt('boosted_until', new Date().toISOString());
-
-      if (debouncedQuery.trim()) {
-        const ftsTerm = searchExpansion.ftsQueryString || debouncedQuery.trim();
-        bq = bq.textSearch('fts', ftsTerm, { type: 'websearch', config: 'french' });
-      }
-      if (filters.category) bq = bq.eq('category', filters.category);
-      if (filters.condition) bq = bq.eq('condition', filters.condition);
-      if (filters.district) bq = bq.eq('district', filters.district);
-      if (filters.priceMin) bq = bq.gte('price', parseInt(filters.priceMin, 10));
-      if (filters.priceMax) bq = bq.lte('price', parseInt(filters.priceMax, 10));
-      
-      bq = bq.order('boosted_until', { ascending: false }).limit(20);
-      const { data: boostedData } = await bq;
-      const boostedListings = (boostedData || []) as unknown as ListingData[];
-      boostedListings.forEach(l => localFetchedIds.add(l.id));
-
-      // 2. Récupérer la première page normale
-      const q = buildQuery();
-      const { data, error: fetchError, count } = await q.range(0, PAGE_SIZE - 1);
-
-      if (fetchError) throw fetchError;
-
-      let rawListings = (data || []) as unknown as ListingData[];
-      let finalCount = count || 0;
-
-      // 3. Fallback Fuzzy Search si FTS n'a renvoyé aucun résultat
-      if (rawListings.length === 0 && debouncedQuery.trim().length >= 2) {
-        let fallbackQuery = supabase
-          .from('listings')
-          .select('*, users!listings_user_id_fkey(full_name, avatar_url)')
-          .eq('status', 'active');
-
-        if (filters.category) fallbackQuery = fallbackQuery.eq('category', filters.category);
-        if (filters.condition) fallbackQuery = fallbackQuery.eq('condition', filters.condition);
-        if (filters.district) fallbackQuery = fallbackQuery.eq('district', filters.district);
-        if (filters.priceMin) fallbackQuery = fallbackQuery.gte('price', parseInt(filters.priceMin, 10));
-        if (filters.priceMax) fallbackQuery = fallbackQuery.lte('price', parseInt(filters.priceMax, 10));
-
-        const { data: allActive } = await fallbackQuery.order('sort_at', { ascending: false }).limit(100);
-
-        if (allActive && allActive.length > 0) {
-          const ranked = rankFuzzySearchResults(allActive as any[], debouncedQuery.trim());
-          if (ranked.length > 0) {
-            rawListings = ranked.slice(0, PAGE_SIZE) as unknown as ListingData[];
-            finalCount = ranked.length;
-          }
-        }
-      }
-
-      const filteredRaw = rawListings.filter(l => !localFetchedIds.has(l.id));
-      filteredRaw.forEach(l => localFetchedIds.add(l.id));
-
-      let combined = [...boostedListings, ...filteredRaw];
-
-      // Filtrage et classement strict par pertinence lors d'une recherche textuelle
-      if (debouncedQuery.trim().length >= 2) {
-        combined = rankFuzzySearchResults(combined as any[], debouncedQuery.trim()) as ListingData[];
-        finalCount = (count !== undefined && count !== null && count > 0) ? count : combined.length;
-      }
-
-      const finalList = interleaveBoosted(combined);
-      const newHasMore = finalCount > PAGE_SIZE;
-
-      setListings(finalList);
-      setTotalCount(finalCount);
-      setHasMore(newHasMore);
-      
-      fetchedIdsRef.current = localFetchedIds;
-
-      searchCache.set(cacheKey, {
-        listings: finalList,
-        totalCount: finalCount,
-        hasMore: newHasMore,
-        page: 0,
-        fetchedIds: Array.from(localFetchedIds),
-        timestamp: Date.now(),
-      });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Une erreur est survenue';
-      if (!cached) {
-        setError(message);
-        setListings([]);
-        setTotalCount(0);
-        setHasMore(false);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [buildQuery, debouncedQuery, searchExpansion, filters, sort]);
-
-  // Load more (infinite scroll)
-  const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore) return;
-    setLoadingMore(true);
-    try {
-      const nextPage = pageRef.current + 1;
-      const from = nextPage * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-
-      const q = buildQuery();
-      const { data, error: fetchError } = await q.range(from, to);
-
-      if (fetchError) throw fetchError;
-
-      const rawListings = (data || []) as unknown as ListingData[];
-      let updatedHasMore: boolean = true;
-      if (rawListings.length < PAGE_SIZE) {
-        updatedHasMore = false;
-        setHasMore(false);
-      }
-      const filteredRaw = rawListings.filter(l => !fetchedIdsRef.current.has(l.id));
-      filteredRaw.forEach(l => fetchedIdsRef.current.add(l.id));
-
-      const newInterleaved = interleaveBoosted(filteredRaw);
-      setListings((prev) => {
-        const nextListings = [...prev, ...newInterleaved];
-        // Update cache with extended pagination list
-        const cacheKey = JSON.stringify({ q: debouncedQuery.trim(), f: filters, s: sort });
-        searchCache.set(cacheKey, {
-          listings: nextListings,
-          totalCount,
-          hasMore: updatedHasMore,
-          page: nextPage,
-          fetchedIds: Array.from(fetchedIdsRef.current),
-          timestamp: Date.now(),
-        });
-        return nextListings;
-      });
-      pageRef.current = nextPage;
-    } catch (err: unknown) {
-      console.error('Load more error:', err);
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [buildQuery, debouncedQuery, filters, hasMore, loadingMore, sort, totalCount]);
-
-  // Refetch on filter/query change
-  useEffect(() => {
-    fetchListings();
-  }, [fetchListings]);
 
   // IntersectionObserver
   useEffect(() => {
@@ -620,7 +376,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ defaultCategory, categoryLabel 
           {error && !loading && (
             <ErrorState
               message={error}
-              onRetry={fetchListings}
+              onRetry={refetch}
             />
           )}
 

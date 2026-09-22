@@ -8,6 +8,8 @@ import { useSEO } from '../hooks/useSEO';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { SectionHeader } from '../components/ui/SectionHeader';
+import { WhatsAppIcon } from '../components/ui/WhatsAppIcon';
+import { CONTACT } from '../content/legalFacts';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 
@@ -50,6 +52,30 @@ export default function HelpPage() {
         <p className="mt-1 text-sm text-orange-100">
           Une question ? Notre équipe est là pour vous aider.
         </p>
+      </div>
+
+      {/* Assistance directe WhatsApp */}
+      <div className="mx-auto mb-5 max-w-3xl rounded-3xl border border-emerald-200 bg-emerald-50/70 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20">
+            <WhatsAppIcon size={22} className="w-5.5 h-5.5 fill-current" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-gray-900">Assistance Directe WhatsApp</h2>
+            <p className="text-xs sm:text-sm text-emerald-800">
+              Une question ou une urgence ? Échangez directement avec notre équipe locale.
+            </p>
+          </div>
+        </div>
+        <a
+          href={CONTACT.whatsappHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-3 px-5 rounded-2xl transition-all shadow-md shadow-emerald-600/20 active:scale-95 text-sm shrink-0"
+        >
+          <WhatsAppIcon size={18} className="w-4.5 h-4.5 fill-current" />
+          <span>Contacter sur WhatsApp ({CONTACT.whatsappDisplay})</span>
+        </a>
       </div>
 
       <div className="mx-auto grid max-w-3xl grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3 mb-5">

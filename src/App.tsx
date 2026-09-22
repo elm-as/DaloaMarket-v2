@@ -321,7 +321,8 @@ function AppContent() {
               <AppLayout><PanierPage /></AppLayout>
             </PrivateRoute>
           } />
-          <Route path="/map-test" element={<AppLayout><MapTestPage /></AppLayout>} />
+          {/* Outil de diagnostic géospatial : réservé à l'administration. */}
+          <Route path="/map-test" element={<AdminRoute><AppLayout><MapTestPage /></AppLayout></AdminRoute>} />
           <Route path="/boutique" element={
             <PrivateRoute requireProfile={true}>
               <AppLayout><ShopSettingsPage /></AppLayout>

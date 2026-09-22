@@ -35,7 +35,7 @@
         "npm:framer-motion@^12.42.0",
         "npm:leaflet@^1.9.4",
         "npm:lucide-react@0.344",
-        "npm:netlify-cli@^23.13.5",
+        "npm:netlify-cli@^23.15.1",
         "npm:postcss@^8.5.15",
         "npm:react-dom@^18.3.1",
         "npm:react-dropzone@^14.4.1",

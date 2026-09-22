@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { usePhase } from '../../contexts/PhaseContext';
+import { CATEGORY_CATALOG, getCategoryPath } from '../../lib/categoryCatalog';
 
 interface FooterLinkItem {
   label: string;
@@ -114,6 +115,33 @@ const Footer: React.FC = () => {
             </div>
           ))}
         </div>
+
+        {/*
+          Les pages de rayon n'étaient atteignables que depuis Google : rien dans
+          l'app n'y menait, alors que le sitemap les déclarait. Ce bandeau leur
+          donne un lien permanent depuis toutes les pages.
+        */}
+        <nav aria-label="Rayons" className="mt-8 pt-6 border-t border-gray-100">
+          <h3
+            className="text-sm font-bold mb-3"
+            style={{ color: 'var(--color-on-surface)' }}
+          >
+            Parcourir les rayons
+          </h3>
+          <ul className="flex flex-wrap gap-x-5 gap-y-2">
+            {CATEGORY_CATALOG.map((category) => (
+              <li key={category.id}>
+                <Link
+                  to={getCategoryPath(category)}
+                  className="text-sm transition-colors hover:text-[var(--color-primary)] no-underline"
+                  style={{ color: 'var(--color-on-surface-variant)' }}
+                >
+                  {category.short}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
 
         <div
           className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-between"

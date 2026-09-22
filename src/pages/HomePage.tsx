@@ -22,12 +22,14 @@ import {
   Tag,
   Zap,
   Package,
+  Flame,
 } from 'lucide-react';
 
 import { useSupabase } from '../hooks/useSupabase';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useSEO } from '../hooks/useSEO';
 import { formatPrice, interleaveBoosted, diversifySellers, CATEGORIES, cn } from '../lib/utils';
+import { getCategoryById, getCategoryPath } from '../lib/categoryCatalog';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -36,6 +38,7 @@ import { SectionHeader } from '../components/ui/SectionHeader';
 import ListingCard from '../components/listings/ListingCard';
 import ListingCardSkeleton from '../components/listings/ListingCardSkeleton';
 import { userBehaviorService } from '../services/userBehaviorService';
+import { getTrendingRecommendations } from '../lib/feedCuration';
 
 const CATEGORY_STYLE: Record<string, { icon: React.ReactNode; bg: string; border: string; emoji: string }> = {
   fashion: { icon: <Shirt className="h-4 w-4" />, bg: 'bg-pink-50 text-pink-600', border: 'border-pink-200', emoji: '👗' },
@@ -290,7 +293,24 @@ const HomePage: React.FC = () => {
     return userBehaviorService.getPersonalizedRecommendations(listings, { limit: 4, minScore: 20 });
   }, [listings, selectedCategory]);
 
+  // Calcul des annonces tendances "Populaire à Daloa" (Gravity Velocity)
+  const trendingRecommendations = useMemo(() => {
+    if (selectedCategory !== 'all' || listings.length === 0) return [];
+    return getTrendingRecommendations(listings, 4);
+  }, [listings, selectedCategory]);
+
   const currentCategoryObj = CATEGORIES.find((cat) => cat.id === selectedCategory);
+
+  /**
+   * « Tout voir » mène au rayon (`/maison-deco`), pas à la recherche filtrée :
+   * la page catégorie est le parcours de navigation, la recherche sert aux
+   * requêtes texte. C'est aussi ce qui donne à ces URL leur maillage interne.
+   */
+  const browseAllPath = useCallback(() => {
+    if (selectedCategory === 'all') return '/search';
+    const target = getCategoryById(selectedCategory);
+    return target ? getCategoryPath(target) : `/search?category=${selectedCategory}`;
+  }, [selectedCategory]);
 
   return (
     <div className="min-h-screen bg-gray-50/70">
@@ -472,7 +492,7 @@ const HomePage: React.FC = () => {
             title="Explorer par catégorie"
             action={{
               label: 'Tout voir',
-              onClick: () => navigate(selectedCategory === 'all' ? '/search' : `/search?category=${selectedCategory}`),
+              to: browseAllPath(),
             }}
           />
           <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 -mx-4 px-4 sm:mx-0 sm:px-0">
@@ -525,6 +545,29 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
+      {/* SECTION POPULAIRE À DALOA */}
+      {selectedCategory === 'all' && trendingRecommendations.length > 0 && !loading && (
+        <section className="pt-2 pb-2">
+          <div className="px-4 lg:px-8 max-w-5xl mx-auto">
+            <SectionHeader title="Populaire à Daloa" />
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mt-1.5">
+              {trendingRecommendations.map((rec, idx) => (
+                <ListingCard
+                  key={`trending-${rec.item.id}`}
+                  listing={{
+                    ...mapToListingCard(rec.item as ListingData),
+                    similarityPercent: rec.similarityPercent,
+                    matchReason: rec.matchReason,
+                  }}
+                  index={idx}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* SECTION RECOMMANDATIONS PERSONNALISÉES */}
       {selectedCategory === 'all' && personalizedRecommendations.length > 0 && !loading && (
         <section className="pt-2 pb-2">
@@ -555,7 +598,7 @@ const HomePage: React.FC = () => {
             title={selectedCategory === 'all' ? 'Dernières annonces' : (currentCategoryObj?.label || 'Catégorie')}
             action={{
               label: 'Voir tout',
-              onClick: () => navigate(selectedCategory === 'all' ? '/search' : `/search?category=${selectedCategory}`),
+              to: browseAllPath(),
             }}
           />
 

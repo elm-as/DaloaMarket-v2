@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import {
   Info, MapPin, Mail, Phone, Globe, Shield, Server, User, Building,
   Heart, ShoppingBag, Truck, Lock, Sparkles, CheckCircle2, Users, Rocket
@@ -242,8 +243,8 @@ export default function AboutPage() {
             </div>
 
             <div className="flex items-start gap-2">
-              <span className="font-bold text-gray-900 min-w-[130px]">WhatsApp :</span>
-              <a href={CONTACT.whatsappHref} target="_blank" rel="noopener noreferrer" className="text-primary font-bold hover:underline">{CONTACT.whatsappDisplay}</a>
+              <span className="font-bold text-gray-900 min-w-[130px]">Support WhatsApp :</span>
+              <span>Disponible 7j/7 depuis notre page dédiée <Link to="/help" className="text-primary font-bold hover:underline">Aide & Support</Link>.</span>
             </div>
 
             <div className="flex items-start gap-2">

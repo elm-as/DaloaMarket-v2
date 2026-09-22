@@ -22,6 +22,7 @@ import DeleteListingModal from '../components/listings/detail/DeleteListingModal
 import StickyBuyBar from '../components/listings/detail/StickyBuyBar';
 import type { ListingVariant } from '../types/listing';
 import { getUnavailabilityReason, isListingAvailable } from '../lib/availability';
+import { getListingPath } from '../lib/utils';
 
 const ListingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -96,7 +97,10 @@ const ListingDetailPage: React.FC = () => {
       ? `${listing.title}, acheter ${listing.title}, ${listing.category}, Daloa, Côte d'Ivoire`
       : 'petites annonces, Daloa',
     ogImage: listing?.photos && listing.photos.length > 0 ? listing.photos[0] : undefined,
-    canonical: listing ? `https://daloamarket.com/listings/${listing.id}` : undefined,
+    // Même URL que celle réellement maillée en interne et partagée
+    // (`getListingPath`) : déclarer /listings/:id tout en liant /l/:id faisait
+    // pointer la canonical vers une variante que rien ne référence.
+    canonical: listing ? `https://daloamarket.com${getListingPath(listing.id)}` : undefined,
     jsonLd: productSchema,
   });
 
