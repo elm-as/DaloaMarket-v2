@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { RefreshCw, WalletCards, ShieldAlert, History } from 'lucide-react';
+import { RefreshCw, WalletCards, ShieldAlert, History, Truck } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorState } from '../ui/ErrorState';
 import { cn } from '../../lib/utils';
 import type { PayoutItem, DisputeDeliveryItem, PayoutStats, FinancialAuditLogItem } from './payouts/types';
+import type { AdminDeliveryItem } from './deliveries/types';
 import { PayoutStatsCards } from './payouts/PayoutStatsCards';
 import { PayoutSyncActionCard } from './payouts/PayoutSyncActionCard';
 import { PayoutsTable } from './payouts/PayoutsTable';
 import { DisputeSettlementSection } from './payouts/DisputeSettlementSection';
 import { FinancialAuditLogsTable } from './payouts/FinancialAuditLogsTable';
+import { DriverPayoutsFlowTable } from './payouts/DriverPayoutsFlowTable';
 
 export const AdminPayoutsTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -18,8 +20,9 @@ export const AdminPayoutsTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [payouts, setPayouts] = useState<PayoutItem[]>([]);
   const [disputes, setDisputes] = useState<DisputeDeliveryItem[]>([]);
+  const [deliveries, setDeliveries] = useState<AdminDeliveryItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<FinancialAuditLogItem[]>([]);
-  const [activeSubTab, setActiveSubTab] = useState<'payouts' | 'disputes' | 'audit'>('payouts');
+  const [activeSubTab, setActiveSubTab] = useState<'payouts' | 'driver_flows' | 'disputes' | 'audit'>('payouts');
   const [stats, setStats] = useState<PayoutStats>({
     totalPaidAmount: 0,
     totalPaidCount: 0,
@@ -132,11 +135,19 @@ export const AdminPayoutsTab: React.FC = () => {
           actorsMap = new Map((actors || []).map((u: any) => [u.id, u]));
         }
 
-        const mergedDisputes: DisputeDeliveryItem[] = ((rawAssignments as any[]) || []).map((a) => {
+        const payoutByAssignmentId = new Map<string, PayoutItem>();
+        mergedPayouts.forEach((p) => {
+          if (p.type === 'delivery' && p.delivery_assignment_id) {
+            payoutByAssignmentId.set(p.delivery_assignment_id, p);
+          }
+        });
+
+        const mergedDeliveries: AdminDeliveryItem[] = ((rawAssignments as any[]) || []).map((a) => {
           const order = orderMap.get(a.order_id) as any;
           const dp = a.delivery_person as any;
           const driverName = dp?.name || (dp?.user_id ? actorsMap.get(dp.user_id)?.full_name : null) || 'Inconnu';
           const driverPhone = dp?.phone || (dp?.user_id ? actorsMap.get(dp.user_id)?.phone : null) || null;
+          const driverPayout = payoutByAssignmentId.get(a.id) || null;
 
           return {
             ...a,
@@ -148,10 +159,12 @@ export const AdminPayoutsTab: React.FC = () => {
                   seller: actorsMap.get(order.seller_id) || null,
                 }
               : null,
+            driver_payout: driverPayout,
           };
         });
 
-        setDisputes(mergedDisputes);
+        setDeliveries(mergedDeliveries);
+        setDisputes(mergedDeliveries as any);
       }
 
       // 3. Charger les journaux d'audit financier
@@ -210,6 +223,9 @@ export const AdminPayoutsTab: React.FC = () => {
   }
 
   const openDisputeCount = disputes.filter((d) => d.status === 'disputed').length;
+  const missingOrPendingDriverCount = deliveries.filter(
+    (d) => d.status === 'delivered' && (!d.driver_payout || (d.driver_payout.status !== 'paid' && d.driver_payout.status !== 'completed'))
+  ).length;
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
@@ -239,11 +255,11 @@ export const AdminPayoutsTab: React.FC = () => {
       <PayoutSyncActionCard onSyncCompleted={fetchData} />
 
       {/* Sub-tab Navigation */}
-      <div className="flex gap-2 border-b border-slate-200 pb-px">
+      <div className="flex gap-2 border-b border-slate-200 pb-px overflow-x-auto">
         <button
           onClick={() => setActiveSubTab('payouts')}
           className={cn(
-            'flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 relative -bottom-[2px] transition-all',
+            'flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 relative -bottom-[2px] transition-all whitespace-nowrap',
             activeSubTab === 'payouts'
               ? 'border-amber-500 text-amber-600'
               : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -257,9 +273,31 @@ export const AdminPayoutsTab: React.FC = () => {
         </button>
 
         <button
+          onClick={() => setActiveSubTab('driver_flows')}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 relative -bottom-[2px] transition-all whitespace-nowrap',
+            activeSubTab === 'driver_flows'
+              ? 'border-emerald-600 text-emerald-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          )}
+        >
+          <Truck className="w-4 h-4" />
+          <span>Flux Paiements Livreurs</span>
+          {missingOrPendingDriverCount > 0 ? (
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-800 font-bold font-mono tabular-nums">
+              {missingOrPendingDriverCount} à régler
+            </span>
+          ) : (
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-700 font-mono tabular-nums">
+              {deliveries.filter((d) => d.delivery_person_id || d.driver_payout || d.status === 'delivered').length}
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => setActiveSubTab('disputes')}
           className={cn(
-            'flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 relative -bottom-[2px] transition-all',
+            'flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 relative -bottom-[2px] transition-all whitespace-nowrap',
             activeSubTab === 'disputes'
               ? 'border-red-600 text-red-600'
               : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -277,7 +315,7 @@ export const AdminPayoutsTab: React.FC = () => {
         <button
           onClick={() => setActiveSubTab('audit')}
           className={cn(
-            'flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 relative -bottom-[2px] transition-all',
+            'flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 relative -bottom-[2px] transition-all whitespace-nowrap',
             activeSubTab === 'audit'
               ? 'border-indigo-600 text-indigo-600'
               : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -294,6 +332,8 @@ export const AdminPayoutsTab: React.FC = () => {
       {/* View Content */}
       {activeSubTab === 'payouts' ? (
         <PayoutsTable payouts={payouts} onRefresh={fetchData} />
+      ) : activeSubTab === 'driver_flows' ? (
+        <DriverPayoutsFlowTable deliveries={deliveries} payouts={payouts} onRefresh={fetchData} />
       ) : activeSubTab === 'disputes' ? (
         <DisputeSettlementSection disputes={disputes} onDisputeResolved={fetchData} />
       ) : (
