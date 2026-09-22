@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { RefreshCw, WalletCards, ShieldAlert, ArrowLeftRight } from 'lucide-react';
+import { RefreshCw, WalletCards, ShieldAlert, History } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorState } from '../ui/ErrorState';
 import { cn } from '../../lib/utils';
-import type { PayoutItem, DisputeDeliveryItem, PayoutStats } from './payouts/types';
+import type { PayoutItem, DisputeDeliveryItem, PayoutStats, FinancialAuditLogItem } from './payouts/types';
 import { PayoutStatsCards } from './payouts/PayoutStatsCards';
 import { PayoutSyncActionCard } from './payouts/PayoutSyncActionCard';
 import { PayoutsTable } from './payouts/PayoutsTable';
 import { DisputeSettlementSection } from './payouts/DisputeSettlementSection';
+import { FinancialAuditLogsTable } from './payouts/FinancialAuditLogsTable';
 
 export const AdminPayoutsTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -17,7 +18,8 @@ export const AdminPayoutsTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [payouts, setPayouts] = useState<PayoutItem[]>([]);
   const [disputes, setDisputes] = useState<DisputeDeliveryItem[]>([]);
-  const [activeSubTab, setActiveSubTab] = useState<'payouts' | 'disputes'>('payouts');
+  const [auditLogs, setAuditLogs] = useState<FinancialAuditLogItem[]>([]);
+  const [activeSubTab, setActiveSubTab] = useState<'payouts' | 'disputes' | 'audit'>('payouts');
   const [stats, setStats] = useState<PayoutStats>({
     totalPaidAmount: 0,
     totalPaidCount: 0,
@@ -151,6 +153,33 @@ export const AdminPayoutsTab: React.FC = () => {
 
         setDisputes(mergedDisputes);
       }
+
+      // 3. Charger les journaux d'audit financier
+      const { data: rawLogs } = await (supabase as any)
+        .from('admin_financial_audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (rawLogs && rawLogs.length > 0) {
+        const adminIds = [...new Set(((rawLogs as any[]) || []).map((l) => l.admin_id).filter(Boolean))];
+        let adminMap = new Map<string, any>();
+        if (adminIds.length > 0) {
+          const { data: admins } = await supabase
+            .from('users')
+            .select('id, full_name, phone, role')
+            .in('id', adminIds);
+          adminMap = new Map((admins || []).map((u: any) => [u.id, u]));
+        }
+
+        const mergedLogs: FinancialAuditLogItem[] = ((rawLogs as any[]) || []).map((l) => ({
+          ...l,
+          admin: adminMap.get(l.admin_id) || null,
+        }));
+        setAuditLogs(mergedLogs);
+      } else {
+        setAuditLogs([]);
+      }
     } catch (err: any) {
       setError(err.message || 'Erreur lors du chargement des versements');
     } finally {
@@ -244,13 +273,31 @@ export const AdminPayoutsTab: React.FC = () => {
             </span>
           )}
         </button>
+
+        <button
+          onClick={() => setActiveSubTab('audit')}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 relative -bottom-[2px] transition-all',
+            activeSubTab === 'audit'
+              ? 'border-indigo-600 text-indigo-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          )}
+        >
+          <History className="w-4 h-4" />
+          <span>Journal d'Audit Financier</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-indigo-50 text-indigo-700 font-mono tabular-nums">
+            {auditLogs.length}
+          </span>
+        </button>
       </div>
 
       {/* View Content */}
       {activeSubTab === 'payouts' ? (
         <PayoutsTable payouts={payouts} onRefresh={fetchData} />
-      ) : (
+      ) : activeSubTab === 'disputes' ? (
         <DisputeSettlementSection disputes={disputes} onDisputeResolved={fetchData} />
+      ) : (
+        <FinancialAuditLogsTable logs={auditLogs} onRefresh={fetchData} />
       )}
     </motion.div>
   );

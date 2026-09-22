@@ -71,3 +71,23 @@ export interface PayoutStats {
   driverPaidAmount: number;
   refundPaidAmount: number;
 }
+
+export interface FinancialAuditLogItem {
+  id: string;
+  admin_id: string;
+  action_type: string;
+  target_id?: string | null;
+  target_type?: string | null;
+  amount?: number | null;
+  currency: string;
+  recipient_phone?: string | null;
+  recipient_name?: string | null;
+  details?: Record<string, any> | null;
+  created_at: string;
+  admin?: {
+    id: string;
+    full_name: string | null;
+    phone: string | null;
+    role?: string | null;
+  } | null;
+}
