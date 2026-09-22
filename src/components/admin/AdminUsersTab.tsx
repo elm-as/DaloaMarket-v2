@@ -71,19 +71,16 @@ export const AdminUsersTab: React.FC = () => {
   // Modal state for flagging (suspect)
   const [userToFlag, setUserToFlag] = useState<{ id: string; email: string; name?: string | null; reason?: string | null } | null>(null);
 
-  const fetchUsers = useCallback(async (page = 0) => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const from = page * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-
-      // 1. Récupération des utilisateurs
+      // 1. Récupération de l'ensemble des utilisateurs (sans tronquage artificiel)
       const { data: usersData, count, error: fetchErr } = await supabase
         .from('users')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
-        .range(from, to);
+        .limit(2000);
 
       if (fetchErr) throw fetchErr;
 
@@ -99,8 +96,7 @@ export const AdminUsersTab: React.FC = () => {
         try {
           const { data: deliveryList } = await (supabase as any)
             .from('delivery_persons')
-            .select('id, user_id, name, phone, is_available, is_verified, vehicle_type, created_at, payout_network')
-            .in('user_id', userIds);
+            .select('id, user_id, name, phone, is_available, is_verified, vehicle_type, created_at, payout_network');
 
           if (deliveryList) {
             deliveryList.forEach((dp: any) => {
@@ -115,8 +111,7 @@ export const AdminUsersTab: React.FC = () => {
           // Compter les annonces créées pour distinguer les vendeurs réels
           const { data: listingsData } = await supabase
             .from('listings')
-            .select('user_id')
-            .in('user_id', userIds);
+            .select('user_id');
 
           if (listingsData) {
             listingsData.forEach((l: any) => {
@@ -132,8 +127,7 @@ export const AdminUsersTab: React.FC = () => {
           // celle d'un compte supprimé. La table n'est lisible que par un admin.
           const { data: rejoinData } = await (supabase as any)
             .from('account_rejoin_flags')
-            .select('new_user_id, previous_user_id, matched_kind, auto_banned, auto_suspect, previous_state, created_at')
-            .in('new_user_id', userIds);
+            .select('new_user_id, previous_user_id, matched_kind, auto_banned, auto_suspect, previous_state, created_at');
 
           if (rejoinData) {
             rejoinData.forEach((r: any) => rejoinMap.set(r.new_user_id, r));
@@ -180,7 +174,7 @@ export const AdminUsersTab: React.FC = () => {
       });
 
       setAllUsers(mergedUsers);
-      setUserTotal(count || 0);
+      setUserTotal(count || mergedUsers.length);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -189,12 +183,16 @@ export const AdminUsersTab: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchUsers(0);
+    fetchUsers();
   }, [fetchUsers]);
+
+  // Réinitialiser la page à 0 quand la recherche ou le filtre de plateforme change
+  useEffect(() => {
+    setUserPage(0);
+  }, [userSearch, platformFilter]);
 
   const goToUserPage = (page: number) => {
     setUserPage(page);
-    fetchUsers(page);
   };
 
   const handleOpenBanModal = (u: any) => {
@@ -233,7 +231,7 @@ export const AdminUsersTab: React.FC = () => {
     }
 
     toast.success('Utilisateur banni avec succès');
-    fetchUsers(userPage);
+    fetchUsers();
   };
 
   const handleUnban = async (userId: string) => {
@@ -252,7 +250,7 @@ export const AdminUsersTab: React.FC = () => {
       return;
     }
     toast.success('Utilisateur débanni avec succès');
-    fetchUsers(userPage);
+    fetchUsers();
   };
 
   /**
@@ -286,7 +284,7 @@ export const AdminUsersTab: React.FC = () => {
     }
 
     toast.success('Compte signalé');
-    fetchUsers(userPage);
+    fetchUsers();
   };
 
   const handleRemoveFlag = async () => {
@@ -303,7 +301,7 @@ export const AdminUsersTab: React.FC = () => {
     }
 
     toast.success('Signalement retiré');
-    fetchUsers(userPage);
+    fetchUsers();
   };
 
   const handleResetCancellations = async (userId: string) => {
@@ -318,7 +316,7 @@ export const AdminUsersTab: React.FC = () => {
       if (res && res.success === false) throw new Error(res.message || 'Erreur réinitialisation');
 
       toast.success("Compteur d'annulations réinitialisé (0)");
-      fetchUsers(userPage);
+      fetchUsers();
     } catch (err: any) {
       toast.error(err.message || 'Erreur lors de la réinitialisation');
     } finally {
@@ -330,7 +328,7 @@ export const AdminUsersTab: React.FC = () => {
     const { error: err } = await supabase.from('users').update({ role: newRole }).eq('id', userId);
     if (err) { toast.error('Erreur lors du changement de rôle'); return; }
     toast.success(`Rôle mis à jour : ${newRole}`);
-    fetchUsers(userPage);
+    fetchUsers();
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -338,7 +336,7 @@ export const AdminUsersTab: React.FC = () => {
     toast.success(`${label} copié !`);
   };
 
-  // Filtered users list
+  // Filtered users list (effectué sur l'intégralité des utilisateurs)
   const filteredUsers = useMemo(() => {
     return allUsers.filter((u) => {
       const query = userSearch.toLowerCase().trim();
@@ -367,7 +365,13 @@ export const AdminUsersTab: React.FC = () => {
     });
   }, [allUsers, userSearch, platformFilter]);
 
-  // Statistics counters
+  // Pagination découpée sur la liste filtrée
+  const paginatedUsers = useMemo(() => {
+    const from = userPage * ITEMS_PER_PAGE;
+    return filteredUsers.slice(from, from + ITEMS_PER_PAGE);
+  }, [filteredUsers, userPage]);
+
+  // Statistics counters (calculées sur TOUS les utilisateurs de la base)
   const counts = useMemo(() => {
     let marketCount = 0;
     let deliveryCount = 0;
@@ -401,7 +405,7 @@ export const AdminUsersTab: React.FC = () => {
   }
 
   if (error) {
-    return <ErrorState message={error} onRetry={() => fetchUsers(userPage)} />;
+    return <ErrorState message={error} onRetry={() => fetchUsers()} />;
   }
 
   return (
@@ -612,7 +616,7 @@ export const AdminUsersTab: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-xs font-medium">
-                {filteredUsers.map((u) => {
+                {paginatedUsers.map((u) => {
                   const isTargetSuperAdmin = (u.role || 'user').toLowerCase() === 'superadmin';
                   const isCurrentUserSuperAdmin = currentUserRole === 'superadmin';
                   const isLocked = isTargetSuperAdmin && !isCurrentUserSuperAdmin;
@@ -913,7 +917,7 @@ export const AdminUsersTab: React.FC = () => {
 
           {/* MOBILE CARDS */}
           <div className="block lg:hidden space-y-3.5">
-            {filteredUsers.map((u) => {
+            {paginatedUsers.map((u) => {
               const isTargetSuperAdmin = (u.role || 'user').toLowerCase() === 'superadmin';
               const isCurrentUserSuperAdmin = currentUserRole === 'superadmin';
               const isLocked = isTargetSuperAdmin && !isCurrentUserSuperAdmin;
@@ -1082,26 +1086,34 @@ export const AdminUsersTab: React.FC = () => {
           </div>
 
           {/* Pagination Controls */}
-          <div className="flex items-center justify-between bg-white px-4 py-3 rounded-2xl border border-gray-200/80 shadow-2xs">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white px-4 py-3 rounded-2xl border border-gray-200/80 shadow-2xs">
             <span className="text-xs text-gray-500 font-medium">
-              Affichage de {filteredUsers.length} sur <strong>{userTotal}</strong> utilisateurs
+              Affichage de {filteredUsers.length === 0 ? 0 : userPage * ITEMS_PER_PAGE + 1} à{' '}
+              {Math.min((userPage + 1) * ITEMS_PER_PAGE, filteredUsers.length)} sur{' '}
+              <strong className="text-gray-900 font-bold">{filteredUsers.length}</strong> utilisateur{filteredUsers.length > 1 ? 's' : ''}
+              {filteredUsers.length !== allUsers.length && (
+                <span className="text-gray-400 font-normal"> (filtré sur {allUsers.length} au total)</span>
+              )}
             </span>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <Button
                 size="sm"
                 variant="outlined"
                 onClick={() => goToUserPage(userPage - 1)}
                 disabled={userPage === 0}
-                className="rounded-xl text-xs"
+                className="rounded-xl text-xs font-bold"
               >
                 Précédent
               </Button>
+              <span className="text-xs text-gray-500 font-bold px-2">
+                Page {userPage + 1} / {Math.ceil(filteredUsers.length / ITEMS_PER_PAGE) || 1}
+              </span>
               <Button
                 size="sm"
                 variant="outlined"
                 onClick={() => goToUserPage(userPage + 1)}
-                disabled={(userPage + 1) * ITEMS_PER_PAGE >= userTotal}
-                className="rounded-xl text-xs"
+                disabled={(userPage + 1) * ITEMS_PER_PAGE >= filteredUsers.length}
+                className="rounded-xl text-xs font-bold"
               >
                 Suivant
               </Button>
