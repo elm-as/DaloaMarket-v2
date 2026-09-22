@@ -361,9 +361,7 @@ function AppContent() {
           <Route path="/categories" element={<Navigate to="/search" replace />} />
           <Route path="/livreurs" element={<Navigate to="/mes-livreurs" replace />} />
           <Route path="/payment/success" element={
-            <PrivateRoute>
-              <AppLayout><PaymentReturnPage /></AppLayout>
-            </PrivateRoute>
+            <AppLayout><PaymentReturnPage /></AppLayout>
           } />
 
           {/* Admin routes */}

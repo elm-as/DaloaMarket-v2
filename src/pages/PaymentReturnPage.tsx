@@ -119,17 +119,22 @@ export default function PaymentReturnPage() {
     }
   }, [transactionId, type, clearCart]);
 
+  const isAppSource = searchParams.get('source') === 'app';
+  const isMobile = isAppSource || (typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+  const appDeepLink = transactionId
+    ? `daloamarket://payment/success?transactionId=${encodeURIComponent(transactionId)}&type=${encodeURIComponent(type)}`
+    : 'daloamarket://';
+
+  useEffect(() => {
+    if ((isAppSource || isMobile) && transactionId) {
+      // Rebond immédiat vers l'application native sur mobile
+      window.location.replace(appDeepLink);
+    }
+  }, [isAppSource, isMobile, transactionId, appDeepLink]);
+
   useEffect(() => {
     verifyPayment(0);
   }, [verifyPayment]);
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
 
   if (status === 'loading') {
     return (
@@ -182,6 +187,23 @@ export default function PaymentReturnPage() {
   // Statut === 'success'
   return (
     <div className="min-h-screen bg-gray-50/60 pb-12">
+      {/* Retour vers l'application native sur mobile */}
+      {(isMobile || isAppSource) && (
+        <div className="bg-orange-50 border-b border-orange-200 px-4 py-3">
+          <div className="max-w-md mx-auto flex items-center justify-between gap-3">
+            <span className="text-xs text-orange-950 font-medium">
+              Paiement confirmé sur DaloaMarket
+            </span>
+            <a
+              href={appDeepLink}
+              className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold rounded-lg shadow-sm"
+            >
+              Ouvrir l'application
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Sur Mobile (< 1024px) */}
       <div className="block lg:hidden">
         {showFullReceiptOnMobile ? (

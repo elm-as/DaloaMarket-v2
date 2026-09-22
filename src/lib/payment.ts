@@ -157,9 +157,15 @@ export const checkPaymentStatus = async (
   if (!PAYMENT_API_URL) {
     throw new Error('Configuration invalide: VITE_PAYMENT_API_URL non définie');
   }
-  const accessToken = await getAccessToken();
+  const headers: Record<string, string> = {};
+  try {
+    const accessToken = await getAccessToken();
+    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  } catch {
+    // Session non requise pour vérifier le statut d'une transaction connue
+  }
   const res = await fetch(`${PAYMENT_API_URL}/check-payment?transactionId=${encodeURIComponent(transactionId)}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers,
   });
   if (!res.ok) {
     throw new Error(`Erreur ${res.status}`);
