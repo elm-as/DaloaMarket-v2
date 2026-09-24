@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Package as PackageIcon, CheckCircle, Truck, MapPin,
   Phone, ShoppingBag, XCircle, User as UserIcon,
-  AlertTriangle, Clock, MessageCircle, ChevronRight, Eye, EyeOff, Store
+  AlertTriangle, Clock, MessageCircle, ChevronRight, ChevronDown, Eye, EyeOff, Store, Route
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { fetchContactPhones } from '../lib/contacts';
@@ -223,6 +223,8 @@ const OrderTrackingPage: React.FC = () => {
   const userRole: UserRole = isSeller ? 'seller' : isBuyer ? 'buyer' : isDeliveryPerson ? 'delivery' : 'other';
   const isCancelledOrDisputed = order.status === 'cancelled' || deliveryAssignment?.status === 'disputed';
   const isDone = order.status === 'delivered' || order.status === 'completed';
+  const deliveredAt = deliveryAssignment?.delivered_at || deliveryAssignment?.buyer_confirmed_at;
+  const journeySummary = `${isPickup ? 4 : 5} étapes${deliveredAt ? ` · terminé le ${formatDate(deliveredAt)}` : ''}`;
   const hasMap = order.seller_lat != null && order.seller_lng != null;
   const productPhoto = order.listing_photos?.[0];
 
@@ -251,9 +253,17 @@ const OrderTrackingPage: React.FC = () => {
           {/* Une fois livrée, la frise n'est plus l'information principale : repliée. */}
           {!isCancelledOrDisputed && isDone && (
             <details className="group space-y-3.5">
-              <summary className="cursor-pointer list-none rounded-2xl border border-gray-100 bg-white px-4 py-3 text-[13px] font-medium text-gray-700 [&::-webkit-details-marker]:hidden">
-                <span className="group-open:hidden">Voir le parcours de la commande</span>
-                <span className="hidden group-open:inline">Masquer le parcours</span>
+              <summary className="flex cursor-pointer list-none items-center gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-3.5 transition-colors hover:bg-gray-50 [&::-webkit-details-marker]:hidden">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[var(--color-primary)]">
+                  <Route className="h-5 w-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-gray-900">Parcours de la commande</span>
+                  <span className="block text-xs text-gray-500">
+                    {journeySummary}
+                  </span>
+                </span>
+                <ChevronDown className="h-5 w-5 shrink-0 text-gray-400 transition-transform duration-200 group-open:rotate-180" />
               </summary>
               <OrderStatusTimeline order={order} role={userRole} />
             </details>

@@ -2,7 +2,7 @@ import { formatPrice } from '../../lib/utils';
 import type { Order } from '../../types/order';
 
 export interface ClosedCopy {
-  kind: 'dispute' | 'cancelled';
+  kind: 'dispute' | 'resolved' | 'cancelled';
   title: string;
   message: string;
   /** Où en est l'argent : la question que tout le monde se pose après une annulation. */
@@ -29,6 +29,31 @@ export function getClosedCopy(order: Order, userId?: string | null): ClosedCopy 
   const isCod = order.payment_method === 'cod';
   const cancelReason = (order as any).cancel_reason as string | undefined;
   const isSellerUnavailable = cancelReason === 'unavailable' || cancelReason === 'seller_unavailable';
+
+  // Litige arbitré par l'équipe : la commande est annulée avec un motif
+  // `admin_refund_*` posé par resolve_delivery_dispute.
+  const cancelReasonRaw = (order as any).cancel_reason as string | undefined;
+  if (isCancelled && cancelReasonRaw?.startsWith('admin_refund')) {
+    const partial = cancelReasonRaw === 'admin_refund_partial';
+    if (userId === order.seller_id) {
+      return {
+        kind: 'resolved',
+        title: 'Litige réglé',
+        message: partial
+          ? 'L’acheteur était absent : le livreur a été dédommagé et le colis vous est rapporté.'
+          : 'L’équipe DaloaMarket a tranché en faveur de l’acheteur.',
+        money: 'Aucun versement pour cette commande',
+      };
+    }
+    return {
+      kind: 'resolved',
+      title: 'Litige réglé',
+      message: partial
+        ? 'L’article vous est remboursé ; la course du livreur reste due.'
+        : 'L’équipe DaloaMarket a tranché en votre faveur.',
+      money: `Remboursement de ${formatPrice(partial ? order.product_amount : order.total_amount)} en cours vers votre Mobile Money`,
+    };
+  }
 
   if (isDisputed) {
     return {

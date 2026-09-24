@@ -162,39 +162,134 @@ const ProfilePage: React.FC = () => {
   const hasPayoutSetup = (userProfile as any)?.payout_network != null && (userProfile as any)?.payout_number != null;
   const showPayoutWarning = profileStats.activeCount > 0 && !hasPayoutSetup;
 
+  // Raccourcis toujours visibles sous le bandeau : ils étaient en bas de page,
+  // sous toutes les annonces, et il fallait défiler longtemps pour les atteindre.
+  const shortcuts: { label: string; icon: React.ReactNode; onClick: () => void }[] = [
+    { label: 'Commandes', icon: <Package className="h-5 w-5" />, onClick: () => navigate('/mes-commandes') },
+    { label: 'Livreurs', icon: <Truck className="h-5 w-5" />, onClick: () => navigate('/mes-livreurs') },
+    { label: 'Stats', icon: <BarChart3 className="h-5 w-5" />, onClick: () => navigate('/mes-statistiques') },
+    ...(showMonetisation
+      ? [{ label: 'Paiements', icon: <CreditCard className="h-5 w-5" />, onClick: () => navigate('/mes-paiements') }]
+      : []),
+    { label: 'Partager', icon: <Share2 className="h-5 w-5" />, onClick: handleShareShop },
+  ];
+
+  const stats: { label: string; value: number; tab: TabId }[] = [
+    { label: 'Actives', value: profileStats.activeCount, tab: 'listings' },
+    { label: 'Vendues', value: profileStats.soldCount, tab: 'listings' },
+    { label: 'Avis', value: profileStats.reviewCount, tab: 'reviews' },
+  ];
+
   return (
     <div className="w-full max-w-2xl lg:max-w-5xl mx-auto pb-28 lg:px-6 lg:pb-12 bg-gray-50/70 min-h-screen">
-      {/* En-tête sobre (l'ancien bandeau en dégradé portait aussi un 2e accès admin) */}
-      <div className="flex items-center justify-between px-4 pt-5 pb-3">
-        <h1 className="text-xl font-bold text-gray-900">Mon profil</h1>
-        <div className="flex items-center gap-2">
-          {isAdmin && (
+      {/* ── Bandeau d'identité, aux couleurs DaloaMarket ── */}
+      <div className="relative overflow-hidden rounded-b-[32px] bg-gradient-to-br from-orange-500 via-[var(--color-primary)] to-amber-600 px-4 pt-5 pb-16 lg:mt-4 lg:rounded-3xl">
+        <div className="pointer-events-none absolute -top-16 -right-10 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-black/10 blur-2xl" />
+
+        <div className="relative flex items-center justify-between">
+          <h1 className="text-lg font-bold text-white">Mon profil</h1>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/admin')}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-white/15 px-3 text-xs font-semibold text-white backdrop-blur-md hover:bg-white/25"
+              >
+                <Shield className="h-3.5 w-3.5" /> Admin
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => navigate('/admin')}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              onClick={() => navigate('/settings')}
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-white/15 px-3 text-xs font-semibold text-white backdrop-blur-md hover:bg-white/25"
             >
-              <Shield className="h-3.5 w-3.5" /> Admin
+              <Edit3 className="h-3.5 w-3.5" /> Paramètres
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => navigate('/settings')}
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-xs font-medium text-gray-700 hover:bg-gray-50"
-          >
-            <Edit3 className="h-3.5 w-3.5" /> Paramètres
-          </button>
+          </div>
+        </div>
+
+        <div className="relative mt-5 flex items-center gap-4">
+          <div className="relative shrink-0">
+            <Avatar
+              src={userProfile?.avatar_url}
+              name={userProfile?.full_name}
+              size="xl"
+              className="ring-4 ring-white/30"
+            />
+            {isPro && (
+              <div className="absolute -bottom-1 -right-1">
+                <ProBadge iconOnly size="sm" ring />
+              </div>
+            )}
+          </div>
+          <div className="min-w-0">
+            <h2 className="truncate text-xl font-bold text-white">{userProfile?.full_name || 'Utilisateur'}</h2>
+            {userProfile?.rating != null && (
+              <div className="mt-1 flex items-center gap-1.5">
+                <div className="flex items-center gap-0.5">{renderStars(userProfile.rating)}</div>
+                <span className="text-xs font-semibold text-white">{userProfile.rating.toFixed(1)}</span>
+              </div>
+            )}
+            <div className="mt-2 flex flex-wrap gap-1.5 text-xs text-white">
+              {userProfile?.phone && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 backdrop-blur-md">
+                  <Phone className="h-3 w-3" /> {userProfile.phone}
+                </span>
+              )}
+              {userProfile?.district && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 backdrop-blur-md">
+                  <MapPin className="h-3 w-3" /> {userProfile.district}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="relative mt-5 grid grid-cols-3 gap-2">
+          {stats.map((st) => (
+            <button
+              key={st.label}
+              type="button"
+              onClick={() => handleTabChange(st.tab)}
+              className="rounded-2xl bg-white/15 px-2 py-2.5 text-center backdrop-blur-md transition-colors hover:bg-white/25"
+            >
+              <p className="text-lg font-bold leading-none text-white tabular-nums">{st.value}</p>
+              <p className="mt-1 text-[11px] font-medium text-orange-50">{st.label}</p>
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="px-4">
+      <div className="relative z-10 -mt-10 px-4">
+        {/* ── Raccourcis : toujours à portée de pouce ── */}
+        {/* Colonnes égales : tout est visible, sans défilement horizontal */}
+        <div
+          className="grid gap-1 rounded-3xl bg-white p-2 shadow-lg shadow-orange-900/5 ring-1 ring-gray-100"
+          style={{ gridTemplateColumns: `repeat(${shortcuts.length}, minmax(0, 1fr))` }}
+        >
+          {shortcuts.map((sc) => (
+            <button
+              key={sc.label}
+              type="button"
+              onClick={sc.onClick}
+              className="flex min-w-0 flex-col items-center gap-1.5 rounded-2xl px-1 py-2.5 text-gray-700 transition-colors hover:bg-orange-50 active:scale-95"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-[var(--color-primary)]">
+                {sc.icon}
+              </span>
+              <span className="w-full truncate text-center text-[11px] font-semibold">{sc.label}</span>
+            </button>
+          ))}
+        </div>
+
         {/* Une seule alerte à la fois, la plus urgente : sans compte de retrait,
             le vendeur ne peut pas être payé. */}
         {(showPayoutWarning || showShopLocationWarning) && (
           <button
             type="button"
             onClick={() => navigate(showPayoutWarning ? '/settings/payout' : '/settings?tab=boutique')}
-            className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-left"
+            className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-left"
           >
             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
             <span className="min-w-0 flex-1 text-sm text-amber-900">
@@ -205,130 +300,46 @@ const ProfilePage: React.FC = () => {
             <ChevronRight className="h-4 w-4 shrink-0 text-amber-700" />
           </button>
         )}
+      </div>
 
-        {/* ── PROFILE MAIN CARD ── */}
-        <div className="bg-white rounded-2xl p-5 border border-gray-100">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
-            {/* Avatar */}
-            <div className="relative">
-              <Avatar
-                src={userProfile?.avatar_url}
-                name={userProfile?.full_name}
-                size="xl"
-                className="ring-4 ring-orange-50 shadow-md"
-              />
-              {isPro && (
-                <div className="absolute -bottom-1 -right-1">
-                  <ProBadge iconOnly size="sm" ring />
-                </div>
-              )}
-            </div>
-
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                <h2 className="text-xl font-black text-gray-900">
-                  {userProfile?.full_name || 'Utilisateur'}
-                </h2>
-              </div>
-
-              {/* Rating */}
-              {userProfile?.rating != null && (
-                <div className="flex items-center justify-center sm:justify-start gap-1.5 mt-1.5">
-                  <div className="flex items-center gap-0.5">
-                    {renderStars(userProfile.rating)}
-                  </div>
-                  <span className="text-xs font-extrabold text-gray-700">
-                    {userProfile.rating.toFixed(1)}
-                  </span>
-                </div>
-              )}
-
-              {/* Badges (Phone & District) */}
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-2 text-xs text-gray-500 font-medium">
-                {userProfile?.phone && (
-                  <span className="inline-flex items-center gap-1 bg-gray-50 px-2.5 py-1 rounded-xl">
-                    <Phone className="w-3.5 h-3.5 text-gray-400" />
-                    {userProfile.phone}
+      {/* ── Onglets : 4 colonnes égales, tout visible sans défiler ──
+          Pas d'icône (c'est elles qui prenaient la largeur) ; le compteur est
+          une bulle posée sur l'angle, qui ne pousse pas le texte. */}
+      <div className="sticky top-14 z-20 mt-5 bg-gray-50/95 px-4 py-2.5 backdrop-blur-md lg:top-16">
+        <div className="grid grid-cols-4 gap-1.5">
+          {tabs.map((tab) => {
+            const isSelected = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleTabChange(tab.id)}
+                aria-pressed={isSelected}
+                className={cn(
+                  'relative flex h-10 items-center justify-center rounded-xl text-[13px] font-semibold transition-colors',
+                  isSelected
+                    ? 'bg-[var(--color-primary)] text-white shadow-md shadow-orange-500/20'
+                    : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:text-gray-900'
+                )}
+              >
+                {tab.label}
+                {tab.count !== undefined && tab.count > 0 && (
+                  <span
+                    className={cn(
+                      'absolute -top-1.5 -right-1 min-w-[18px] rounded-full px-1 text-center text-[10px] font-bold leading-[18px] ring-2 ring-gray-50',
+                      isSelected ? 'bg-gray-900 text-white' : 'bg-[var(--color-primary)] text-white'
+                    )}
+                  >
+                    {tab.count}
                   </span>
                 )}
-                {userProfile?.district && (
-                  <span className="inline-flex items-center gap-1 bg-gray-50 px-2.5 py-1 rounded-xl">
-                    <MapPin className="w-3.5 h-3.5 text-orange-500" />
-                    {userProfile.district}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* ── 3-Tile Stats Strip ── */}
-          <div className="grid grid-cols-3 gap-2 w-full mt-4 pt-4 border-t border-gray-100">
-            <div className="rounded-2xl bg-gray-50/80 p-2.5 text-center">
-              <p className="text-lg font-black text-gray-900 leading-none">{profileStats.activeCount}</p>
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mt-1">Actives</p>
-            </div>
-            <div className="rounded-2xl bg-gray-50/80 p-2.5 text-center">
-              <p className="text-lg font-black text-gray-900 leading-none">{profileStats.soldCount}</p>
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mt-1">Vendues</p>
-            </div>
-            <div className="rounded-2xl bg-gray-50/80 p-2.5 text-center">
-              <p className="text-lg font-black text-gray-900 leading-none">{profileStats.reviewCount}</p>
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mt-1">Avis</p>
-            </div>
-          </div>
-
+              </button>
+            );
+          })}
         </div>
+      </div>
 
-        {/* ── TABS NAVIGATION (PREMIUM UNDERLINE SLIDER) ── */}
-        <div className="mt-4 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="flex items-center">
-            {tabs.map((tab) => {
-              const isSelected = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => handleTabChange(tab.id)}
-                  className={cn(
-                    'relative flex-1 flex items-center justify-center gap-1.5 py-3 px-1 text-xs transition-colors select-none active:scale-[0.98]',
-                    isSelected
-                      ? 'text-orange-600 font-black'
-                      : 'text-gray-400 font-semibold hover:text-gray-700'
-                  )}
-                >
-                  <span className={cn('transition-colors flex-shrink-0', isSelected ? 'text-orange-600' : 'text-gray-400')}>
-                    {tab.icon}
-                  </span>
-                  <span className="truncate">{tab.label}</span>
-                  {tab.count !== undefined && tab.count > 0 && (
-                    <span
-                      className={cn(
-                        'text-[10px] min-w-[16px] h-4 px-1 rounded-full font-black flex items-center justify-center leading-none transition-colors flex-shrink-0',
-                        isSelected
-                          ? 'bg-orange-500 text-white shadow-2xs'
-                          : 'bg-gray-100 text-gray-500'
-                      )}
-                    >
-                      {tab.count}
-                    </span>
-                  )}
-
-                  {/* Animated Active Indicator */}
-                  {isSelected && (
-                    <motion.div
-                      layoutId="activeProfileTabIndicator"
-                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                      className="absolute bottom-0 left-3 right-3 h-[2.5px] bg-gradient-to-r from-orange-500 to-amber-500 rounded-full"
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── TAB CONTENT ── */}
+      <div className="px-4">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -336,7 +347,7 @@ const ProfilePage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
-            className="mt-4"
+            className="mt-2"
           >
             {activeTab === 'listings' && (
               <ProfileListingsTab userId={currentUserId!} activeCount={profileStats.activeCount} />
@@ -347,87 +358,21 @@ const ProfilePage: React.FC = () => {
           </motion.div>
         </AnimatePresence>
 
-        {/* ── ACCOUNT SETTINGS & LOGOUT ACTIONS ── */}
-        <div className="mt-8 bg-white rounded-2xl border border-gray-100 overflow-hidden divide-y divide-gray-100">
-          <button
-            type="button"
-            onClick={() => navigate('/mes-livreurs')}
-            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
-          >
-            <span className="flex items-center gap-3 text-sm text-gray-900">
-              <Truck className="w-4 h-4 text-gray-500" />
-              Mes livreurs
-            </span>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/mes-statistiques')}
-            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
-          >
-            <span className="flex items-center gap-3 text-sm text-gray-900">
-              <BarChart3 className="w-4 h-4 text-gray-500" />
-              Statistiques
-            </span>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-          </button>
-          {showMonetisation ? (
-            <button
-            type="button"
-            onClick={() => navigate('/mes-paiements')}
-            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
-          >
-            <span className="flex items-center gap-3 text-sm text-gray-900">
-              <CreditCard className="w-4 h-4 text-gray-500" />
-              Paiements
-            </span>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-          </button>
-          ) : (
-          <button
-            type="button"
-            onClick={handleShareShop}
-            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
-          >
-            <span className="flex items-center gap-3 text-sm text-gray-900">
-              <Share2 className="w-4 h-4 text-gray-500" />
-              Partager ma boutique
-            </span>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-          </button>
-          )}
+        {/* Actions rares : elles peuvent rester en bas de page */}
+        <div className="mt-8 grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => setIsFeedbackModalOpen(true)}
-            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
+            className="flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-3 text-sm font-medium text-gray-700 ring-1 ring-gray-100 hover:bg-gray-50"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
-                <MessageSquare className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-gray-900">Donner mon avis sur l'application</p>
-                <p className="text-[11px] text-gray-400">Aidez-nous à améliorer DaloaMarket</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
+            <MessageSquare className="h-4 w-4 text-[var(--color-primary)]" /> Donner mon avis
           </button>
-
           <button
             type="button"
             onClick={handleSignOut}
-            className="w-full flex items-center justify-between p-4 hover:bg-red-50/50 active:bg-red-100 transition-colors text-left text-red-600"
+            className="flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-3 text-sm font-medium text-red-600 ring-1 ring-gray-100 hover:bg-red-50"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
-                <LogOut className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-xs font-extrabold text-red-600">Se déconnecter</p>
-                <p className="text-[11px] text-red-400">Fermer votre session actuelle</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-red-400" />
+            <LogOut className="h-4 w-4" /> Se déconnecter
           </button>
         </div>
       </div>
