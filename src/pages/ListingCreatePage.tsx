@@ -491,18 +491,11 @@ const ListingCreatePage: React.FC = () => {
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <div>
-              <h1 className="text-sm sm:text-base font-black tracking-tight text-gray-900 leading-tight">
-                {isEditing ? "Modifier l'annonce" : "Publier une annonce"}
-              </h1>
-              <p className="text-[10px] font-bold text-orange-600">
-                Étape {currentStep} sur 3 · {currentStep === 1 ? 'Photos & Type' : currentStep === 2 ? 'Prix & Stock' : 'Contact & Publication'}
-              </p>
-            </div>
+            {/* L'étape est donnée par la barre d'étapes juste dessous. */}
+            <h1 className="text-base font-semibold text-gray-900">
+              {isEditing ? "Modifier l'annonce" : "Publier une annonce"}
+            </h1>
           </div>
-          <span className="inline-flex rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-extrabold text-orange-700 border border-orange-200/60 shadow-2xs">
-            {isEditing ? "Édition" : "Gratuit"}
-          </span>
         </div>
       </header>
 

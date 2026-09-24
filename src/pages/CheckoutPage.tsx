@@ -611,28 +611,8 @@ const CheckoutPage: React.FC = () => {
   if (isCartMode && cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50/70">
-        <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-amber-600 px-5 pt-6 pb-14 rounded-b-[36px] shadow-lg">
-          <div className="absolute -top-12 -right-10 w-36 h-36 rounded-full bg-white/10" />
-          <div className="relative flex items-center gap-3">
-            <Link
-              to="/panier"
-              className="w-10 h-10 inline-flex items-center justify-center rounded-2xl bg-white/15 text-white hover:bg-white/25 active:scale-95 transition-all"
-              aria-label="Retour au panier"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-orange-100">
-                DaloaMarket · commande
-              </p>
-              <h1 className="text-2xl font-extrabold tracking-tight text-white">
-                Panier vide
-              </h1>
-            </div>
-          </div>
-        </div>
-        <div className="relative z-10 -mt-7 mx-4 max-w-lg md:mx-auto">
-          <Card className="rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50 p-6">
+        <div className="mx-4 max-w-lg pt-10 md:mx-auto">
+          <Card className="rounded-2xl border border-gray-100 p-6">
             <EmptyState
               title="Votre panier est vide"
               description="Ajoutez des articles à votre panier avant de finaliser votre commande."
@@ -647,28 +627,8 @@ const CheckoutPage: React.FC = () => {
   if (!isCartMode && (notFound || !listing)) {
     return (
       <div className="min-h-screen bg-gray-50/70">
-        <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-amber-600 px-5 pt-6 pb-14 rounded-b-[36px] shadow-lg">
-          <div className="absolute -top-12 -right-10 w-36 h-36 rounded-full bg-white/10" />
-          <div className="relative flex items-center gap-3">
-            <Link
-              to="/"
-              className="w-10 h-10 inline-flex items-center justify-center rounded-2xl bg-white/15 text-white hover:bg-white/25 active:scale-95 transition-all"
-              aria-label="Retour à l'accueil"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-orange-100">
-                DaloaMarket · commande
-              </p>
-              <h1 className="text-2xl font-extrabold tracking-tight text-white">
-                Annonce introuvable
-              </h1>
-            </div>
-          </div>
-        </div>
-        <div className="relative z-10 -mt-7 mx-4 max-w-lg md:mx-auto">
-          <Card className="rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50 p-6">
+        <div className="mx-4 max-w-lg pt-10 md:mx-auto">
+          <Card className="rounded-2xl border border-gray-100 p-6">
             <EmptyState
               title="Article indisponible"
               description="Cette annonce n'existe pas ou a été retirée de la vente."
@@ -689,38 +649,27 @@ const CheckoutPage: React.FC = () => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      {/* ── HERO BANNER ── */}
-      <header className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-amber-600 px-5 pt-6 pb-16 rounded-b-[36px] shadow-lg">
-        <div className="absolute -top-12 -right-10 h-36 w-36 rounded-full bg-white/10" />
-        <div className="absolute -bottom-14 -left-8 h-32 w-32 rounded-full bg-white/10" />
-        <div className="relative mx-auto flex max-w-3xl items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              type="button"
-              onClick={handleHeaderBack}
-              className="w-10 h-10 inline-flex flex-shrink-0 items-center justify-center rounded-2xl bg-white/15 text-white transition-all hover:bg-white/25 active:scale-95"
-              aria-label="Retour"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <div className="min-w-0">
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-orange-100">
-                Commande 100% sécurisée
-              </p>
-              <h1 className="truncate text-xl font-extrabold tracking-tight text-white">
-                {isCartMode ? "Finaliser votre commande" : "Finaliser votre achat"}
-              </h1>
-            </div>
-          </div>
-          <span className="flex-shrink-0 rounded-full bg-white/20 backdrop-blur-md px-3 py-1 text-xs font-extrabold text-white border border-white/20">
-            Étape {step}/3
-          </span>
+      {/* En-tête sobre : l'étape est donnée par la barre d'étapes juste dessous
+          (elle était écrite deux fois, sur un bandeau en dégradé). */}
+      <header className="border-b border-gray-100 bg-white px-4 py-3">
+        <div className="mx-auto flex max-w-2xl items-center gap-3">
+          <button
+            type="button"
+            onClick={handleHeaderBack}
+            className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-95"
+            aria-label="Retour"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <h1 className="truncate text-base font-semibold text-gray-900">
+            {isCartMode ? 'Finaliser votre commande' : 'Finaliser votre achat'}
+          </h1>
         </div>
       </header>
 
       {/* ── FLOATING MODERN STEPPER ── */}
-      <div className="relative z-20 -mt-8 max-w-2xl mx-auto px-4">
-        <div className="bg-white rounded-3xl p-3 border border-gray-100 shadow-lg shadow-gray-200/50">
+      <div className="relative z-20 mt-3 max-w-2xl mx-auto px-4">
+        <div className="bg-white rounded-2xl p-3 border border-gray-100">
           <div className="relative flex items-center justify-between px-3">
             {/* Background connecting bar */}
             <div className="absolute top-1/2 left-8 right-8 h-1 bg-gray-100 -translate-y-1/2 z-0 rounded-full" />
@@ -1116,7 +1065,7 @@ const CheckoutPage: React.FC = () => {
                     <div className="flex items-center gap-1.5">
                       <Truck className="h-4 w-4 text-gray-400" />
                       <span>
-                        {isPickup ? "Retrait en boutique" : "Livraison"}
+                        {isPickup ? "Retrait en boutique" : distanceKm > 0 ? `Livraison (${distanceKm} km)` : "Livraison"}
                       </span>
                       {!isPickup && (
                         <span className="group relative cursor-help">
@@ -1136,19 +1085,11 @@ const CheckoutPage: React.FC = () => {
                   <div className="flex justify-between items-center text-gray-600 font-medium">
                     <div className="flex items-center gap-1.5">
                       <Shield className="h-4 w-4 text-emerald-600" />
-                      <span>Protection acheteur Escrow ({BUYER_FEE_RATE * 100}%)</span>
+                      <span>Frais de protection ({BUYER_FEE_RATE * 100}%)</span>
                     </div>
                     <span className="font-extrabold text-gray-900 tabular-nums">{formatPrice(buyerFee)}</span>
                   </div>
 
-                  {distanceKm > 0 && !isPickup && (
-                    <div className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-xl px-3 py-2 border border-gray-100 font-medium">
-                      <Navigation className="h-3.5 w-3.5 text-orange-600" />
-                      <span>
-                        Distance estimée : <strong>{distanceKm} km</strong>
-                      </span>
-                    </div>
-                  )}
                 </div>
 
                 <div className="h-px bg-gray-100" />
@@ -1250,7 +1191,7 @@ const CheckoutPage: React.FC = () => {
                 {paymentMethod === 'online' && (
                   <p className="flex items-start gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>Protection Acheteur Escrow :</strong> Votre argent est sécurisé sous séquestre par MoneyFusion et vous est <strong>remboursé à 100%</strong> en cas d'annulation ou de non-livraison.</span>
+                    <span><strong>Paiement protégé :</strong> Votre argent est sécurisé sous séquestre par MoneyFusion et vous est <strong>remboursé à 100%</strong> en cas d'annulation ou de non-livraison.</span>
                   </p>
                 )}
                 {paymentMethod === 'cod' && (

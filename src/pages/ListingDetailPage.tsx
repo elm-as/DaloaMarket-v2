@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { PackageX, ShoppingBag } from 'lucide-react';
+import { PackageX } from 'lucide-react';
 
 import { useSupabase } from '../hooks/useSupabase';
 import { useSEO } from '../hooks/useSEO';
@@ -12,7 +12,6 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import ListingGallery from '../components/listings/detail/ListingGallery';
 import ListingLightbox from '../components/listings/detail/ListingLightbox';
 import ListingInfoCard from '../components/listings/detail/ListingInfoCard';
-import TrustBadgesRow from '../components/listings/detail/TrustBadgesRow';
 import SellerCard from '../components/listings/detail/SellerCard';
 import ListingReviewsSection from '../components/listings/detail/ListingReviewsSection';
 import SimilarListingsSection from '../components/listings/detail/SimilarListingsSection';
@@ -112,7 +111,6 @@ const ListingDetailPage: React.FC = () => {
     setReportOpen(true);
   };
 
-  const [dismissSoldOverlay, setDismissSoldOverlay] = useState(false);
 
   if (loading) {
     return (
@@ -140,40 +138,6 @@ const ListingDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50/70 pb-32 lg:pb-8 relative">
-      {/* Écran Overlay Plein Écran VENDU avec Bouton de Retour aux Articles */}
-      {isSold && !dismissSoldOverlay && !isOwner && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="text-center max-w-sm w-full mx-auto">
-            <div className="text-white text-5xl sm:text-6xl font-black tracking-widest mb-3 uppercase drop-shadow-lg">
-              {unavailableReason === 'sold' ? 'VENDU' : 'ÉPUISÉ'}
-            </div>
-            <p className="text-gray-300 text-sm sm:text-base mb-8 leading-relaxed">
-              {unavailableReason === 'sold'
-                ? "Cette annonce n'est plus disponible sur le marché"
-                : 'Le vendeur est momentanément en rupture de stock'}
-            </p>
-
-            <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                onClick={() => navigate('/')}
-                className="w-full h-13 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-bold text-sm shadow-lg flex items-center justify-center gap-2 active:scale-95 transition cursor-pointer"
-              >
-                <ShoppingBag className="w-5 h-5" />
-                Voir les autres articles
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setDismissSoldOverlay(true)}
-                className="w-full h-11 bg-white/10 hover:bg-white/20 text-white/90 rounded-2xl font-semibold text-xs flex items-center justify-center gap-2 active:scale-95 transition cursor-pointer border border-white/15"
-              >
-                Consulter l'annonce
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="lg:px-6 lg:pt-6 lg:grid lg:grid-cols-[1fr_420px] lg:gap-8 lg:items-start">
         <ListingGallery
@@ -188,49 +152,27 @@ const ListingDetailPage: React.FC = () => {
         />
 
         <div className="relative z-10 px-4 lg:px-0 -mt-8 lg:mt-0 py-4 space-y-5">
+          {/* Un seul signal, discret : l'ancien écran noir plein écran « VENDU »
+              bloquait la page et doublonnait ce bandeau. */}
           {isSold && (
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-              <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-800 flex items-center justify-center shrink-0">
-                  <PackageX className="w-5 h-5 text-amber-700" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="px-2 py-0.5 rounded-md bg-amber-600 text-white font-black text-[10px] uppercase tracking-wider">
-                      {unavailableReason === 'sold' ? 'Vendu' : 'Épuisé'}
-                    </span>
-                    <h2 className="text-sm sm:text-base font-black text-gray-900">
-                      {unavailableReason === 'sold' ? 'Cet article a déjà été vendu' : 'Article épuisé'}
-                    </h2>
-                  </div>
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                    {unavailableReason === 'sold'
-                      ? "Cette annonce n'est plus disponible à l'achat. Découvrez d'autres opportunités ci-dessous."
-                      : 'Le vendeur est momentanément en rupture de stock sur cet article.'}
-                  </p>
-                </div>
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <PackageX className="h-5 w-5 shrink-0 text-gray-500" />
+                <p className="text-sm text-gray-800">
+                  {unavailableReason === 'sold' ? 'Cet article a été vendu.' : 'Article momentanément épuisé.'}
+                </p>
               </div>
-              <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => navigate('/')}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 active:scale-95 px-3.5 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
-                >
-                  <ShoppingBag className="w-3.5 h-3.5" />
-                  Voir les autres articles
-                </button>
-                {similarListings.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      document.getElementById('similar-listings-section')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    className="text-xs font-bold text-amber-900 bg-amber-200/80 hover:bg-amber-200 active:scale-95 px-3.5 py-2 rounded-xl transition-all cursor-pointer"
-                  >
-                    Voir les similaires
-                  </button>
-                )}
-              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  similarListings.length > 0
+                    ? document.getElementById('similar-listings-section')?.scrollIntoView({ behavior: 'smooth' })
+                    : navigate('/')
+                }
+                className="shrink-0 text-sm font-semibold text-[var(--color-primary-dark)] hover:underline"
+              >
+                {similarListings.length > 0 ? 'Voir les similaires' : 'Voir d’autres articles'}
+              </button>
             </div>
           )}
 
@@ -239,8 +181,6 @@ const ListingDetailPage: React.FC = () => {
             selectedVariant={selectedVariant}
             onVariantChange={handleVariantChange}
           />
-
-          <TrustBadgesRow />
 
           <SellerCard
             listing={listing}
@@ -255,7 +195,9 @@ const ListingDetailPage: React.FC = () => {
             avgRating={avgRating}
             listingId={listing.id}
             sellerId={listing.user_id}
-            canReview={!!user && !isOwner}
+            // On note le vendeur depuis le suivi, une fois la commande reçue : la base
+            // refuse l'avis de quelqu'un qui n'a rien acheté.
+            canReview={false}
             onSubmitted={fetchListing}
           />
 

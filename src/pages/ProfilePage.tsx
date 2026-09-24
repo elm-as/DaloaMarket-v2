@@ -110,6 +110,26 @@ const ProfilePage: React.FC = () => {
     fetchStats();
   }, [fetchStats]);
 
+  const handleShareShop = async () => {
+    if (!currentUserId) return;
+    const { title, text } = formatShopShareText({
+      id: currentUserId,
+      shop_name: (userProfile as any)?.shop_name,
+      full_name: userProfile?.full_name,
+      shop_slug: (userProfile as any)?.shop_slug || null,
+      district: (userProfile as any)?.district || null,
+    });
+    const imageUrl =
+      (userProfile as any)?.shop_logo_url ||
+      (userProfile as any)?.shop_banner_url ||
+      userProfile?.avatar_url ||
+      null;
+    const res = await shareWithImage(title, text, imageUrl);
+    if (res.copied) {
+      toast.success('Lien copié !', { duration: 4000 });
+    }
+                };
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
@@ -144,91 +164,50 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl lg:max-w-5xl mx-auto pb-28 lg:px-6 lg:pb-12 bg-gray-50/70 min-h-screen">
-      {/* ── MODERN HERO BANNER ── */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-orange-500 to-amber-600 px-4 pt-6 pb-16 rounded-b-[36px] shadow-lg shadow-orange-500/20">
-        <div className="pointer-events-none absolute -top-12 -right-10 w-44 h-44 rounded-full bg-white/15 blur-xl" />
-        <div className="pointer-events-none absolute -bottom-14 -left-8 w-36 h-36 rounded-full bg-white/10 blur-xl" />
-
-        <div className="relative z-10 flex items-center justify-between">
-          <div>
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-md px-3 py-0.5 text-[11px] font-extrabold text-white border border-white/20 mb-1">
-              <span>Espace Personnel</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Mon Profil
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => navigate('/admin')}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-purple-700/90 hover:bg-purple-800 backdrop-blur-md border border-purple-400/40 text-white text-xs font-extrabold active:scale-95 transition-all shadow-sm"
-              >
-                <Shield className="w-3.5 h-3.5" />
-                <span>Admin</span>
-              </button>
-            )}
-
+      {/* En-tête sobre (l'ancien bandeau en dégradé portait aussi un 2e accès admin) */}
+      <div className="flex items-center justify-between px-4 pt-5 pb-3">
+        <h1 className="text-xl font-bold text-gray-900">Mon profil</h1>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
             <button
               type="button"
-              onClick={() => navigate('/settings')}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-extrabold hover:bg-white/30 active:scale-95 transition-all shadow-sm"
+              onClick={() => navigate('/admin')}
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-xs font-medium text-gray-700 hover:bg-gray-50"
             >
-              <Edit3 className="w-3.5 h-3.5" />
-              <span>Paramètres</span>
+              <Shield className="h-3.5 w-3.5" /> Admin
             </button>
-          </div>
+          )}
+          <button
+            type="button"
+            onClick={() => navigate('/settings')}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <Edit3 className="h-3.5 w-3.5" /> Paramètres
+          </button>
         </div>
       </div>
 
-      <div className="relative z-10 -mt-10 px-4">
-        {/* Alerts for Shop Location & Payout Setup */}
-        {showShopLocationWarning && (
-          <div className="mb-4 p-4 bg-white border border-amber-200/80 rounded-3xl flex gap-3 items-start shadow-lg shadow-amber-500/5">
-            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="text-xs font-black text-amber-900">Emplacement boutique manquant</h4>
-              <p className="text-[11px] text-amber-800/80 mt-0.5 leading-relaxed">
-                Configurez votre localisation GPS pour calculer automatiquement les frais de livraison aux clients.
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate('/settings?tab=boutique')}
-                className="mt-2 text-xs font-extrabold text-amber-900 underline flex items-center gap-1"
-              >
-                Définir maintenant <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {showPayoutWarning && (
-          <div className="mb-4 p-4 bg-white border border-red-200/80 rounded-3xl flex gap-3 items-start shadow-lg shadow-red-500/5">
-            <div className="w-8 h-8 rounded-xl bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="text-xs font-black text-red-900">Coordonnées de retrait requises</h4>
-              <p className="text-[11px] text-red-800/80 mt-0.5 leading-relaxed">
-                Ajoutez votre compte Wave ou Mobile Money pour recevoir vos gains de vente.
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate('/settings/payout')}
-                className="mt-2 text-xs font-extrabold text-red-900 underline flex items-center gap-1"
-              >
-                Configurer mes retraits <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
+      <div className="px-4">
+        {/* Une seule alerte à la fois, la plus urgente : sans compte de retrait,
+            le vendeur ne peut pas être payé. */}
+        {(showPayoutWarning || showShopLocationWarning) && (
+          <button
+            type="button"
+            onClick={() => navigate(showPayoutWarning ? '/settings/payout' : '/settings?tab=boutique')}
+            className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-left"
+          >
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+            <span className="min-w-0 flex-1 text-sm text-amber-900">
+              {showPayoutWarning
+                ? 'Ajoutez votre compte Mobile Money pour recevoir vos ventes.'
+                : 'Placez votre boutique sur la carte pour calculer les frais de livraison.'}
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-amber-700" />
+          </button>
         )}
 
         {/* ── PROFILE MAIN CARD ── */}
-        <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-xl shadow-gray-200/50">
+        <div className="bg-white rounded-2xl p-5 border border-gray-100">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
             {/* Avatar */}
             <div className="relative">
@@ -251,11 +230,6 @@ const ProfilePage: React.FC = () => {
                 <h2 className="text-xl font-black text-gray-900">
                   {userProfile?.full_name || 'Utilisateur'}
                 </h2>
-                {userProfile?.phone && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-extrabold rounded-full border border-emerald-100">
-                    <CheckCircle className="w-3 h-3" /> Vérifié
-                  </span>
-                )}
               </div>
 
               {/* Rating */}
@@ -288,34 +262,6 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Bannière d'accès Console Admin */}
-          {isAdmin && (
-            <div className="mt-4 p-3 bg-gradient-to-r from-purple-50 via-indigo-50 to-purple-50 border border-purple-200/80 rounded-2xl flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold shadow-sm flex-shrink-0">
-                  <Shield className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-black text-purple-950">Console d'Administration</span>
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-purple-200/90 text-purple-800">
-                      {userProfile?.role || 'SuperAdmin'}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-purple-700/90">KPIs, utilisateurs, modération et configurations</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate('/admin')}
-                className="px-3 py-1.5 rounded-xl bg-purple-600 text-white text-xs font-extrabold hover:bg-purple-700 active:scale-95 transition-all shadow-sm flex items-center gap-1 flex-shrink-0"
-              >
-                <span>Accéder</span>
-                <ChevronRight className="w-3 h-3" />
-              </button>
-            </div>
-          )}
-
           {/* ── 3-Tile Stats Strip ── */}
           <div className="grid grid-cols-3 gap-2 w-full mt-4 pt-4 border-t border-gray-100">
             <div className="rounded-2xl bg-gray-50/80 p-2.5 text-center">
@@ -332,73 +278,6 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          {/* ── Balanced Action Shortcut Grid ── */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 pt-3 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={() => navigate('/mes-commandes')}
-              className="flex items-center justify-center gap-1.5 h-10 px-3 rounded-2xl bg-orange-50 text-orange-700 hover:bg-orange-100 text-xs font-extrabold active:scale-95 transition-all"
-            >
-              <Package className="w-3.5 h-3.5" />
-              <span>Commandes</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate('/mes-livreurs')}
-              className="flex items-center justify-center gap-1.5 h-10 px-3 rounded-2xl bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-extrabold active:scale-95 transition-all"
-            >
-              <Truck className="w-3.5 h-3.5" />
-              <span>Mes Livreurs</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate('/mes-statistiques')}
-              className="flex items-center justify-center gap-1.5 h-10 px-3 rounded-2xl bg-gray-100 text-gray-800 hover:bg-gray-200 text-xs font-extrabold active:scale-95 transition-all"
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span>Statistiques</span>
-            </button>
-
-            {showMonetisation ? (
-              <button
-                type="button"
-                onClick={() => navigate('/mes-paiements')}
-                className="flex items-center justify-center gap-1.5 h-10 px-3 rounded-2xl bg-gray-100 text-gray-800 hover:bg-gray-200 text-xs font-extrabold active:scale-95 transition-all"
-              >
-                <CreditCard className="w-3.5 h-3.5" />
-                <span>Paiements</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!currentUserId) return;
-                  const { title, text } = formatShopShareText({
-                    id: currentUserId,
-                    shop_name: (userProfile as any)?.shop_name,
-                    full_name: userProfile?.full_name,
-                    shop_slug: (userProfile as any)?.shop_slug || null,
-                    district: (userProfile as any)?.district || null,
-                  });
-                  const imageUrl =
-                    (userProfile as any)?.shop_logo_url ||
-                    (userProfile as any)?.shop_banner_url ||
-                    userProfile?.avatar_url ||
-                    null;
-                  const res = await shareWithImage(title, text, imageUrl);
-                  if (res.copied) {
-                    toast.success('Lien copié !', { duration: 4000 });
-                  }
-                }}
-                className="flex items-center justify-center gap-1.5 h-10 px-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white text-xs font-extrabold shadow-sm active:scale-95 transition-all"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>Partager</span>
-              </button>
-            )}
-          </div>
         </div>
 
         {/* ── TABS NAVIGATION (PREMIUM UNDERLINE SLIDER) ── */}
@@ -469,7 +348,54 @@ const ProfilePage: React.FC = () => {
         </AnimatePresence>
 
         {/* ── ACCOUNT SETTINGS & LOGOUT ACTIONS ── */}
-        <div className="mt-8 bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50 overflow-hidden divide-y divide-gray-100">
+        <div className="mt-8 bg-white rounded-2xl border border-gray-100 overflow-hidden divide-y divide-gray-100">
+          <button
+            type="button"
+            onClick={() => navigate('/mes-livreurs')}
+            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
+          >
+            <span className="flex items-center gap-3 text-sm text-gray-900">
+              <Truck className="w-4 h-4 text-gray-500" />
+              Mes livreurs
+            </span>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/mes-statistiques')}
+            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
+          >
+            <span className="flex items-center gap-3 text-sm text-gray-900">
+              <BarChart3 className="w-4 h-4 text-gray-500" />
+              Statistiques
+            </span>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </button>
+          {showMonetisation ? (
+            <button
+            type="button"
+            onClick={() => navigate('/mes-paiements')}
+            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
+          >
+            <span className="flex items-center gap-3 text-sm text-gray-900">
+              <CreditCard className="w-4 h-4 text-gray-500" />
+              Paiements
+            </span>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </button>
+          ) : (
+          <button
+            type="button"
+            onClick={handleShareShop}
+            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
+          >
+            <span className="flex items-center gap-3 text-sm text-gray-900">
+              <Share2 className="w-4 h-4 text-gray-500" />
+              Partager ma boutique
+            </span>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </button>
+          )}
           <button
             type="button"
             onClick={() => setIsFeedbackModalOpen(true)}
