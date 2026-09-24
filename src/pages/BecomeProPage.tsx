@@ -92,6 +92,7 @@ export default function BecomeProPage() {
       const payment = await initiatePayment({
         type: 'seller_badge',
         amount: planPrice,
+        plan: selectedPlan,
         userId: user.id,
         customerName,
         customerPhone,

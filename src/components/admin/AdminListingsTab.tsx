@@ -24,6 +24,7 @@ import { ErrorState } from '../ui/ErrorState';
 import { Button } from '../ui/Button';
 import WhatsAppIcon from '../ui/WhatsAppIcon';
 import { cn, formatPrice, formatDate, getListingPath, formatWhatsAppPhone } from '../../lib/utils';
+import { AdminPageHeader, AdminButton } from './ui/AdminUI';
 
 interface AdminListing {
   id: string;
@@ -244,46 +245,35 @@ ${itemsText}
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 max-w-full">
-      {/* Header avec Titre et Compteurs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
-        <div>
-          <h2 className="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-            <Package className="w-6 h-6 text-orange-500" />
-            <span>Gestion des Annonces</span>
-          </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {statusCounts.all} annonces au total dans le catalogue DaloaMarket
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Bouton Digest WhatsApp Chaîne */}
-          <button
-            onClick={handleShareTopDigest}
-            disabled={loading}
-            title="Générer et diffuser un résumé des 5 dernières annonces sur votre chaîne WhatsApp"
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition-all border border-emerald-200/80 shadow-2xs active:scale-95"
-          >
-            <WhatsAppIcon size={14} className="w-3.5 h-3.5" />
-            <span>📢 Digest Chaîne WhatsApp (Top 5)</span>
-          </button>
-
-          <button
-            onClick={() => {
-              fetchCounts();
-              fetchListings(listingPage);
-            }}
-            disabled={loading}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-bold transition-all border border-gray-200 shadow-2xs active:scale-95 self-start sm:self-auto"
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin text-orange-500' : ''} />
-            <span>Actualiser</span>
-          </button>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Annonces"
+        description={`${statusCounts.all} annonces au total dans le catalogue.`}
+        actions={
+          <>
+            <AdminButton
+              onClick={handleShareTopDigest}
+              disabled={loading}
+              title="Générer et diffuser un résumé des 5 dernières annonces sur la chaîne WhatsApp"
+            >
+              <WhatsAppIcon size={14} className="h-3.5 w-3.5" />
+              Résumé pour la chaîne WhatsApp
+            </AdminButton>
+            <AdminButton
+              icon={RefreshCw}
+              loading={loading}
+              onClick={() => {
+                fetchCounts();
+                fetchListings(listingPage);
+              }}
+            >
+              Actualiser
+            </AdminButton>
+          </>
+        }
+      />
 
       {/* Barre de recherche globale & Filtres */}
-      <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-4">
         <div className="relative">
           <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -322,16 +312,16 @@ ${itemsText}
                   setListingPage(0);
                 }}
                 className={cn(
-                  'px-4 py-2 rounded-2xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-1.5 active:scale-95 shadow-2xs',
+                  'px-4 py-2 rounded-2xl text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 active:scale-95 shadow-2xs',
                   isActive
-                    ? 'bg-orange-500 text-white shadow-orange-500/20'
+                    ? 'bg-orange-500 text-white'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 )}
               >
                 <span>{tab.label}</span>
                 <span
                   className={cn(
-                    'px-1.5 py-0.5 rounded-full text-[10px] font-black',
+                    'px-1.5 py-0.5 rounded-full text-[10px] font-semibold',
                     isActive ? 'bg-white/25 text-white' : 'bg-white text-gray-700'
                   )}
                 >
@@ -345,13 +335,13 @@ ${itemsText}
 
       {/* Main Content */}
       {loading && listings.length === 0 ? (
-        <div className="flex justify-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
+        <div className="flex justify-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
           <LoadingSpinner size="lg" />
         </div>
       ) : error ? (
         <ErrorState message={error} onRetry={() => fetchListings(listingPage)} />
       ) : listings.length === 0 ? (
-        <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
           <EmptyState
             title="Aucune annonce trouvée"
             description={debouncedSearch ? `Aucun résultat pour "${debouncedSearch}"` : 'Aucune annonce dans cette catégorie.'}
@@ -361,11 +351,11 @@ ${itemsText}
       ) : (
         <div className="space-y-4">
           {/* Listings Table / Cards */}
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50/80 text-[11px] font-black uppercase tracking-wider text-gray-400">
+                  <tr className="border-b border-gray-100 bg-gray-50/80 text-[11px] font-semibold text-gray-400">
                     <th className="p-3.5 pl-5">Article</th>
                     <th className="p-3.5">Prix & Stock</th>
                     <th className="p-3.5">Vendeur & Contact</th>
@@ -403,7 +393,7 @@ ${itemsText}
                                 }}
                               />
                               {l.photos?.length > 1 && (
-                                <span className="absolute bottom-0.5 right-0.5 bg-black/70 text-[9px] font-black text-white px-1 rounded-md">
+                                <span className="absolute bottom-0.5 right-0.5 bg-black/70 text-[9px] font-semibold text-white px-1 rounded-md">
                                   +{l.photos.length - 1}
                                 </span>
                               )}
@@ -414,7 +404,7 @@ ${itemsText}
                                 href={listingPath}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="font-extrabold text-sm text-gray-900 hover:text-orange-600 flex items-center gap-1 group-hover:underline truncate"
+                                className="font-semibold text-sm text-gray-900 hover:text-orange-600 flex items-center gap-1 group-hover:underline truncate"
                                 title={l.title}
                               >
                                 <span className="truncate">{l.title}</span>
@@ -442,10 +432,10 @@ ${itemsText}
 
                         {/* Prix & Stock */}
                         <td className="p-3.5 whitespace-nowrap">
-                          <div className="font-black text-sm text-gray-900">{formatPrice(l.price)}</div>
+                          <div className="font-semibold text-sm text-gray-900">{formatPrice(l.price)}</div>
                           <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-0.5">
                             <span className="font-bold">Stock :</span>
-                            <span className={l.stock > 0 ? 'text-emerald-600 font-extrabold' : 'text-red-500 font-bold'}>
+                            <span className={l.stock > 0 ? 'text-emerald-600 font-semibold' : 'text-red-500 font-bold'}>
                               {l.stock > 0 ? l.stock : 'Épuisé'}
                             </span>
                           </div>
@@ -489,7 +479,7 @@ ${itemsText}
                         <td className="p-3.5 whitespace-nowrap">
                           <span
                             className={cn(
-                              'px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1',
+                              'px-2.5 py-1 rounded-xl text-[10px] font-semibold inline-flex items-center gap-1',
                               l.status === 'sold'
                                 ? 'bg-red-50 text-red-700 border border-red-200/60'
                                 : l.status === 'deleted'
@@ -510,7 +500,7 @@ ${itemsText}
                         {/* Boost */}
                         <td className="p-3.5 whitespace-nowrap">
                           {isBoosted ? (
-                            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-extrabold">
+                            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-semibold">
                               <Sparkles size={12} className="text-amber-500" />
                               <span>Boosté</span>
                             </div>
@@ -596,7 +586,7 @@ ${itemsText}
                               <button
                                 type="button"
                                 onClick={() => handleDeletePermanent(l.id, l.title)}
-                                className="p-2 rounded-xl bg-red-100 text-red-700 hover:bg-red-200 active:scale-95 transition-all font-black text-[10px]"
+                                className="p-2 rounded-xl bg-red-100 text-red-700 hover:bg-red-200 active:scale-95 transition-all font-semibold text-[10px]"
                                 title="Supprimer définitivement"
                               >
                                 <Trash2 size={14} className="text-red-700" />
@@ -613,11 +603,11 @@ ${itemsText}
           </div>
 
           {/* Pagination Footer */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-3xl border border-gray-100 shadow-sm text-xs font-bold text-gray-600">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm text-xs font-bold text-gray-600">
             <div>
               Affichage de {listings.length > 0 ? listingPage * ITEMS_PER_PAGE + 1 : 0} à{' '}
               {Math.min((listingPage + 1) * ITEMS_PER_PAGE, listingTotal)} sur{' '}
-              <span className="text-gray-900 font-extrabold">{listingTotal}</span> annonces
+              <span className="text-gray-900 font-semibold">{listingTotal}</span> annonces
             </div>
 
             {totalPages > 1 && (
@@ -632,7 +622,7 @@ ${itemsText}
                   Précédent
                 </Button>
 
-                <span className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-800 font-black text-xs">
+                <span className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-800 font-semibold text-xs">
                   Page {listingPage + 1} / {totalPages}
                 </span>
 

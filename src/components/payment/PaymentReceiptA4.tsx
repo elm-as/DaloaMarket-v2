@@ -118,7 +118,7 @@ export const PaymentReceiptA4: React.FC<PaymentReceiptA4Props> = ({
             <p className="text-xs text-gray-500 max-w-xs leading-relaxed">
               DaloaMarket CI & ElmasCore Systems<br />
               Centre Commercial & Marché Central, Daloa (Côte d'Ivoire)<br />
-              Support client : +225 07 00 00 00 00 • support@daloamarket.com
+              Support client : +225 07 04 16 33 61 • support@daloamarket.com
             </p>
           </div>
 

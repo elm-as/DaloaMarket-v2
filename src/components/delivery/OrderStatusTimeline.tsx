@@ -158,6 +158,23 @@ function getStepDate(step: TimelineStep, order: Order): string | null {
   }
 }
 
+/**
+ * Étape en cours, pour l'encadré d'état en tête du suivi : mêmes étapes et
+ * mêmes textes que la frise, pour que les deux ne se contredisent jamais.
+ */
+export function getTimelineProgress(order: Order, role: UserRole) {
+  const isPickup = order.delivery_mode === 'pickup' || order.delivery_mode === 'pickup_point';
+  const steps = isPickup ? PICKUP_STEPS : DELIVERY_STEPS;
+  const done = steps.filter((s) => getStepStatus(s.key, order, steps, isPickup) === 'completed').length;
+  const current = steps[Math.min(done, steps.length - 1)];
+  return {
+    total: steps.length,
+    done,
+    label: current.labels[role].label,
+    description: current.labels[role].description,
+  };
+}
+
 interface OrderStatusTimelineProps {
   order: Order;
   role: UserRole;

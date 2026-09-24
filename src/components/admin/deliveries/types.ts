@@ -1,6 +1,6 @@
 import type { PayoutItem } from '../payouts/types';
 
-export type DeliveryTabFilter = 'all' | 'disputed' | 'active' | 'delivered' | 'unpaid_driver';
+export type DeliveryTabFilter = 'all' | 'active' | 'delivered' | 'cancelled';
 
 export interface AdminDeliveryItem {
   id: string;

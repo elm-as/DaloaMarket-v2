@@ -1,15 +1,59 @@
 import React, { useState } from 'react';
-import { AlertTriangle, CheckCircle2, RefreshCw, MapPin, ExternalLink, ShieldCheck, UserCheck } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ExternalLink, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { triggerPayoutProcessing } from '../../../lib/payment';
 import { cn, formatPrice, formatDate } from '../../../lib/utils';
+import { AdminBadge, AdminButton, AdminEmpty, AdminTabs, adminInputClass } from '../ui/AdminUI';
+import { deliveryStatus } from '../deliveries/status';
 import type { DisputeDeliveryItem } from './types';
+
+type ResolveAction = 'refund_partial' | 'refund_complete' | 'deliver';
+
+const ACTIONS: { key: ResolveAction; label: string; effect: string; variant: 'primary' | 'danger' | 'secondary' }[] = [
+  {
+    key: 'refund_partial',
+    label: 'Remboursement partiel',
+    effect: 'Client absent : l’acheteur est remboursé de l’article, le livreur est payé, le colis retourne au vendeur.',
+    variant: 'primary',
+  },
+  {
+    key: 'refund_complete',
+    label: 'Remboursement total',
+    effect: 'L’acheteur récupère tout (article et livraison). Ni le vendeur ni le livreur ne sont payés.',
+    variant: 'danger',
+  },
+  {
+    key: 'deliver',
+    label: 'Valider la livraison',
+    effect: 'La commande est considérée livrée : le vendeur et le livreur sont payés.',
+    variant: 'secondary',
+  },
+];
+
+const SUCCESS: Record<ResolveAction, string> = {
+  refund_partial: 'Remboursement partiel effectué, livreur payé.',
+  refund_complete: 'Remboursement total validé.',
+  deliver: 'Livraison validée : vendeur et livreur payés.',
+};
+
+const person = (name?: string | null, phone?: string | null) => (
+  <>
+    {name || 'Inconnu'}
+    {phone && <span className="text-gray-500"> · {phone}</span>}
+  </>
+);
 
 interface DisputeSettlementSectionProps {
   disputes: DisputeDeliveryItem[];
   onDisputeResolved: () => void;
 }
 
+/**
+ * Liste des litiges : une ligne par course, dépliée au clic pour le détail et
+ * l'arbitrage. Chaque décision demande une confirmation : elle déplace de
+ * l'argent et ne se défait pas.
+ */
 export const DisputeSettlementSection: React.FC<DisputeSettlementSectionProps> = ({
   disputes,
   onDisputeResolved,
@@ -17,45 +61,25 @@ export const DisputeSettlementSection: React.FC<DisputeSettlementSectionProps> =
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<'disputed' | 'all'>('disputed');
   const [search, setSearch] = useState('');
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [pending, setPending] = useState<{ id: string; action: ResolveAction } | null>(null);
 
-  const handleResolve = async (
-    assignmentId: string,
-    action: 'refund_partial' | 'refund_complete' | 'deliver'
-  ) => {
+  const handleResolve = async (assignmentId: string, action: ResolveAction) => {
     setProcessingId(assignmentId);
     try {
       const { data, error } = await (supabase as any).rpc('resolve_delivery_dispute', {
         p_assignment_id: assignmentId,
         p_action: action,
       });
-
       if (error) throw error;
       if (data && data.success === false) {
         throw new Error(data.reason || 'Action non autorisée');
       }
-
-      if (action === 'refund_partial') {
-        toast.success('Règlement partiel effectué : Produit remboursé à l\'acheteur, livreur dédommagé.');
-      } else if (action === 'refund_complete') {
-        toast.success('Remboursement total validé pour l\'acheteur.');
-      } else {
-        toast.success('Livraison validée de force : Fonds libérés au vendeur et au livreur.');
-      }
-
-      // Synchronisation immédiate des payouts
-      try {
-        const apiUrl = import.meta.env.VITE_PAYMENT_API_URL || 'https://api.daloamarket.com';
-        const { data: sess } = await supabase.auth.getSession();
-        const token = sess.session?.access_token;
-        if (token) {
-          await fetch(`${apiUrl}/process-payouts?force=true`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-        }
-      } catch (e) {
-        console.warn('Sync post-résolution différée:', e);
-      }
-
+      toast.success(SUCCESS[action]);
+      // Envoie tout de suite les versements créés par l'arbitrage.
+      await triggerPayoutProcessing({ force: true });
+      setPending(null);
+      setOpenId(null);
       onDisputeResolved();
     } catch (err: any) {
       toast.error(err.message || 'Erreur lors du traitement du litige');
@@ -64,215 +88,173 @@ export const DisputeSettlementSection: React.FC<DisputeSettlementSectionProps> =
     }
   };
 
+  const openCount = disputes.filter((d) => d.status === 'disputed').length;
   const filtered = disputes.filter((item) => {
     if (filterMode === 'disputed' && item.status !== 'disputed') return false;
     if (search.trim()) {
       const q = search.toLowerCase();
-      const buyerName = item.order?.buyer?.full_name?.toLowerCase() || '';
-      const sellerName = item.order?.seller?.full_name?.toLowerCase() || '';
-      const driverName = item.delivery_person?.name?.toLowerCase() || '';
-      const id = item.id.toLowerCase();
-      return buyerName.includes(q) || sellerName.includes(q) || driverName.includes(q) || id.includes(q);
+      return [item.order?.buyer?.full_name, item.order?.seller?.full_name, item.delivery_person?.name, item.id]
+        .some((v) => (v || '').toLowerCase().includes(q));
     }
     return true;
   });
 
   return (
-    <div className="space-y-5">
-      {/* Information Banner on Partial Refund Policy */}
-      <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 mt-0.5">
-            <ShieldCheck className="w-4 h-4" />
-          </div>
-          <div className="text-xs space-y-1">
-            <h3 className="font-black text-amber-900 uppercase tracking-wide">
-              Procédure d'Arbitrage : Client Absent / Retour Colis
-            </h3>
-            <p className="text-amber-800 leading-relaxed">
-              Lorsqu'un livreur s'est déplacé mais que l'acheteur est absent ou injoignable : appliquez le{' '}
-              <strong>Remboursement partiel</strong>. Le livreur reçoit immédiatement sa rémunération de course,
-              l'acheteur est remboursé de la marchandise et le colis doit être restitué au vendeur.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setFilterMode('disputed')}
-            className={cn(
-              'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all',
-              filterMode === 'disputed'
-                ? 'bg-red-600 text-white shadow-sm'
-                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-            )}
-          >
-            Litiges Ouverts ({disputes.filter((d) => d.status === 'disputed').length})
-          </button>
-          <button
-            onClick={() => setFilterMode('all')}
-            className={cn(
-              'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all',
-              filterMode === 'all'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-            )}
-          >
-            Toutes les courses récentes ({disputes.length})
-          </button>
-        </div>
-
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher par acteur ou ID..."
-          className="w-full sm:w-64 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-500/20"
+    <div className="space-y-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <AdminTabs<'disputed' | 'all'>
+          value={filterMode}
+          onChange={setFilterMode}
+          tabs={[
+            { key: 'disputed', label: 'À arbitrer', count: openCount },
+            { key: 'all', label: 'Courses récentes', count: disputes.length },
+          ]}
         />
+        <div className="relative sm:w-64">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Nom ou n° de course"
+            className={cn(adminInputClass, 'pl-8')}
+          />
+        </div>
       </div>
 
-      {/* Courses List */}
       {filtered.length === 0 ? (
-        <div className="p-12 text-center text-slate-500 text-sm bg-white rounded-2xl border border-slate-200">
-          Aucun litige ou incident en attente d'arbitrage.
-        </div>
+        <AdminEmpty title="Aucun litige" description="Aucune course contestée en attente d’arbitrage." />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ul className="space-y-2">
           {filtered.map((item) => {
-            const isProcessing = processingId === item.id;
+            const open = openId === item.id;
             const isDisputed = item.status === 'disputed';
+            const status = deliveryStatus(item.status);
             const productAmount = item.order?.product_amount || 0;
             const deliveryFee = item.order?.delivery_fee || 0;
-            const driverPay = Math.max(0, deliveryFee - Math.ceil(deliveryFee * 0.10));
+            const driverPay = Math.max(0, deliveryFee - Math.ceil(deliveryFee * 0.1));
+            const isProcessing = processingId === item.id;
+            const confirm = pending?.id === item.id ? ACTIONS.find((a) => a.key === pending.action) : undefined;
 
             return (
-              <div
+              <li
                 key={item.id}
-                className={cn(
-                  'bg-white border rounded-2xl p-5 space-y-4 shadow-sm relative overflow-hidden transition-all',
-                  isDisputed ? 'border-red-300 ring-1 ring-red-200' : 'border-slate-200'
-                )}
+                className={cn('rounded-xl border bg-white', isDisputed ? 'border-red-200' : 'border-gray-200')}
               >
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      Course #{item.id.slice(0, 8)}
-                    </span>
-                    <div className="text-xs text-slate-500">{formatDate(item.created_at)}</div>
-                  </div>
-                  <span
-                    className={cn(
-                      'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider',
-                      isDisputed
-                        ? 'bg-red-100 text-red-700 border border-red-200'
-                        : item.status === 'delivered'
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-slate-100 text-slate-700'
-                    )}
-                  >
-                    {isDisputed ? 'LITIGE' : item.status}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenId(open ? null : item.id);
+                    setPending(null);
+                  }}
+                  aria-expanded={open}
+                  className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
+                >
+                  <span className="w-20 shrink-0 font-mono text-xs text-gray-500">#{item.id.slice(0, 8)}</span>
+                  <span className="w-24 shrink-0">
+                    <AdminBadge tone={status.tone}>{status.label}</AdminBadge>
                   </span>
-                </div>
+                  <span className="min-w-0 flex-1 truncate text-sm text-gray-800">
+                    {item.dispute_reason || `${item.order?.buyer?.full_name || 'Acheteur'} ← ${item.order?.seller?.full_name || 'Vendeur'}`}
+                  </span>
+                  <span className="hidden shrink-0 text-sm tabular-nums text-gray-700 sm:inline">
+                    {formatPrice(productAmount + deliveryFee)}
+                  </span>
+                  <span className="hidden w-24 shrink-0 text-right text-xs text-gray-500 md:inline">
+                    {formatDate(item.created_at)}
+                  </span>
+                  <ChevronDown size={16} className={cn('shrink-0 text-gray-400 transition-transform', open && 'rotate-180')} />
+                </button>
 
-                {/* Amounts Breakdown */}
-                <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl text-center border border-slate-100">
-                  <div>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase">Article</span>
-                    <p className="font-mono tabular-nums font-bold text-slate-900 text-xs mt-0.5">
-                      {formatPrice(productAmount)}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase">Frais Course</span>
-                    <p className="font-mono tabular-nums font-bold text-slate-900 text-xs mt-0.5">
-                      {formatPrice(deliveryFee)}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-emerald-600 font-bold uppercase">Net Livreur</span>
-                    <p className="font-mono tabular-nums font-black text-emerald-700 text-xs mt-0.5">
-                      {formatPrice(driverPay)}
-                    </p>
-                  </div>
-                </div>
+                {open && (
+                  <div className="space-y-3 border-t border-gray-100 px-3 py-3">
+                    {item.dispute_reason && (
+                      <p className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-900">
+                        <AlertTriangle size={14} className="mt-0.5 shrink-0 text-red-600" />
+                        {item.dispute_reason}
+                      </p>
+                    )}
 
-                {/* Stakeholders info */}
-                <div className="bg-slate-50/70 p-3 rounded-xl space-y-1.5 text-xs text-slate-700 border border-slate-100">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-semibold">Acheteur :</span>
-                    <span className="font-bold">{item.order?.buyer?.full_name || 'Inconnu'} ({item.order?.buyer?.phone || 'N/A'})</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-semibold">Vendeur :</span>
-                    <span className="font-bold">{item.order?.seller?.full_name || 'Inconnu'} ({item.order?.seller?.phone || 'N/A'})</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-semibold">Livreur :</span>
-                    <span className="font-bold text-amber-800">{item.delivery_person?.name || 'Non assigné'} ({item.delivery_person?.phone || 'N/A'})</span>
-                  </div>
-                </div>
+                    <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-xs">
+                      <dt className="text-gray-500">Acheteur</dt>
+                      <dd className="text-gray-900">{person(item.order?.buyer?.full_name, item.order?.buyer?.phone)}</dd>
+                      <dt className="text-gray-500">Vendeur</dt>
+                      <dd className="text-gray-900">{person(item.order?.seller?.full_name, item.order?.seller?.phone)}</dd>
+                      <dt className="text-gray-500">Livreur</dt>
+                      <dd className="text-gray-900">{person(item.delivery_person?.name || 'Non assigné', item.delivery_person?.phone)}</dd>
+                      {(item.pickup_location || item.dropoff_location) && (
+                        <>
+                          <dt className="text-gray-500">Trajet</dt>
+                          <dd className="text-gray-900">
+                            {item.pickup_location || 'Vendeur'} → {item.dropoff_location || 'Acheteur'}
+                          </dd>
+                        </>
+                      )}
+                      <dt className="text-gray-500">Montants</dt>
+                      <dd className="text-gray-900">
+                        Article {formatPrice(productAmount)} · course {formatPrice(deliveryFee)} (livreur{' '}
+                        {formatPrice(driverPay)})
+                      </dd>
+                      <dt className="text-gray-500">Créée le</dt>
+                      <dd className="text-gray-900">{formatDate(item.created_at)}</dd>
+                      {item.resolved_at && (
+                        <>
+                          <dt className="text-gray-500">Arbitré le</dt>
+                          <dd className="text-gray-900">{formatDate(item.resolved_at)}</dd>
+                        </>
+                      )}
+                    </dl>
 
-                {/* Dispute Reason */}
-                {item.dispute_reason && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-900 flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-bold text-[10px] uppercase tracking-wider text-red-600">Motif signalé</p>
-                      <p className="font-medium mt-0.5">{item.dispute_reason}</p>
-                    </div>
+                    {item.delivery_photo_url && (
+                      <a
+                        href={item.delivery_photo_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-gray-700 hover:underline"
+                      >
+                        <ExternalLink size={12} /> Voir la preuve de livraison
+                      </a>
+                    )}
+
+                    {isDisputed &&
+                      (confirm ? (
+                        <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                          <p className="text-sm font-medium text-gray-900">{confirm.label} ?</p>
+                          <p className="text-xs text-gray-600">{confirm.effect} Cette décision est définitive.</p>
+                          <div className="flex gap-2">
+                            <AdminButton
+                              size="sm"
+                              variant={confirm.variant === 'danger' ? 'danger' : 'primary'}
+                              loading={isProcessing}
+                              onClick={() => handleResolve(item.id, confirm.key)}
+                            >
+                              Confirmer
+                            </AdminButton>
+                            <AdminButton size="sm" variant="ghost" disabled={isProcessing} onClick={() => setPending(null)}>
+                              Annuler
+                            </AdminButton>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {ACTIONS.map((a) => (
+                            <AdminButton
+                              key={a.key}
+                              size="sm"
+                              variant={a.variant}
+                              onClick={() => setPending({ id: item.id, action: a.key })}
+                            >
+                              {a.label}
+                            </AdminButton>
+                          ))}
+                        </div>
+                      ))}
                   </div>
                 )}
-
-                {/* Actions */}
-                <div className="space-y-2 pt-2 border-t border-slate-100">
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                    Décision d'Arbitrage Administratif
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {/* 1. Remboursement Partiel (Client absent) */}
-                    <button
-                      onClick={() => handleResolve(item.id, 'refund_partial')}
-                      disabled={isProcessing}
-                      className="px-3 py-2.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 rounded-xl text-xs font-black transition-all flex flex-col items-center justify-center disabled:opacity-50"
-                    >
-                      <span className="flex items-center gap-1">
-                        <UserCheck className="w-3.5 h-3.5" />
-                        Remboursement Partiel
-                      </span>
-                      <span className="text-[10px] font-medium opacity-90">
-                        (Client absent - Livreur payé)
-                      </span>
-                    </button>
-
-                    {/* 2. Remboursement Total */}
-                    <button
-                      onClick={() => handleResolve(item.id, 'refund_complete')}
-                      disabled={isProcessing}
-                      className="px-3 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl text-xs font-black transition-all flex flex-col items-center justify-center disabled:opacity-50"
-                    >
-                      <span>Remboursement 100%</span>
-                      <span className="text-[10px] font-medium opacity-90">(Acheteur indemnisé total)</span>
-                    </button>
-                  </div>
-
-                  {/* 3. Forcer Livraison */}
-                  <button
-                    onClick={() => handleResolve(item.id, 'deliver')}
-                    disabled={isProcessing}
-                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Forcer validation livraison (Payer vendeur & livreur)
-                  </button>
-                </div>
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
     </div>
   );

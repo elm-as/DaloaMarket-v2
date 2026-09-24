@@ -155,7 +155,7 @@ const MesRevenusPage: React.FC = () => {
 
   useEffect(() => {
     if (userProfile) {
-      const phone = (userProfile as Record<string, unknown>).mobile_money_phone as string | undefined || (userProfile as Record<string, unknown>).payout_number as string | undefined;
+      const phone = (userProfile as Record<string, unknown>).payout_number as string | undefined;
       if (phone) {
         setMobileMoneyPhone(phone);
       } else {
@@ -186,10 +186,9 @@ const MesRevenusPage: React.FC = () => {
     try {
       const { error: updateError } = await supabase
         .from('users')
-        .update({ 
-          mobile_money_phone: mobileMoneyPhone,
-          payout_number: mobileMoneyPhone,
-        } as any)
+        // `mobile_money_phone` n'existe pas : l'UPDATE entier échouait et le
+        // numéro n'était jamais enregistré. Les virements lisent `payout_number`.
+        .update({ payout_number: mobileMoneyPhone })
         .eq('id', user!.id);
 
       if (updateError) throw updateError;

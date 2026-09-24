@@ -193,8 +193,8 @@ export default function TermsPage() {
                   <ul className="list-disc pl-5 space-y-1">
                     <li>Abonnement Vendeur Pro Mensuel ({PRO_PASS.monthly} / mois) : badge Vendeur Pro vérifié, priorité de classement, et commission de vente réduite à {FEES.sellerProPct} au lieu de {FEES.sellerStandardPct} lorsque la grille de commission entrera en vigueur.</li>
                     <li>Abonnement Vendeur Pro Annuel ({PRO_PASS.yearly} / an) : l'intégralité des avantages Pro pendant 365 jours, avec deux mois offerts.</li>
-                    <li>Boost d'annonce ({VISIBILITY.boost}) : mise en avant prioritaire avec badge « Sponsorisé » pendant {VISIBILITY.boostDays} jours.</li>
-                    <li>Bump ({VISIBILITY.bump}) : remontée de l'annonce en tête de liste, sans badge ni durée.</li>
+                    <li>Boost d'annonce : mise en avant prioritaire avec badge « Sponsorisé », payée en crédits : {VISIBILITY.boostOptions}.</li>
+                    <li>Packs de crédits : {VISIBILITY.creditPacks}.</li>
                   </ul>
                   <p><strong>Précision sur la phase de lancement.</strong> La publication illimitée d'annonces, le paiement à la livraison, le retrait sur place et l'affiliation de livreurs sont actuellement <strong>ouverts à tous les vendeurs</strong>, qu'ils soient titulaires du Pass Vendeur Pro ou non. Ces fonctionnalités redeviendront des avantages réservés au Pass Vendeur Pro à l'issue de la phase de lancement, après information préalable des utilisateurs.</p>
 

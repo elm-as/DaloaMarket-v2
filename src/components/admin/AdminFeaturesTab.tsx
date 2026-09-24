@@ -22,6 +22,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
+import { AdminPageHeader, AdminButton } from './ui/AdminUI';
 
 interface FeatureSuggestionItem {
   id: string;
@@ -254,49 +255,20 @@ export function AdminFeaturesTab() {
 
   return (
     <div className="space-y-6">
-      {/* Season Control Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-amber-950 rounded-2xl p-6 text-white shadow-lg border border-slate-700 relative overflow-hidden">
-        <div className="absolute -top-12 -right-12 w-40 h-40 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-black uppercase tracking-wider border border-amber-500/30">
-                Saison Active
-              </span>
-              <span className="text-xs text-slate-300 font-bold">
-                {currentSeasonFeaturesCount} idée{currentSeasonFeaturesCount > 1 ? 's' : ''} soumise{currentSeasonFeaturesCount > 1 ? 's' : ''}
-              </span>
-            </div>
-
-            <h2 className="text-xl font-black text-white flex items-center gap-2">
-              <Crown className="w-5 h-5 text-amber-400 fill-amber-400" />
-              {activeSeason?.season_name || 'Saison 1'} : Boîte à Idées & Upvotes
-            </h2>
-
-            <p className="text-xs text-slate-300 max-w-xl">
-              Gérez les suggestions de la communauté, élisez les gagnants pour le Hall of Fame et clôturez la saison active pour en lancer une nouvelle.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsResetModalOpen(true)}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black shadow-md shadow-orange-500/30 flex items-center gap-2 transition-all active:scale-95 shrink-0"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Réinitialiser & Nouvelle Saison
-            </button>
-            <button
-              onClick={fetchFeaturesAndSeasons}
-              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
-              title="Actualiser"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Idées"
+        description={`${activeSeason?.season_name || 'Saison 1'} · ${currentSeasonFeaturesCount} idée${currentSeasonFeaturesCount > 1 ? 's' : ''} soumise${currentSeasonFeaturesCount > 1 ? 's' : ''} par la communauté`}
+        actions={
+          <>
+            <AdminButton icon={RefreshCw} onClick={fetchFeaturesAndSeasons}>
+              Actualiser
+            </AdminButton>
+            <AdminButton variant="primary" icon={RotateCcw} onClick={() => setIsResetModalOpen(true)}>
+              Clôturer la saison
+            </AdminButton>
+          </>
+        }
+      />
 
       {/* Filters Bar */}
       <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-wrap gap-3 items-center justify-between">
@@ -382,7 +354,7 @@ export function AdminFeaturesTab() {
           {filteredFeatures.map((item, index) => (
             <div
               key={item.id}
-              className={`bg-white rounded-2xl p-5 border shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+              className={`bg-white rounded-2xl p-5 border shadow-sm hover: transition-shadow flex flex-col md:flex-row md:items-center justify-between gap-4 ${
                 item.is_hall_of_fame || item.status === 'completed'
                   ? 'border-amber-300 bg-amber-50/30 ring-1 ring-amber-300/40'
                   : 'border-gray-100'
@@ -393,20 +365,20 @@ export function AdminFeaturesTab() {
                 <div className="flex flex-col items-center justify-center min-w-[54px] p-2 bg-amber-50 border border-amber-200/60 rounded-2xl text-amber-700 font-bold shrink-0">
                   <ThumbsUp className="w-4 h-4 fill-amber-500 text-amber-500 mb-0.5" />
                   <span className="text-sm">{item.upvotes_count || 0}</span>
-                  <span className="text-[9px] uppercase font-semibold text-amber-600">Votes</span>
+                  <span className="text-[9px] font-semibold text-amber-600">Votes</span>
                 </div>
 
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     {item.is_hall_of_fame && (
-                      <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1">
+                      <span className="px-2.5 py-0.5 rounded-full bg-[var(--color-primary)] text-white text-[10px] font-semibold shadow-sm flex items-center gap-1">
                         <Trophy className="w-3 h-3 text-amber-200 fill-amber-200" /> Hall of Fame
                       </span>
                     )}
 
                     <h4 className="text-sm font-bold text-gray-900">{item.title}</h4>
                     
-                    <span className="px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 text-[10px] font-semibold uppercase">
+                    <span className="px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 text-[10px] font-semibold">
                       {item.category}
                     </span>
 
@@ -545,10 +517,10 @@ export function AdminFeaturesTab() {
       {/* ─── Season Reset Modal ─── */}
       {isResetModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-5 border border-slate-100">
+          <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-5 border border-slate-100">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <div>
-                <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
                   <RotateCcw className="w-5 h-5 text-amber-500" />
                   Réinitialiser & Lancer une Nouvelle Saison
                 </h3>
@@ -631,7 +603,7 @@ export function AdminFeaturesTab() {
                 <button
                   type="submit"
                   disabled={isResetting || !newSeasonName.trim()}
-                  className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-black shadow-md hover:from-amber-600 hover:to-orange-600 disabled:opacity-50 flex items-center gap-2"
+                  className="px-5 py-2.5 rounded-2xl bg-[var(--color-primary)] text-white text-xs font-semibold hover:bg-[var(--color-primary-dark)] disabled:opacity-50 flex items-center gap-2"
                 >
                   {isResetting && <LoadingSpinner />}
                   Clôturer et Lancer {newSeasonName}

@@ -27,7 +27,7 @@ export default function AboutPage() {
     },
     contactPoint: {
       '@type': 'ContactPoint',
-      telephone: '+2250173801559',
+      telephone: '+2250704163361',
       contactType: 'customer support',
       email: 'support@daloamarket.com',
       areaServed: 'CI'

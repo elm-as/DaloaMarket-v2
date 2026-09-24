@@ -19,9 +19,8 @@ import {
   DELIVERY_RATE_PER_KM,
 } from '../lib/delivery';
 import {
-  BOOST_PRICE,
-  BOOST_DURATION_DAYS,
-  BUMP_PRICE,
+  BOOST_CREDIT_COSTS,
+  CREDIT_PACKS,
   SELLER_BADGE_PRICE,
   SELLER_BADGE_YEARLY_PRICE,
 } from '../lib/featureFlags';
@@ -80,10 +79,18 @@ export const PRO_PASS = {
   yearly: fcfa(SELLER_BADGE_YEARLY_PRICE),
 } as const;
 
+/**
+ * Visibilité : boost payé en crédits (RPC buy_boost_with_credits), crédits
+ * achetés en packs. L'ancien « Boost 500 FCFA » et le « Bump 200 FCFA »
+ * n'étaient achetables nulle part : le serveur de paiement refuse ces types.
+ */
+const joinFr = (items: string[]): string =>
+  items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} ou ${items[items.length - 1]}`;
 export const VISIBILITY = {
-  boost: fcfa(BOOST_PRICE),
-  boostDays: BOOST_DURATION_DAYS,
-  bump: fcfa(BUMP_PRICE),
+  /** « 1 crédit (24 heures), 2 crédits (2 jours) ou 5 crédits (7 jours) » */
+  boostOptions: joinFr(BOOST_CREDIT_COSTS.map((o) => `${o.credits} crédit${o.credits > 1 ? 's' : ''} (${o.label})`)),
+  /** « 5 crédits pour 500 FCFA, 12 crédits pour 1 000 FCFA ou 30 crédits pour 2 000 FCFA » */
+  creditPacks: joinFr(CREDIT_PACKS.map((p) => `${p.credits} crédits pour ${fcfa(p.price)}`)),
 } as const;
 
 /** Nombre maximum d'annulations consécutives (system_settings.cancellation_settings). */
@@ -99,8 +106,8 @@ export const MAX_CONSECUTIVE_CANCELLATIONS = 3;
  */
 export const CONTACT = {
   support: 'support@daloamarket.com',
-  whatsappDisplay: '+225 01 73 80 15 59',
-  whatsappHref: 'https://wa.me/2250173801559',
+  whatsappDisplay: '+225 07 04 16 33 61',
+  whatsappHref: 'https://wa.me/2250704163361',
 } as const;
 
 /**

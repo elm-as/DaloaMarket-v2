@@ -19,7 +19,10 @@ export type PaymentType = 'seller_badge' | 'listing_pack_10' | 'boost' | 'bump' 
 
 export interface InitiatePaymentInput {
   type: PaymentType;
+  /** Indicatif : le serveur fixe lui-même le prix du Pass Pro et des packs. */
   amount: number;
+  /** Formule du Pass Pro (`type: 'seller_badge'`). */
+  plan?: 'monthly' | 'yearly';
   customerName: string;
   customerPhone: string;
   userId: string;
@@ -185,11 +188,11 @@ export const checkPaymentStatus = async (
  * façon inutile ici, `create_seller_payout` posant `scheduled_for = now()`,
  * donc tout virement légitime est immédiatement éligible.
  */
-export const triggerPayoutProcessing = async (): Promise<void> => {
+export const triggerPayoutProcessing = async (options: { force?: boolean } = {}): Promise<void> => {
   if (!PAYMENT_API_URL) return;
   try {
     const accessToken = await getAccessToken();
-    await fetch(`${PAYMENT_API_URL}/process-payouts`, {
+    await fetch(`${PAYMENT_API_URL}/process-payouts${options.force ? '?force=true' : ''}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
   } catch {

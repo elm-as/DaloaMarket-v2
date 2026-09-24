@@ -78,7 +78,6 @@ export const RegisterForm: React.FC = () => {
         full_name: data.fullName.trim(),
         name: data.fullName.trim(),
         phone: data.phone.trim(),
-        role: 'buyer',
       });
 
       if (res.error) throw res.error;
@@ -90,7 +89,6 @@ export const RegisterForm: React.FC = () => {
             .update({
               full_name: data.fullName.trim(),
               phone: data.phone.trim(),
-              role: 'buyer',
             } as any)
             .eq('id', res.user.id);
         } catch {

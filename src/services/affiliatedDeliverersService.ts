@@ -142,65 +142,32 @@ export const affiliatedDeliverersService = {
 
   /**
    * Invite un livreur par son numéro de téléphone.
+   *
+   * Passe uniquement par la RPC, qui vérifie le droit du vendeur (Pro ou phase
+   * de lancement) et crée la demande en attente. L'ancien code écrivait d'abord
+   * directement dans la table, ce qui contournait cette vérification ; la base
+   * refuse désormais cette écriture.
    */
   async inviteDelivererByPhone(phone: string): Promise<{ success: boolean; message?: string }> {
     try {
-      const { data: userRes } = await supabase.auth.getUser();
-      if (!userRes?.user) return { success: false, message: 'Non connecté' };
-
-      const cleanPhone = phone.replace(/\D/g, '');
-
-      // 1. Recherche du coursier dans delivery_persons
-      const { data: drivers } = await (supabase as any)
-        .from('delivery_persons')
-        .select('id, name, phone')
-        .or(`phone.eq.${phone},phone.ilike.%${cleanPhone.slice(-8)}%`)
-        .limit(1);
-
-      if (drivers && drivers.length > 0) {
-        const driver = drivers[0];
-        const { error: affErr } = await (supabase as any)
-          .from('seller_delivery_affiliations')
-          .upsert({
-            seller_id: userRes.user.id,
-            delivery_person_id: driver.id,
-            status: 'pending',
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'seller_id,delivery_person_id' });
-
-        if (!affErr) {
-          return {
-            success: true,
-            message: `Demande d'affiliation envoyée à ${driver.name} ! En attente de sa validation.`,
-          };
-        }
-      }
-
-      // 2. Appel du RPC Supabase (qui gère les statuts Pro, Phase 0 et les invitations)
       const { data, error } = await (supabase as any).rpc('invite_delivery_driver_by_phone', {
-        p_phone: phone,
+        p_phone: phone.trim(),
       });
+      if (error) throw error;
 
-      if (!error && data) {
-        const res = data as any;
-        if (res.success) {
-          return res;
-        }
-        return {
-          success: false,
-          message: res.message || `Aucun livreur DaloaDelivery trouvé avec le numéro ${phone}. Il doit d'abord créer son compte sur delivery.daloamarket.com.`,
-        };
-      }
-
+      const res = data as { success?: boolean; message?: string } | null;
+      if (res?.success) return { success: true, message: res.message };
       return {
         success: false,
-        message: `Aucun livreur DaloaDelivery trouvé avec le numéro ${phone}. Il doit d'abord créer son compte sur delivery.daloamarket.com.`,
+        message:
+          res?.message ||
+          `Aucun livreur DaloaDelivery trouvé avec le numéro ${phone}. Il doit d'abord créer son compte sur delivery.daloamarket.com.`,
       };
     } catch (err: any) {
       console.error('inviteDelivererByPhone error:', err);
-      return { 
-        success: false, 
-        message: err.message || 'Impossible de trouver ce livreur. Vérifiez le numéro de téléphone.' 
+      return {
+        success: false,
+        message: err.message || 'Impossible de trouver ce livreur. Vérifiez le numéro de téléphone.',
       };
     }
   },

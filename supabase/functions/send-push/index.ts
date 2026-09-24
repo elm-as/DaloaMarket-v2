@@ -4,9 +4,16 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 /**
  * send-push — Envoi unifié de notifications push Expo aux utilisateurs Daloa.
  * Supporte :
- *  - Les envois ciblés (userIds: [...]) pour le chat, les commandes, les courses.
+ *  - Les envois ciblés (userIds: [...]) décidés par l'administration.
  *  - Les diffusions globales (broadcast: true) pour les annonces Admin.
- *  - Authentification : Service Role ou JWT utilisateur connecté.
+ *  - Authentification : Service Role, ou JWT d'un compte admin / superadmin.
+ *
+ * Les envois ciblés étaient ouverts à tout utilisateur connecté, avec un titre
+ * et un texte libres et une liste de destinataires sans limite : n'importe qui
+ * pouvait envoyer une fausse notification à tous les comptes. Les
+ * notifications métier (chat, commandes, courses) sont désormais émises par la
+ * base via le webhook Railway ; cette fonction ne sert plus qu'à
+ * l'administration.
  */
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -69,8 +76,8 @@ Deno.serve(async (req: Request) => {
     return json({ error: "userIds requis si ce n'est pas une diffusion" }, 400);
   }
 
-  // Si diffusion générale, vérifier que l'utilisateur est admin ou service_role
-  if (broadcast && !isServiceRole) {
+  // Tout envoi (ciblé ou diffusion) est réservé à l'administration.
+  if (!isServiceRole) {
     const { data: userProfile } = await supabase
       .from("users")
       .select("role")

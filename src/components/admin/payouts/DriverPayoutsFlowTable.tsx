@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Search, RefreshCw, CheckCircle2, Clock, AlertTriangle, Phone, WalletCards, ShieldAlert, ArrowUpRight } from 'lucide-react';
+import { Search, RefreshCw, CheckCircle2, Clock, AlertTriangle, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn, formatPrice, formatDate } from '../../../lib/utils';
-import { supabase } from '../../../lib/supabase';
+import { triggerDriverPayout } from '../../../lib/adminPayouts';
 import { type AdminDeliveryItem, isDriverDelivery } from '../deliveries/types';
 import type { PayoutItem } from './types';
+import { AdminStatGrid, AdminStatCard } from '../ui/AdminUI';
 
 interface DriverPayoutsFlowTableProps {
   deliveries: AdminDeliveryItem[];
@@ -54,44 +55,8 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
     }
     setProcessingId(item.id);
     try {
-      const driver = item.delivery_person;
-      const targetPhone = driver?.payout_number || driver?.phone;
-      if (!targetPhone) {
-        throw new Error('Numéro de versement du livreur manquant.');
-      }
-
-      const deliveryFee = item.delivery_price || item.order?.delivery_fee || 0;
-      const netFee = Math.max(0, deliveryFee - Math.ceil(deliveryFee * 0.10));
-
-      let network = driver?.payout_network || 'wave-ci';
-      const cleanPhone = targetPhone.replace(/[^0-9]/g, '');
-      if (cleanPhone.startsWith('07') || cleanPhone.startsWith('22507')) {
-        network = 'orange-money-ci';
-      }
-
-      const { error: insertErr } = await (supabase as any).from('payouts').insert({
-        user_id: driver?.user_id || item.delivery_person_id,
-        amount: netFee,
-        recipient_phone: targetPhone,
-        withdraw_mode: network,
-        type: 'delivery',
-        status: 'pending',
-        scheduled_for: new Date().toISOString(),
-        idempotency_key: `payout_${item.order_id || item.id}_delivery_flow`,
-        delivery_assignment_id: item.id,
-      });
-
-      if (insertErr) throw insertErr;
-
+      await triggerDriverPayout(item.id);
       toast.success('Versement programmé ! Synchronisation Railway en cours...');
-      try {
-        const apiUrl = import.meta.env.VITE_PAYMENT_API_URL || 'https://api.daloamarket.com';
-        const { data: sess } = await supabase.auth.getSession();
-        const token = sess.session?.access_token;
-        if (token) await fetch(`${apiUrl}/process-payouts?force=true`, { headers: { Authorization: `Bearer ${token}` } });
-      } catch (e) {
-        console.warn('Sync Railway warning:', e);
-      }
       onRefresh();
     } catch (err: any) {
       toast.error(err.message || 'Erreur lors du versement livreur');
@@ -125,68 +90,27 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
 
   return (
     <div className="space-y-5">
-      {/* Driver Financial KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-4">
-          <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
-            Total Versé aux Livreurs
-          </span>
-          <p className="mt-2 text-2xl font-black text-emerald-950 font-mono tabular-nums">
-            {formatPrice(totalPaidToDrivers)}
-          </p>
-          <span className="text-xs text-emerald-700 font-semibold font-mono tabular-nums">
-            {driverPayouts.filter((p) => p.status === 'paid' || p.status === 'completed').length} virements honorés
-          </span>
-        </div>
-
-        <div className="bg-amber-50/60 border border-amber-200 rounded-2xl p-4">
-          <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
-            Gains Livreurs en Attente
-          </span>
-          <p className="mt-2 text-2xl font-black text-amber-950 font-mono tabular-nums">
-            {formatPrice(totalPendingForDrivers)}
-          </p>
-          <span className="text-xs text-amber-700 font-semibold font-mono tabular-nums">
-            {driverPayouts.filter((p) => p.status === 'pending' || p.status === 'processing').length} en attente de transfert
-          </span>
-        </div>
-
-        <div className="bg-blue-50/60 border border-blue-200 rounded-2xl p-4">
-          <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wider block">
-            Commissions DaloaMarket (10%)
-          </span>
-          <p className="mt-2 text-2xl font-black text-blue-950 font-mono tabular-nums">
-            {formatPrice(totalPlatformCommissions)}
-          </p>
-          <span className="text-xs text-blue-700 font-semibold">
-            Revenus plateforme prélevés
-          </span>
-        </div>
-
-        <div className={cn(
-          'border rounded-2xl p-4 transition-colors',
-          missingPayoutsCount > 0 ? 'bg-rose-50/60 border-rose-200' : 'bg-slate-50 border-slate-200'
-        )}>
-          <span className={cn(
-            'text-[10px] font-bold uppercase tracking-wider block',
-            missingPayoutsCount > 0 ? 'text-rose-800' : 'text-slate-500'
-          )}>
-            Versements Non Déclenchés
-          </span>
-          <p className={cn(
-            'mt-2 text-2xl font-black font-mono tabular-nums',
-            missingPayoutsCount > 0 ? 'text-rose-950' : 'text-slate-900'
-          )}>
-            {missingPayoutsCount}
-          </p>
-          <span className={cn(
-            'text-xs font-semibold',
-            missingPayoutsCount > 0 ? 'text-rose-700' : 'text-slate-500'
-          )}>
-            {missingPayoutsCount > 0 ? 'Courses livrées sans virement' : 'Tous les versements sont à jour'}
-          </span>
-        </div>
-      </div>
+      <AdminStatGrid>
+        <AdminStatCard
+          label="Versé aux livreurs"
+          value={formatPrice(totalPaidToDrivers)}
+          hint={`${driverPayouts.filter((p) => p.status === 'paid' || p.status === 'completed').length} virements`}
+        />
+        <AdminStatCard
+          label="En attente d’envoi"
+          value={formatPrice(totalPendingForDrivers)}
+          tone={totalPendingForDrivers > 0 ? 'warning' : 'neutral'}
+          hint={`${driverPayouts.filter((p) => p.status === 'pending' || p.status === 'processing').length} virements`}
+        />
+        <AdminStatCard label="Commission livraison (10 %)" value={formatPrice(totalPlatformCommissions)} />
+        <AdminStatCard
+          label="Non déclenchés"
+          value={missingPayoutsCount}
+          tone={missingPayoutsCount > 0 ? 'danger' : 'neutral'}
+          hint={missingPayoutsCount > 0 ? 'Courses livrées sans versement' : 'À jour'}
+          onClick={missingPayoutsCount > 0 ? () => setStatusFilter('missing') : undefined}
+        />
+      </AdminStatGrid>
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
@@ -234,7 +158,7 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-[10px]">
                 <tr>
                   <th className="py-3 px-4">Course / Date</th>
                   <th className="py-3 px-4">Livreur Associé</th>
@@ -286,7 +210,7 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
 
                       {/* Net Driver */}
                       <td className="py-3 px-4 text-right">
-                        <span className="font-mono tabular-nums font-black text-emerald-800 text-sm">
+                        <span className="font-mono tabular-nums font-semibold text-emerald-800 text-sm">
                           {formatPrice(netFee)}
                         </span>
                       </td>

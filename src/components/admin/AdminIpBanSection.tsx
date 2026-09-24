@@ -89,7 +89,7 @@ export const AdminIpBanSection: React.FC = () => {
   };
 
   return (
-    <Card className="p-6 rounded-3xl border border-gray-200/80 shadow-xs bg-white space-y-6 hover:shadow-md transition-shadow">
+    <Card className="p-6 rounded-2xl border border-gray-200/80 shadow-xs bg-white space-y-6 hover: transition-shadow">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
         <div className="flex items-center gap-3">
@@ -97,7 +97,7 @@ export const AdminIpBanSection: React.FC = () => {
             <ShieldAlert size={22} />
           </div>
           <div>
-            <h2 className="text-sm font-black text-gray-900">Bannissement d'Adresses IP</h2>
+            <h2 className="text-sm font-semibold text-gray-900">Bannissement d'Adresses IP</h2>
             <p className="text-xs text-gray-500">
               Bloquez directement les adresses IP suspectes pour empêcher la création de faux comptes et les attaques spam.
             </p>
@@ -118,7 +118,7 @@ export const AdminIpBanSection: React.FC = () => {
 
       {/* Formulaire de bannissement rapide (Compact et Responsive PC) */}
       <form onSubmit={handleAddBan} className="bg-gray-50/80 p-4 rounded-2xl border border-gray-200/80 space-y-3">
-        <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+        <h3 className="text-xs font-semibold text-gray-800 flex items-center gap-1.5">
           <Plus size={14} className="text-red-500 stroke-[3]" />
           Bannir une nouvelle adresse IP
         </h3>
@@ -173,7 +173,7 @@ export const AdminIpBanSection: React.FC = () => {
               size="sm"
               loading={addingBan}
               disabled={addingBan || !newIp.trim()}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-black text-xs py-2 px-3 rounded-xl gap-1.5 shadow-xs"
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold text-xs py-2 px-3 rounded-xl gap-1.5 shadow-xs"
             >
               <Ban size={13} />
               <span>Bannir cette IP</span>
@@ -185,7 +185,7 @@ export const AdminIpBanSection: React.FC = () => {
       {/* Liste des adresses IP bannies */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-black uppercase tracking-wider text-gray-700">
+          <h3 className="text-xs font-semibold text-gray-700">
             Adresses IP Actuellement Bannies ({bannedIps.length})
           </h3>
         </div>
@@ -198,7 +198,7 @@ export const AdminIpBanSection: React.FC = () => {
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-gray-200/80 shadow-2xs">
             <table className="w-full text-left text-xs">
-              <thead className="bg-gray-50/80 text-gray-500 font-extrabold uppercase tracking-wider border-b border-gray-200/80">
+              <thead className="bg-gray-50/80 text-gray-500 font-semibold border-b border-gray-200/80">
                 <tr>
                   <th className="px-4 py-3">Adresse IP</th>
                   <th className="px-4 py-3">Motif du Bannissement</th>
@@ -226,7 +226,7 @@ export const AdminIpBanSection: React.FC = () => {
                           {formatDate(item.expires_at)}
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black text-red-700 bg-red-50 px-2 py-0.5 rounded-md border border-red-200 uppercase">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-md border border-red-200">
                           Permanente
                         </span>
                       )}
@@ -234,7 +234,7 @@ export const AdminIpBanSection: React.FC = () => {
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => handleUnbanIp(item.ip_address)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-extrabold text-xs transition-colors border border-emerald-200 active:scale-95"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold text-xs transition-colors border border-emerald-200 active:scale-95"
                         title="Débannir l'adresse IP"
                       >
                         <Trash2 size={12} />

@@ -16,7 +16,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMessageRead } from '../contexts/MessageReadContext';
 import { censorMessageContent } from '../lib/censor';
 import { extractUuid, getSellerPath } from '../lib/utils';
-import { notifyUserPush } from '../lib/pushNotifications';
 
 interface Message {
   id: string;
@@ -25,7 +24,7 @@ interface Message {
   receiver_id: string;
   content: string;
   created_at: string;
-  read: boolean;
+  read: boolean | null;
   _optimistic?: boolean; // flag pour les messages optimistes
 }
 
@@ -318,23 +317,8 @@ const ChatPage: React.FC = () => {
       }
 
       if (insertedData) {
-        // Envoi de la notification push au destinataire
-        const senderName = (
-          userProfile?.shop_name?.trim() ||
-          userProfile?.full_name?.trim() ||
-          user?.user_metadata?.full_name ||
-          user?.user_metadata?.name ||
-          'Un utilisateur'
-        ) as string;
-        notifyUserPush({
-          targetUserId: otherUserId,
-          title: `💬 Nouveau message de ${senderName}`,
-          body: censoredText.length > 80 ? censoredText.slice(0, 77) + '...' : censoredText,
-          url: isSupport ? `/messages/support/${currentUserId}` : `/messages/${listingId}/${currentUserId}`,
-          tag: isSupport ? `chat-support-${currentUserId}` : `chat-${listingId}-${currentUserId}`,
-          chatPartnerId: currentUserId,
-          listingId: isSupport ? undefined : listingId,
-        }).catch((e) => console.warn('[Push Chat Notification Warning]:', e));
+        // La notification du destinataire est émise par la base
+        // (trigger push_webhook_messages), à partir du message enregistré.
 
         setMessages((prev) => {
           const updated = [...prev];

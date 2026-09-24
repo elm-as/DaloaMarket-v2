@@ -214,7 +214,7 @@ const HomePage: React.FC = () => {
           .order('boosted_until', { ascending: false })
           .limit(6);
 
-        const boostedListings = (boostedData || []) as ListingData[];
+        const boostedListings = (boostedData || []) as unknown as ListingData[];
         const boostedIds = new Set(boostedListings.map(b => b.id));
 
         const { data, error: fetchError } = await supabase

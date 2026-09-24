@@ -379,6 +379,9 @@ function AppContent() {
           <Route path="/admin/litiges" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
           <Route path="/admin/payouts" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
           <Route path="/admin/versements" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
+          <Route path="/admin/monetisation" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
+          <Route path="/admin/paiements" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
+          <Route path="/admin/maintenance" element={<AdminRoute><AppLayout><AdminDashboardPage /></AppLayout></AdminRoute>} />
 
                     {/* Pricing — masqué en Phase 0 */}
           {showMonetisation && (

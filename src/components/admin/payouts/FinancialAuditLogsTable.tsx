@@ -55,7 +55,7 @@ export const FinancialAuditLogsTable: React.FC<FinancialAuditLogsTableProps> = (
           <ShieldAlert className="w-4 h-4" />
         </div>
         <div className="space-y-1">
-          <h4 className="font-black text-white uppercase tracking-wider text-[11px]">
+          <h4 className="font-semibold text-white text-[11px]">
             Journal d'Audit Financier Immuable
           </h4>
           <p className="text-slate-400 leading-relaxed">
@@ -113,7 +113,7 @@ export const FinancialAuditLogsTable: React.FC<FinancialAuditLogsTableProps> = (
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-[10px]">
                 <tr>
                   <th className="py-3 px-4">Date & Heure</th>
                   <th className="py-3 px-4">Administrateur</th>
@@ -144,7 +144,7 @@ export const FinancialAuditLogsTable: React.FC<FinancialAuditLogsTableProps> = (
                           <User className="w-3.5 h-3.5 text-slate-400" />
                           <span>{log.admin?.full_name || 'Admin'}</span>
                         </div>
-                        <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                        <div className="text-[10px] text-slate-400 font-semibold">
                           {log.admin?.role || 'Administrateur'}
                         </div>
                       </td>
@@ -153,7 +153,7 @@ export const FinancialAuditLogsTable: React.FC<FinancialAuditLogsTableProps> = (
                       <td className="py-3 px-4">
                         <span
                           className={cn(
-                            'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border',
+                            'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border',
                             meta.color
                           )}
                         >
@@ -163,7 +163,7 @@ export const FinancialAuditLogsTable: React.FC<FinancialAuditLogsTableProps> = (
 
                       {/* Amount */}
                       <td className="py-3 px-4 text-right whitespace-nowrap">
-                        <span className="font-mono tabular-nums font-black text-slate-950 text-sm">
+                        <span className="font-mono tabular-nums font-semibold text-slate-950 text-sm">
                           {log.amount != null ? formatPrice(log.amount) : '—'}
                         </span>
                       </td>
@@ -206,10 +206,10 @@ export const FinancialAuditLogsTable: React.FC<FinancialAuditLogsTableProps> = (
       {/* Details Modal */}
       {activeDetailLog && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 space-y-4 border border-slate-200 animate-in fade-in zoom-in-95">
             <div className="flex items-start justify-between pb-3 border-b border-slate-100">
               <div>
-                <h3 className="font-black text-slate-900 text-sm">Détail de l'Opération Financière</h3>
+                <h3 className="font-semibold text-slate-900 text-sm">Détail de l'Opération Financière</h3>
                 <p className="text-xs text-slate-400">{formatDate(activeDetailLog.created_at)}</p>
               </div>
               <button
@@ -231,7 +231,7 @@ export const FinancialAuditLogsTable: React.FC<FinancialAuditLogsTableProps> = (
               </div>
               <div className="flex justify-between py-1 border-b border-slate-50">
                 <span className="text-slate-400">Montant :</span>
-                <span className="font-mono tabular-nums font-black text-slate-950">
+                <span className="font-mono tabular-nums font-semibold text-slate-950">
                   {activeDetailLog.amount != null ? formatPrice(activeDetailLog.amount) : 'N/A'}
                 </span>
               </div>
@@ -252,7 +252,7 @@ export const FinancialAuditLogsTable: React.FC<FinancialAuditLogsTableProps> = (
             {/* JSON Context */}
             {activeDetailLog.details && Object.keys(activeDetailLog.details).length > 0 && (
               <div className="space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payload technique</span>
+                <span className="text-[10px] font-bold text-slate-400">Payload technique</span>
                 <pre className="p-3 bg-slate-900 text-amber-400 rounded-xl text-[11px] font-mono overflow-x-auto max-h-40">
                   {JSON.stringify(activeDetailLog.details, null, 2)}
                 </pre>

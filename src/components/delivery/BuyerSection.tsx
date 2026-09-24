@@ -304,7 +304,7 @@ export const BuyerSection: React.FC<{ order: Order; onChanged: () => void }> = (
                   </div>
                 </div>
                 <button
-                  onClick={() => window.open('https://wa.me/2250700000000', '_blank')}
+                  onClick={() => window.open('https://wa.me/2250704163361', '_blank')}
                   className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[12px] font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
                 >
                   <MessageCircle className="w-3.5 h-3.5" />
@@ -419,19 +419,6 @@ export const BuyerSection: React.FC<{ order: Order; onChanged: () => void }> = (
           </div>
         )}
 
-        {(order.status === 'delivered' || order.status === 'completed') && (
-          <div className="flex items-center gap-2.5 p-3 bg-emerald-50 rounded-xl border border-emerald-200">
-            <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-            <div>
-              <p className="text-[13px] font-bold text-emerald-900">
-                {isPickup ? 'Article récupéré en boutique' : 'Commande livrée avec succès'}
-              </p>
-              {delivery?.delivered_at && (
-                <p className="text-[11px] text-emerald-700">Le {formatDate(delivery.delivered_at)}</p>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </motion.div>
   );

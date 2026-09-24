@@ -1,7 +1,7 @@
 // Service Worker de base pour PWA DaloaMarket (network-first pour HTML)
 // Important: ne JAMAIS mettre en cache les requêtes API cross-origin (ex: Supabase)
 // sinon on peut “figer” une réponse vide et faire disparaître les données au refresh.
-const CACHE_NAME = 'daloamarket-cache-v10'; // bump pour invalider anciens caches
+const CACHE_NAME = 'daloamarket-cache-v11'; // bump pour invalider anciens caches
 const urlsToCache = [
   '/',
   '/logo.png',
@@ -138,17 +138,27 @@ self.addEventListener('push', (event) => {
     };
   }
 
+  // Libellé du bouton selon le type de notification (tag posé par le serveur).
+  const tag = data.tag || 'daloamarket-notification';
+  const openLabel = tag.startsWith('chat-')
+    ? 'Répondre'
+    : tag.startsWith('order-')
+      ? 'Voir la commande'
+      : 'Ouvrir';
+
   const options = {
     body: data.body || '',
     icon: data.icon || '/android-chrome-192x192.png',
-    badge: '/android-chrome-192x192.png',
+    // Badge de la barre d'état : Android n'en garde que la silhouette, il doit
+    // être blanc sur fond transparent (l'icône pleine donnait un carré blanc).
+    badge: '/notification-badge.png',
     image: data.image || undefined,
     data: { url: data.url || '/' },
     vibrate: [200, 100, 200],
-    tag: data.tag || 'daloamarket-notification',
+    tag,
     renotify: true,
     actions: [
-      { action: 'open', title: 'Ouvrir', icon: '/android-chrome-192x192.png' },
+      { action: 'open', title: openLabel },
       { action: 'dismiss', title: 'Fermer' },
     ],
   };

@@ -503,9 +503,10 @@ const CheckoutPage: React.FC = () => {
           p_delivery_mode: isShopPickup ? 'pickup' : 'delivery',
           p_payment_method: isShopPickup ? 'cash_at_shop' : 'cod',
           p_delivery_address: isShopPickup ? 'Retrait en boutique' : (deliveryAddress || 'Daloa'),
-          p_delivery_lat: isShopPickup ? null : deliveryLatitude,
-          p_delivery_lng: isShopPickup ? null : deliveryLongitude,
-          p_delivery_district: null,
+          // Paramètres facultatifs de la RPC : `undefined` les omet (défaut SQL = NULL).
+          p_delivery_lat: isShopPickup ? undefined : (deliveryLatitude ?? undefined),
+          p_delivery_lng: isShopPickup ? undefined : (deliveryLongitude ?? undefined),
+          p_delivery_district: undefined,
           p_road_km: isShopPickup ? {} : roadKmBySeller,
         });
 

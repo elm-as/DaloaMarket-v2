@@ -29,11 +29,8 @@ export const BETA_DISABLE_LISTING_PAYMENTS = parseBoolean(
 	true
 );
 
-// Limite de publications gratuites par compte (annonces actives).
-// En Phase0, la limite est ignorée (publication illimitée pour tous).
-export const MAX_FREE_LISTINGS = PHASE0_FREE_MODE
-	? Number.POSITIVE_INFINITY
-	: parseInteger(import.meta.env.VITE_MAX_FREE_LISTINGS, 20);
+// La publication d'annonces n'est plus limitée (plafond et crédits de
+// publication abandonnés) : les crédits servent uniquement au boost.
 
 // --- Monétisation : visibilité & performance ---
 

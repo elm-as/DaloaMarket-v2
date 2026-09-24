@@ -8,6 +8,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
+import { AdminPageHeader, AdminButton } from './ui/AdminUI';
 
 interface FeedbackRow {
   id: string;
@@ -144,27 +145,19 @@ export function AdminFeedbacksTab() {
 
   return (
     <div className="space-y-6">
-      {/* En-tête */}
-      <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-primary" />
-            Avis &amp; Feedbacks
-          </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {unanswered > 0
-              ? `${unanswered} en attente · ${answeredCount} répondus`
-              : `${answeredCount} avis tous traités avec réponse`}
-          </p>
-        </div>
-        <button
-          onClick={fetchFeedbacks}
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-semibold text-gray-700 transition-colors"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          Actualiser
-        </button>
-      </div>
+      <AdminPageHeader
+        title="Avis"
+        description={
+          unanswered > 0
+            ? `${unanswered} en attente de réponse · ${answeredCount} répondus`
+            : `${answeredCount} avis, tous traités`
+        }
+        actions={
+          <AdminButton icon={RefreshCw} onClick={fetchFeedbacks}>
+            Actualiser
+          </AdminButton>
+        }
+      />
 
       {/* Filtres */}
       <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3 md:items-center justify-between">
@@ -252,7 +245,7 @@ export function AdminFeedbacksTab() {
             return (
               <div
                 key={item.id}
-                className={`bg-white rounded-2xl p-5 border shadow-sm transition-shadow hover:shadow-md ${
+                className={`bg-white rounded-2xl p-5 border shadow-sm transition-shadow hover: ${
                   answered ? 'border-gray-100' : 'border-l-4 border-l-amber-400 border-y-gray-100 border-r-gray-100'
                 }`}
               >
@@ -353,7 +346,7 @@ export function AdminFeedbacksTab() {
                   /* Formulaire de réponse (nouveau ou modification) */
                   <div className="mt-3.5 rounded-xl border border-gray-200 bg-gray-50/60 p-3.5 space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <label htmlFor={`reply-${item.id}`} className="text-[11px] font-bold uppercase tracking-wider text-gray-600">
+                      <label htmlFor={`reply-${item.id}`} className="text-[11px] font-bold text-gray-600">
                         {isEditing ? 'Modifier la réponse' : 'Répondre au client'}
                       </label>
                       {isEditing && (

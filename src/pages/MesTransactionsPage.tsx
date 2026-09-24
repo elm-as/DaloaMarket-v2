@@ -627,7 +627,7 @@ const MesTransactionsPage: React.FC = () => {
                     const message = encodeURIComponent(
                       `Bonjour support DaloaMarket, j'ai une question concernant mon paiement de ${formatPrice(selectedTx.amount)} pour ${getTypeConfig(selectedTx.type).label} (Réf: #${selectedTx.id.slice(0, 8).toUpperCase()}).`
                     );
-                    window.open(`https://wa.me/2250700000000?text=${message}`, '_blank');
+                    window.open(`https://wa.me/2250704163361?text=${message}`, '_blank');
                   }}
                   className="w-full h-10 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold text-xs flex items-center justify-center gap-2 transition-colors border border-gray-200"
                 >

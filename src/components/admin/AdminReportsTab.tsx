@@ -8,6 +8,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorState } from '../ui/ErrorState';
 import { cn, formatDate } from '../../lib/utils';
+import { AdminPageHeader } from './ui/AdminUI';
 
 export const AdminReportsTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -54,7 +55,7 @@ export const AdminReportsTab: React.FC = () => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <h2 className="text-xl font-bold text-[var(--color-on-surface)] mb-6">Signalements</h2>
+      <AdminPageHeader title="Signalements" description="Annonces et comptes signalés par les utilisateurs." />
       {reports.length === 0 ? (
         <EmptyState title="Aucun signalement" icon={<Flag size={48} />} />
       ) : (

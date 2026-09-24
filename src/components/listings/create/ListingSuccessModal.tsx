@@ -4,11 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle, Zap, Share2, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '../../ui/Button';
-import { BOOST_PRICE, BOOST_DURATION_DAYS } from '../../../lib/featureFlags';
-import { formatPrice, getListingPath, formatListingShareText, openWhatsAppShare, shareWithImage } from '../../../lib/utils';
+import { BOOST_CREDIT_COSTS } from '../../../lib/featureFlags';
+import { getListingPath, formatListingShareText, openWhatsAppShare, shareWithImage } from '../../../lib/utils';
 import { useSupabase } from '../../../hooks/useSupabase';
 import { usePhase } from '../../../contexts/PhaseContext';
-import { initiatePayment } from '../../../lib/payment';
+import { supabase } from '../../../lib/supabase';
 
 interface ListingSuccessModalProps {
   show: boolean;
@@ -22,6 +22,8 @@ interface ListingSuccessModalProps {
   listingPhoto?: string | null;
 }
 
+const BOOST_WEEK = BOOST_CREDIT_COSTS.find((o) => o.days === 7)!;
+
 export const ListingSuccessModal: React.FC<ListingSuccessModalProps> = ({
   show,
   onClose,
@@ -33,7 +35,7 @@ export const ListingSuccessModal: React.FC<ListingSuccessModalProps> = ({
   listingPhoto,
 }) => {
   const navigate = useNavigate();
-  const { user, userProfile } = useSupabase();
+  const { user } = useSupabase();
   const { enableBoost } = usePhase();
   const [loadingBoost, setLoadingBoost] = useState(false);
 
@@ -166,7 +168,7 @@ export const ListingSuccessModal: React.FC<ListingSuccessModalProps> = ({
                     <div className="flex-1">
                       <h3 className="text-sm font-bold mb-0.5" style={{ color: 'var(--color-on-surface)' }}>Boostez votre annonce</h3>
                       <p className="text-xs leading-relaxed mb-2.5" style={{ color: 'var(--color-on-surface-variant)' }}>
-                        Apparaît en tête des résultats pendant {BOOST_DURATION_DAYS} jours pour seulement {formatPrice(BOOST_PRICE)}.
+                        Apparaît en tête des résultats pendant {BOOST_WEEK.label} pour {BOOST_WEEK.credits} crédits.
                       </p>
                       <Button
                         variant="filled"
@@ -179,31 +181,34 @@ export const ListingSuccessModal: React.FC<ListingSuccessModalProps> = ({
                             toast.error('Vous devez être connecté.');
                             return;
                           }
+                          // Boost en crédits (buy_boost_with_credits). L'ancien
+                          // paiement direct « boost » n'était pas accepté par le
+                          // serveur de paiement : le bouton échouait toujours.
                           setLoadingBoost(true);
                           try {
-                            const payment = await initiatePayment({
-                              type: 'boost',
-                              metadata: { listing_id: createdListingId },
-                              amount: BOOST_PRICE,
-                              userId: user.id,
-                              customerName: userProfile?.full_name || 'Client',
-                              customerPhone: userProfile?.phone || '',
+                            const { data, error } = await (supabase as any).rpc('buy_boost_with_credits', {
+                              p_listing_id: createdListingId,
+                              p_duration_days: BOOST_WEEK.days,
                             });
-                            
-                            if (payment?.paymentUrl) {
-                              window.location.href = payment.paymentUrl;
+                            if (error) throw error;
+                            if (data?.success) {
+                              toast.success('Annonce boostée !');
+                              handleClose();
+                            } else if (data?.reason === 'insufficient_credits') {
+                              toast.error('Crédits insuffisants : rechargez votre solde.');
+                              navigate('/acheter-pack');
                             } else {
-                              toast.error('Erreur lors de l\'initialisation du paiement');
+                              toast.error('Boost impossible pour le moment.');
                             }
                           } catch (e) {
                             console.error(e);
-                            toast.error('Erreur lors du paiement');
+                            toast.error('Erreur lors du boost');
                           } finally {
                             setLoadingBoost(false);
                           }
                         }}
                       >
-                        Booster pour {formatPrice(BOOST_PRICE)}
+                        Booster {BOOST_WEEK.label} ({BOOST_WEEK.credits} crédits)
                       </Button>
                     </div>
                   </div>

@@ -219,7 +219,9 @@ export async function broadcastPushNotification(params: {
   body: string;
   url?: string;
   image?: string;
-}): Promise<{ success: boolean; sent?: number; total?: number; error?: string }> {
+  /** Application visée ; absent = toutes. */
+  appType?: 'market' | 'delivery';
+}): Promise<{ success: boolean; sent?: number; total?: number; error?: string; message?: string }> {
   try {
     const headers = await authHeaders();
     if (!headers) {
@@ -234,6 +236,7 @@ export async function broadcastPushNotification(params: {
         body: params.body,
         url: params.url || '/',
         image: params.image || null,
+        appType: params.appType,
       }),
     });
 

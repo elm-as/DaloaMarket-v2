@@ -17,7 +17,7 @@ import { DeliveryOtpInputSection } from '../components/delivery/DeliveryOtpInput
 import { OrderStatusTimeline } from '../components/delivery/OrderStatusTimeline';
 import type { UserRole } from '../components/delivery/OrderStatusTimeline';
 import { OrderTrackingHeader } from '../components/delivery/OrderTrackingHeader';
-import { CancelledBanner } from '../components/delivery/CancelledBanner';
+import { OrderStatusHero } from '../components/delivery/OrderStatusHero';
 import { SellerSection } from '../components/delivery/SellerSection';
 import { BuyerSection } from '../components/delivery/BuyerSection';
 import { friendlyError } from '../lib/messages';
@@ -219,6 +219,7 @@ const OrderTrackingPage: React.FC = () => {
 
   const userRole: UserRole = isSeller ? 'seller' : isBuyer ? 'buyer' : isDeliveryPerson ? 'delivery' : 'other';
   const isCancelledOrDisputed = order.status === 'cancelled' || deliveryAssignment?.status === 'disputed';
+  const isDone = order.status === 'delivered' || order.status === 'completed';
   const hasMap = order.seller_lat != null && order.seller_lng != null;
   const productPhoto = order.listing_photos?.[0];
 
@@ -229,7 +230,7 @@ const OrderTrackingPage: React.FC = () => {
 
       <div className={cn('px-4 lg:px-0 space-y-3.5 pt-3.5 lg:grid lg:grid-cols-[1fr_380px] lg:gap-6 lg:space-y-0 lg:items-start max-w-2xl lg:max-w-5xl mx-auto')}>
         <div className="space-y-3.5">
-          <CancelledBanner order={order} onBack={() => navigate('/mes-commandes')} />
+          <OrderStatusHero order={order} role={userRole} userId={user?.id} />
 
           {!isCancelledOrDisputed && (
             <>
@@ -241,8 +242,18 @@ const OrderTrackingPage: React.FC = () => {
             </>
           )}
 
-          {!isCancelledOrDisputed && (
+          {!isCancelledOrDisputed && !isDone && (
             <OrderStatusTimeline order={order} role={userRole} />
+          )}
+          {/* Une fois livrée, la frise n'est plus l'information principale : repliée. */}
+          {!isCancelledOrDisputed && isDone && (
+            <details className="group space-y-3.5">
+              <summary className="cursor-pointer list-none rounded-2xl border border-gray-100 bg-white px-4 py-3 text-[13px] font-medium text-gray-700 [&::-webkit-details-marker]:hidden">
+                <span className="group-open:hidden">Voir le parcours de la commande</span>
+                <span className="hidden group-open:inline">Masquer le parcours</span>
+              </summary>
+              <OrderStatusTimeline order={order} role={userRole} />
+            </details>
           )}
         </div>
 

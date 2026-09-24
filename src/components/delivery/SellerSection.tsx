@@ -10,6 +10,14 @@ import type { Order, RpcResult } from '../../types/order';
 import toast from 'react-hot-toast';
 import { friendlyError } from '../../lib/messages';
 
+/** Traduction des `reason` renvoyés par les RPC vendeur. */
+const SELLER_RPC_MESSAGES: Record<string, string> = {
+  order_not_found: 'Commande introuvable ou non rattachée à votre boutique.',
+  invalid_status: "Cette commande n'est plus dans un état permettant cette action.",
+  not_cod_delivery: 'Cette action ne concerne que les livraisons payées à la livraison.',
+  not_authenticated: 'Session expirée. Reconnectez-vous.',
+};
+
 export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = ({ order, onChanged }) => {
   const [loading, setLoading] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -72,7 +80,7 @@ export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = 
         } else if (data.reason === 'unauthorized') {
           toast.error("Vous n'êtes pas autorisé à valider cette commande.");
         } else {
-          toast.error(data.reason || 'Validation refusée.');
+          toast.error(SELLER_RPC_MESSAGES[data.reason] || data.reason || 'Validation refusée.');
         }
         return;
       }
@@ -105,7 +113,7 @@ export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = 
         toast.error(
           data.reason === 'unauthorized'
             ? "Vous n'êtes pas autorisé à valider cette commande."
-            : data.reason || 'Validation refusée.'
+            : SELLER_RPC_MESSAGES[data.reason] || data.reason || 'Validation refusée.'
         );
         return;
       }
@@ -127,12 +135,15 @@ export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = 
   const handleDispatchCodOrder = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: 'in_transit' } as any)
-        .eq('id', order.id);
-
+      // Un UPDATE direct sur orders.status est annulé en silence par
+      // protect_orders_columns : le bouton annonçait un envoi qui n'avait pas eu lieu.
+      const { data, error } = await (supabase as any).rpc('dispatch_cod_order', {
+        p_order_id: order.id,
+      });
       if (error) throw error;
+      const result = data as RpcResult;
+      if (!result?.success) throw new Error(SELLER_RPC_MESSAGES[result?.reason || ''] || 'Expédition refusée');
+
       toast.success('Commande marquée comme en cours de livraison !');
       onChanged();
     } catch (err: unknown) {
@@ -186,20 +197,15 @@ export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = 
   const handleCancelUnavailable = async () => {
     setCancelling(true);
     try {
-      if (isPickup || isCod) {
-        const { error } = await supabase
-          .from('orders')
-          .update({ status: 'cancelled' } as any)
-          .eq('id', order.id);
-        if (error) throw error;
-      } else {
-        const { data, error } = await supabase.rpc('cancel_order_unavailable', {
-          p_order_id: order.id,
-        });
-        if (error) throw error;
-        const result = data as unknown as RpcResult;
-        if (!result.success) throw new Error(result.reason || 'Annulation refusée');
-      }
+      // Toutes les commandes passent par la RPC : l'ancien UPDATE direct (COD,
+      // retrait) était annulé en silence, et seule la RPC rembourse un
+      // paiement en ligne et libère la course.
+      const { data, error } = await supabase.rpc('cancel_order_unavailable', {
+        p_order_id: order.id,
+      });
+      if (error) throw error;
+      const result = data as unknown as RpcResult;
+      if (!result.success) throw new Error(SELLER_RPC_MESSAGES[result.reason || ''] || 'Annulation refusée');
       toast.success('Commande annulée.');
       onChanged();
     } catch (err: unknown) {

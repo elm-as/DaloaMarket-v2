@@ -16,7 +16,6 @@ export interface PhaseContextValue {
   showMonetisation: boolean;
 
   /** Max free listings allowed for standard sellers */
-  maxFreeListings: number;
 
   /** Feature toggles derived from phaseConfig */
   enableBoost: boolean;
@@ -40,22 +39,21 @@ export function PhaseProvider({ children }: { children: React.ReactNode }) {
     const isPhase0 = phaseConfig.phase === 0;
 
     // Monétisation visible dès qu'au moins un levier payant est activé,
-    // même en Phase 0. Cela permet d'activer boost/bump/badge
+    // même en Phase 0. Cela permet d'activer boost/badge
     // individuellement depuis l'admin sans quitter la Phase 0.
     const hasAnyMonetisation =
       phaseConfig.enable_boost ||
-      phaseConfig.enable_bump ||
       phaseConfig.enable_seller_badge;
 
     return {
       phaseConfig,
       isPhase0,
       showMonetisation: !isPhase0 || hasAnyMonetisation,
-      maxFreeListings: isPhase0 ? (phaseConfig.max_free_listings >= 999999 ? Number.POSITIVE_INFINITY : phaseConfig.max_free_listings) : phaseConfig.max_free_listings,
       enableBoost: phaseConfig.enable_boost,
       enableBump: phaseConfig.enable_bump,
       enableSellerBadge: phaseConfig.enable_seller_badge,
-      sellerFeeOverride: phaseConfig.seller_fee_override ?? (isPhase0 ? 0 : null),
+      // Même règle que la base : null = taux standard, quelle que soit la phase.
+      sellerFeeOverride: phaseConfig.seller_fee_override ?? null,
     };
   }, [phaseConfig]);
 

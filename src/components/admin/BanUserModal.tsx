@@ -55,7 +55,7 @@ export const BanUserModal: React.FC<BanUserModalProps> = ({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-3xl p-6 max-w-md w-full shadow-2xl relative"
+          className="bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-2xl p-6 max-w-md w-full shadow-2xl relative"
         >
           <button
             onClick={onClose}
@@ -80,7 +80,7 @@ export const BanUserModal: React.FC<BanUserModalProps> = ({
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-[var(--color-on-surface)] mb-1.5 uppercase tracking-wider">
+              <label className="block text-xs font-semibold text-[var(--color-on-surface)] mb-1.5">
                 Motif du bannissement (sera visible par l'utilisateur)
               </label>
 

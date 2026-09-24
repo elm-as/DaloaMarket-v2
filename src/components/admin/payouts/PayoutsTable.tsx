@@ -146,7 +146,7 @@ export const PayoutsTable: React.FC<PayoutsTableProps> = ({ payouts, onRefresh }
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-[10px]">
                 <tr>
                   <th className="py-3 px-4">Date / Réf</th>
                   <th className="py-3 px-4">Type</th>
@@ -186,7 +186,7 @@ export const PayoutsTable: React.FC<PayoutsTableProps> = ({ payouts, onRefresh }
                       <td className="py-3 px-4">
                         <span
                           className={cn(
-                            'px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider',
+                            'px-2 py-0.5 rounded-full text-[10px] font-semibold',
                             p.type === 'seller'
                               ? 'bg-blue-50 text-blue-700 border border-blue-200'
                               : p.type === 'delivery'
@@ -216,7 +216,7 @@ export const PayoutsTable: React.FC<PayoutsTableProps> = ({ payouts, onRefresh }
 
                       {/* Amount */}
                       <td className="py-3 px-4 text-right">
-                        <span className="font-mono tabular-nums font-black text-slate-950 text-sm">
+                        <span className="font-mono tabular-nums font-semibold text-slate-950 text-sm">
                           {formatPrice(p.amount)}
                         </span>
                       </td>
@@ -225,7 +225,7 @@ export const PayoutsTable: React.FC<PayoutsTableProps> = ({ payouts, onRefresh }
                       <td className="py-3 px-4">
                         <span
                           className={cn(
-                            'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider',
+                            'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold',
                             isPaid
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : isProcessing

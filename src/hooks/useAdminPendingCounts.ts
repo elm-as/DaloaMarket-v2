@@ -72,16 +72,17 @@ export function useAdminPendingCounts(enabled = true) {
     };
   }, [refresh, enabled]);
 
-  /** Nombre d'éléments qui attendent une action, par onglet. */
+  // Pastilles de la navigation admin : chaque compteur pointe vers la page qui
+  // le traite réellement. Les pièces livreurs se vérifient sur le site
+  // DaloaDelivery, et les messages de contact n'ont pas d'écran : ils ne
+  // gonflent plus les pastilles de pages qui ne les affichent pas.
   const byTab: Record<string, number> = {
     ambassadeurs: (counts as any).ambassadeurs_payouts_en_attente || 0,
     feedbacks: counts.avis_sans_reponse,
     features: counts.suggestions,
     reports: counts.signalements,
-    livraisons: counts.litiges + counts.kyc_a_verifier,
-    payouts: counts.payouts_en_attente,
-    utilisateurs: counts.messages_contact,
-    settings: counts.paiements_en_attente,
+    litiges: counts.litiges,
+    versements: counts.payouts_en_attente,
   };
 
   const total = Object.values(byTab).reduce((a, b) => a + b, 0);

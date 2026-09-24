@@ -36,6 +36,7 @@ import { useSupabase } from '../../hooks/useSupabase';
 import { BanUserModal } from './BanUserModal';
 import { FlagUserModal } from './FlagUserModal';
 import Avatar from '../profile/Avatar';
+import { AdminBadge } from './ui/AdminUI';
 
 type PlatformFilter =
   | 'all'
@@ -410,35 +411,10 @@ export const AdminUsersTab: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-full">
-      {/* Header & Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-            <Users className="w-6 h-6 text-orange-600" />
-            Gestion des Utilisateurs
-          </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Suivi des comptes, attribution des rôles, modération anti-abus et provenance DaloaMarket / DaloaDelivery.
-          </p>
-        </div>
-
-        {/* Global Stats Badges */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-50 text-orange-700 border border-orange-100/80 text-xs font-bold shadow-xs">
-            <ShoppingBag className="w-3.5 h-3.5 text-orange-600" />
-            <span>Market : {counts.marketCount}</span>
-          </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100/80 text-xs font-bold shadow-xs">
-            <Bike className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Delivery : {counts.deliveryCount}</span>
-          </span>
-          {counts.bothCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 border border-purple-100/80 text-xs font-bold shadow-xs">
-              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-              <span>Les 2 : {counts.bothCount}</span>
-            </span>
-          )}
-        </div>
+      <div className="flex flex-wrap gap-2">
+        <AdminBadge>DaloaMarket : {counts.marketCount}</AdminBadge>
+        <AdminBadge>DaloaDelivery : {counts.deliveryCount}</AdminBadge>
+        {counts.bothCount > 0 && <AdminBadge>Les deux : {counts.bothCount}</AdminBadge>}
       </div>
 
       {/* Filter and Search Bar */}
@@ -605,7 +581,7 @@ export const AdminUsersTab: React.FC = () => {
           <div className="hidden lg:block bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[980px]">
               <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-200/80 text-[11px] font-extrabold uppercase tracking-wider text-gray-500">
+                <tr className="bg-gray-50/80 border-b border-gray-200/80 text-[11px] font-semibold text-gray-500">
                   <th className="py-3.5 px-4 min-w-[220px]">Utilisateur</th>
                   <th className="py-3.5 px-3 min-w-[220px]">Plateforme(s) Inscrite(s)</th>
                   <th className="py-3.5 px-3 min-w-[150px]">Rôle Attribué</th>
@@ -691,7 +667,7 @@ export const AdminUsersTab: React.FC = () => {
                         <div className="flex flex-wrap items-center gap-1.5">
                           {/* Badge DaloaMarket (Uniquement si pertinent) */}
                           {u.isMarket && (
-                            <div className="inline-flex items-center gap-1 px-2.5 py-0.8 rounded-lg bg-orange-50 text-orange-800 border border-orange-200/80 text-[11px] font-extrabold shadow-2xs">
+                            <div className="inline-flex items-center gap-1 px-2.5 py-0.8 rounded-lg bg-orange-50 text-orange-800 border border-orange-200/80 text-[11px] font-semibold shadow-2xs">
                               <ShoppingBag className="w-3.5 h-3.5 text-orange-600 shrink-0" />
                               <span>DaloaMarket</span>
                               {u.listings_count > 0 && (
@@ -704,7 +680,7 @@ export const AdminUsersTab: React.FC = () => {
 
                           {/* Badge DaloaDelivery (si le profil livreur existe) */}
                           {u.isDelivery && (
-                            <div className="inline-flex items-center gap-1 px-2.5 py-0.8 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-[11px] font-extrabold shadow-2xs">
+                            <div className="inline-flex items-center gap-1 px-2.5 py-0.8 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-[11px] font-semibold shadow-2xs">
                               <Bike className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                               <span>DaloaDelivery</span>
                               {deliveryData?.vehicle_type && (
@@ -717,7 +693,7 @@ export const AdminUsersTab: React.FC = () => {
 
                           {/* Badge Hybride si l'utilisateur est présent activement sur les deux */}
                           {u.isBoth && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-black">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-semibold">
                               <Sparkles className="w-3 h-3 text-purple-600" />
                               Compte Double (DM + DD)
                             </span>
@@ -767,7 +743,7 @@ export const AdminUsersTab: React.FC = () => {
                             <div className="flex items-center gap-1.5">
                               <span
                                 className={cn(
-                                  'px-2 py-0.5 rounded-md text-[10px] font-black',
+                                  'px-2 py-0.5 rounded-md text-[10px] font-semibold',
                                   consecutive >= 3 ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
                                 )}
                               >
@@ -793,7 +769,7 @@ export const AdminUsersTab: React.FC = () => {
                         <div className="flex flex-col gap-1 items-start">
                           <span
                             className={cn(
-                              'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold',
+                              'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold',
                               u.banned ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                             )}
                           >
@@ -871,7 +847,7 @@ export const AdminUsersTab: React.FC = () => {
                                 : 'Signaler sans bloquer. Suit la personne si elle supprime puis recrée son compte.'
                             }
                             className={cn(
-                              'rounded-xl text-xs font-extrabold px-3 py-1.5 shadow-2xs active:scale-[0.97] transition-all flex items-center justify-center gap-1',
+                              'rounded-xl text-xs font-semibold px-3 py-1.5 shadow-2xs active:scale-[0.97] transition-all flex items-center justify-center gap-1',
                               u.suspect
                                 ? 'bg-orange-50 text-orange-700 border border-orange-300 hover:bg-orange-100'
                                 : 'border-gray-300 text-gray-600 hover:bg-gray-50'
@@ -888,7 +864,7 @@ export const AdminUsersTab: React.FC = () => {
                             disabled={isLocked || isSelf}
                             onClick={() => (u.banned ? handleUnban(u.id) : handleOpenBanModal(u))}
                             className={cn(
-                              'rounded-xl text-xs font-extrabold px-3 py-1.5 min-w-[84px] shadow-2xs active:scale-[0.97] transition-all flex items-center justify-center gap-1',
+                              'rounded-xl text-xs font-semibold px-3 py-1.5 min-w-[84px] shadow-2xs active:scale-[0.97] transition-all flex items-center justify-center gap-1',
                               u.banned
                                 ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-300'
                                 : 'border-red-300 text-red-600 hover:bg-red-50'
@@ -982,7 +958,7 @@ export const AdminUsersTab: React.FC = () => {
                     )}
                     {u.suspect && (
                       <span
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-100 text-orange-900 border border-orange-200 text-[10px] font-black"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-100 text-orange-900 border border-orange-200 text-[10px] font-semibold"
                         title={u.suspect_reason || 'Compte signalé'}
                       >
                         <Flag className="w-3 h-3" />
@@ -990,19 +966,19 @@ export const AdminUsersTab: React.FC = () => {
                       </span>
                     )}
                     {u.rejoin && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-fuchsia-100 text-fuchsia-900 border border-fuchsia-200 text-[10px] font-black">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-fuchsia-100 text-fuchsia-900 border border-fuchsia-200 text-[10px] font-semibold">
                         <Repeat className="w-3 h-3" />
                         Réinscription
                       </span>
                     )}
                     {u.deleted_at && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-200 text-gray-700 border border-gray-300 text-[10px] font-black">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-200 text-gray-700 border border-gray-300 text-[10px] font-semibold">
                         <Trash2 className="w-3 h-3" />
                         Compte supprimé
                       </span>
                     )}
                     {u.isBoth && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-black">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-semibold">
                         <Sparkles className="w-3 h-3 text-purple-600" />
                         Double Compte
                       </span>
@@ -1035,7 +1011,7 @@ export const AdminUsersTab: React.FC = () => {
                   {/* Role and Action */}
                   <div className="flex items-center justify-between pt-2 border-t border-gray-100 gap-2">
                     <div>
-                      <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Rôle</span>
+                      <span className="text-[10px] font-bold text-gray-400 block mb-1">Rôle</span>
                       <select
                         value={u.role || 'user'}
                         disabled={isLocked || isSelf}

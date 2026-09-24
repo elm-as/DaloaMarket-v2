@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, AlertTriangle, ArrowRight, CheckCircle2, Star, RotateCcw, Sparkles } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, ArrowRight, CheckCircle2, RotateCcw, Sparkles } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 
@@ -46,7 +46,7 @@ const ListingCreatePage: React.FC = () => {
   usePageTitle(isEditing ? "Modifier l'annonce" : 'Publier une annonce');
 
   const { user, userProfile, loading: authLoading } = useSupabase();
-  const { isPhase0, maxFreeListings, showMonetisation, sellerFeeOverride } = usePhase();
+  const { sellerFeeOverride } = usePhase();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [photos, setPhotos] = useState<File[]>([]);
@@ -92,9 +92,11 @@ const ListingCreatePage: React.FC = () => {
   const discountPercent = (origPriceNum > priceNum && priceNum > 0) ? Math.round(((origPriceNum - priceNum) / origPriceNum) * 100) : 0;
   const isPro = userProfile?.pro_until ? new Date(userProfile.pro_until) > new Date() : false;
   const defaultSellerFeeRate = isPro ? PRO_SELLER_FEE_RATE : SELLER_FEE_RATE;
+  // Même règle que la base et le serveur : commission imposée si définie,
+  // sinon taux standard.
   const currentSellerFeeRate = sellerFeeOverride !== null && sellerFeeOverride !== undefined
     ? sellerFeeOverride
-    : (isPhase0 ? 0 : defaultSellerFeeRate);
+    : defaultSellerFeeRate;
   const sellerFee = !isNaN(priceNum) ? Math.round(priceNum * currentSellerFeeRate) : 0;
   const netPayout = !isNaN(priceNum) ? priceNum - sellerFee : 0;
 
@@ -451,22 +453,9 @@ const ListingCreatePage: React.FC = () => {
     }
   };
 
-  const [activeListingsCount, setActiveListingsCount] = useState<number>(0);
-
-  useEffect(() => {
-    if (user && !isPro && !isEditing) {
-      supabase
-        .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .then(({ count }) => {
-          if (count != null) setActiveListingsCount(count);
-        });
-    }
-  }, [user, isPro, isEditing]);
-
-  const canCreateNew = isEditing || isPro || isPhase0 || activeListingsCount < maxFreeListings;
+  // La publication n'est plus limitée : l'ancien plafond d'annonces gratuites
+  // (et les crédits de publication) a été abandonné, les crédits ne servent
+  // plus qu'au boost.
 
   if (authLoading || loadingListing) {
     return (
@@ -553,35 +542,6 @@ const ListingCreatePage: React.FC = () => {
             >
               Définir la position GPS
             </Button>
-          </div>
-        </div>
-      ) : !canCreateNew ? (
-        <div className="px-4 py-8 max-w-lg mx-auto">
-          <div className="bg-white rounded-3xl p-6 border border-amber-100 shadow-xl shadow-amber-100/50 flex flex-col items-center text-center">
-            <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mb-3.5 border border-amber-200 shadow-xs">
-              <Star className="w-7 h-7 text-amber-500 fill-amber-500" />
-            </div>
-            <h2 className="text-base font-black text-gray-900 mb-1.5">Limite d'annonces atteinte ({activeListingsCount}/{maxFreeListings})</h2>
-            <p className="text-xs text-gray-500 mb-5 leading-relaxed">
-              Votre compte Standard est limité à {maxFreeListings} annonces actives. {showMonetisation ? 'Passez au Pass Vendeur Pro pour publier sans limite !' : 'Gérez ou supprimez vos anciennes annonces pour en publier de nouvelles.'}
-            </p>
-            {showMonetisation ? (
-              <Button
-                color="primary"
-                onClick={() => navigate('/devenir-pro')}
-                className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-black shadow-lg shadow-orange-500/25 active:scale-[0.98]"
-              >
-                Devenir Vendeur Pro
-              </Button>
-            ) : (
-              <Button
-                color="primary"
-                onClick={() => navigate('/profile')}
-                className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-black shadow-lg shadow-orange-500/25 active:scale-[0.98]"
-              >
-                Gérer mes annonces
-              </Button>
-            )}
           </div>
         </div>
       ) : (
@@ -770,7 +730,7 @@ const ListingCreatePage: React.FC = () => {
             ) : (
               <button
                 type="button"
-                disabled={submitting || (!isEditing && !canCreateNew)}
+                disabled={submitting}
                 onClick={handleSubmit(onSubmit)}
                 className="flex-1 h-11 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
               >

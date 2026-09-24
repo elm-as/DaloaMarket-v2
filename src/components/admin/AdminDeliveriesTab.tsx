@@ -1,16 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { Truck, Search, RefreshCw, WalletCards } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import { Truck, Search, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorState } from '../ui/ErrorState';
-import { EmptyState } from '../ui/EmptyState';
-import { cn } from '../../lib/utils';
 import { DeliveryCard } from './deliveries/DeliveryCard';
 import type { AdminDeliveryItem, DeliveryTabFilter } from './deliveries/types';
-import { isDriverDelivery } from './deliveries/types';
 import type { PayoutItem } from './payouts/types';
+import {
+  AdminPageHeader,
+  AdminStatGrid,
+  AdminStatCard,
+  AdminTabs,
+  AdminButton,
+  AdminEmpty,
+  AdminLoading,
+  adminInputClass,
+} from './ui/AdminUI';
 
 export const AdminDeliveriesTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -20,7 +25,7 @@ export const AdminDeliveriesTab: React.FC = () => {
   const [filter, setFilter] = useState<DeliveryTabFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
-  const [processing, setProcessing] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const fetchDeliveries = useCallback(async () => {
     setError(null);
@@ -140,157 +145,84 @@ export const AdminDeliveriesTab: React.FC = () => {
     fetchDeliveries();
   };
 
-  const handleResolveDispute = async (
-    assignmentId: string,
-    action: 'deliver' | 'cancel' | 'refund_complete' | 'refund_partial'
-  ) => {
-    setProcessing(assignmentId);
-    try {
-      const { data, error: rpcErr } = await (supabase as any).rpc('resolve_delivery_dispute', {
-        p_assignment_id: assignmentId,
-        p_action: action,
-      });
-      if (rpcErr) throw rpcErr;
+  const ACTIVE = ['pending_seller_confirmation', 'awaiting_pickup', 'accepted', 'picked_up', 'in_transit'];
 
-      let msg = '';
-      if (action === 'deliver') msg = 'Litige résolu : Commande livrée (fonds libérés)';
-      else if (action === 'refund_complete') msg = 'Litige résolu : Commande annulée et acheteur remboursé à 100%';
-      else if (action === 'refund_partial') msg = 'Litige résolu : Remboursement produit, livreur payé';
-      else msg = 'Litige résolu : Attribution annulée';
-
-      toast.success(msg);
-      fetchDeliveries();
-    } catch (err: any) {
-      toast.error(err.message || 'Erreur lors de la résolution du litige');
-    } finally {
-      setProcessing(null);
-    }
-  };
-
-  // Filtrage
   const filteredDeliveries = deliveries.filter((item) => {
-    if (filter === 'disputed' && item.status !== 'disputed') return false;
+    if (filter === 'active' && !ACTIVE.includes(item.status)) return false;
     if (filter === 'delivered' && item.status !== 'delivered') return false;
-    if (filter === 'active' && !['pending_seller_confirmation', 'awaiting_pickup', 'accepted', 'picked_up', 'in_transit'].includes(item.status)) return false;
-    if (filter === 'unpaid_driver') {
-      if (!isDriverDelivery(item)) return false;
-      if (item.status !== 'delivered') return false;
-      const isPaid = item.driver_payout?.status === 'paid' || item.driver_payout?.status === 'completed';
-      if (isPaid) return false;
-    }
+    if (filter === 'cancelled' && item.status !== 'cancelled') return false;
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const buyerName = item.order?.buyer?.full_name?.toLowerCase() || '';
       const sellerName = item.order?.seller?.full_name?.toLowerCase() || '';
       const driverName = item.delivery_person?.name?.toLowerCase() || '';
-      const idStr = item.id.toLowerCase();
-      return buyerName.includes(q) || sellerName.includes(q) || driverName.includes(q) || idStr.includes(q);
+      return buyerName.includes(q) || sellerName.includes(q) || driverName.includes(q) || item.id.toLowerCase().includes(q);
     }
-
     return true;
   });
 
-  const unpaidCount = deliveries.filter(
-    (d) => isDriverDelivery(d) && d.status === 'delivered' && d.driver_payout?.status !== 'paid' && d.driver_payout?.status !== 'completed'
-  ).length;
+  if (loading) return <AdminLoading />;
+  if (error) return <ErrorState message={error} onRetry={fetchDeliveries} />;
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return <ErrorState message={error} onRetry={fetchDeliveries} />;
-  }
+  const disputedCount = deliveries.filter((d) => d.status === 'disputed').length;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Suivi des Livraisons & Flux Livreurs</h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Supervisez les courses actives, vérifiez les versements livreurs et tranchez les litiges en cours.
-          </p>
-        </div>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="self-start sm:self-center flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50 active:scale-95 transition-all shadow-sm"
-        >
-          <RefreshCw className={cn('w-4 h-4', refreshing && 'animate-spin')} />
-          Actualiser
-        </button>
-      </div>
+    <div>
+      <AdminPageHeader
+        title="Livraisons"
+        description="Suivi des courses. Les litiges et les versements livreurs se traitent sur leurs propres pages."
+        actions={
+          <AdminButton icon={RefreshCw} loading={refreshing} onClick={handleRefresh}>
+            Actualiser
+          </AdminButton>
+        }
+      />
 
-      {/* Tabs / Filters */}
-      <div className="flex gap-2 border-b border-slate-200 pb-px overflow-x-auto min-w-max">
-        {[
+      <AdminStatGrid>
+        <AdminStatCard label="En cours" icon={Truck} value={deliveries.filter((d) => ACTIVE.includes(d.status)).length} />
+        <AdminStatCard label="Livrées" tone="success" value={deliveries.filter((d) => d.status === 'delivered').length} />
+        <AdminStatCard
+          label="Litiges"
+          tone={disputedCount > 0 ? 'danger' : 'neutral'}
+          value={disputedCount}
+          hint={disputedCount > 0 ? 'Voir la page Litiges' : undefined}
+          onClick={disputedCount > 0 ? () => navigate('/admin/litiges') : undefined}
+        />
+        <AdminStatCard label="Annulées" value={deliveries.filter((d) => d.status === 'cancelled').length} />
+      </AdminStatGrid>
+
+      <AdminTabs<DeliveryTabFilter>
+        value={filter}
+        onChange={setFilter}
+        tabs={[
           { key: 'all', label: 'Toutes', count: deliveries.length },
-          { key: 'unpaid_driver', label: 'Paiements Livreurs à Régler', count: unpaidCount, highlight: unpaidCount > 0 },
-          { key: 'disputed', label: 'Litiges', count: deliveries.filter((d) => d.status === 'disputed').length, alert: true },
-          { key: 'active', label: 'En cours', count: deliveries.filter((d) => ['pending_seller_confirmation', 'awaiting_pickup', 'accepted', 'picked_up', 'in_transit'].includes(d.status)).length },
-          { key: 'delivered', label: 'Livrées', count: deliveries.filter((d) => d.status === 'delivered').length },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setFilter(tab.key as DeliveryTabFilter)}
-            className={cn(
-              'flex items-center gap-1.5 px-3.5 py-2.5 text-xs sm:text-sm font-semibold transition-all border-b-2 relative -bottom-[2px]',
-              filter === tab.key
-                ? 'border-amber-500 text-amber-600 font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            )}
-          >
-            <span>{tab.label}</span>
-            <span
-              className={cn(
-                'px-1.5 py-0.5 rounded-full text-[10px] font-bold font-mono tabular-nums',
-                tab.highlight
-                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                  : tab.alert && tab.count > 0
-                  ? 'bg-red-100 text-red-700'
-                  : 'bg-slate-100 text-slate-600'
-              )}
-            >
-              {tab.count}
-            </span>
-          </button>
-        ))}
-      </div>
+          { key: 'active', label: 'En cours', count: deliveries.filter((d) => ACTIVE.includes(d.status)).length },
+          { key: 'delivered', label: 'Livrées' },
+          { key: 'cancelled', label: 'Annulées' },
+        ]}
+      />
 
-      {/* Search Input */}
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Rechercher par acheteur, vendeur, livreur ou ID de course..."
-          className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-amber-500/20"
+          placeholder="Acheteur, vendeur, livreur ou numéro de course"
+          className={`${adminInputClass} pl-9`}
         />
       </div>
 
-      {/* Deliveries List */}
       {filteredDeliveries.length === 0 ? (
-        <EmptyState title="Aucune course correspondante" icon={<Truck size={48} />} />
+        <AdminEmpty icon={Truck} title="Aucune course" description="Aucune course ne correspond à ces critères." />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ul className="space-y-2">
           {filteredDeliveries.map((item) => (
-            <DeliveryCard
-              key={item.id}
-              item={item}
-              photoUrl={photoUrls[item.id]}
-              isProcessing={processing === item.id}
-              onResolveDispute={handleResolveDispute}
-              onRefresh={fetchDeliveries}
-            />
+            <DeliveryCard key={item.id} item={item} photoUrl={photoUrls[item.id]} />
           ))}
-        </div>
+        </ul>
       )}
-    </motion.div>
+    </div>
   );
 };

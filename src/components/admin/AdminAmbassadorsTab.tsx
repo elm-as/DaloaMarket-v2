@@ -12,6 +12,7 @@ import {
   Search
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { AdminPageHeader } from './ui/AdminUI';
 
 interface AmbassadorRow {
   id: string;
@@ -153,41 +154,45 @@ export const AdminAmbassadorsTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <AdminPageHeader
+        title="Ambassadeurs"
+        description="Réseau de parrainage des vendeurs, commissions et demandes de retrait."
+      />
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
           <div className="flex items-center gap-2 text-orange-600 mb-1">
             <Award className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase">Ambassadeurs</span>
+            <span className="text-xs font-bold">Ambassadeurs</span>
           </div>
-          <p className="text-2xl font-black text-gray-900 tabular-nums">{ambassadors.length}</p>
+          <p className="text-2xl font-semibold text-gray-900 tabular-nums">{ambassadors.length}</p>
           <p className="text-[11px] text-gray-500">Inscrits sur le réseau</p>
         </div>
 
         <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
           <div className="flex items-center gap-2 text-emerald-600 mb-1">
             <Users className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase">Vendeurs Enrôlés</span>
+            <span className="text-xs font-bold">Vendeurs Enrôlés</span>
           </div>
-          <p className="text-2xl font-black text-gray-900 tabular-nums">{totalReferredSellers}</p>
+          <p className="text-2xl font-semibold text-gray-900 tabular-nums">{totalReferredSellers}</p>
           <p className="text-[11px] text-gray-500">Boutiques rattachées</p>
         </div>
 
         <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
           <div className="flex items-center gap-2 text-amber-600 mb-1">
             <Clock className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase">Retraits en attente</span>
+            <span className="text-xs font-bold">Retraits en attente</span>
           </div>
-          <p className="text-2xl font-black text-gray-900 tabular-nums">{pendingPayouts.length}</p>
+          <p className="text-2xl font-semibold text-gray-900 tabular-nums">{pendingPayouts.length}</p>
           <p className="text-[11px] text-gray-500">À traiter via Wave / OM</p>
         </div>
 
         <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
           <div className="flex items-center gap-2 text-blue-600 mb-1">
             <Wallet className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase">Total Payé</span>
+            <span className="text-xs font-bold">Total Payé</span>
           </div>
-          <p className="text-2xl font-black text-gray-900 tabular-nums">
+          <p className="text-2xl font-semibold text-gray-900 tabular-nums">
             {totalPaidOut.toLocaleString('fr-FR')} F
           </p>
           <p className="text-[11px] text-gray-500">Commissions versées</p>
@@ -225,7 +230,7 @@ export const AdminAmbassadorsTab: React.FC = () => {
                     </span>
                   </div>
                   <div className="text-xs text-gray-600 mt-1 flex flex-wrap items-center gap-3">
-                    <span className="font-medium text-emerald-700 uppercase">
+                    <span className="font-medium text-emerald-700">
                       Réseau : {payout.network}
                     </span>
                     <span>Numéro : <strong className="tabular-nums">{payout.phone_number}</strong></span>
@@ -241,7 +246,7 @@ export const AdminAmbassadorsTab: React.FC = () => {
                 </div>
 
                 <div className="flex items-center justify-between md:justify-end gap-3">
-                  <span className="text-base font-black text-gray-900 tabular-nums">
+                  <span className="text-base font-semibold text-gray-900 tabular-nums">
                     {payout.amount.toLocaleString('fr-FR')} FCFA
                   </span>
                   <div className="flex items-center gap-2">
@@ -299,7 +304,7 @@ export const AdminAmbassadorsTab: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase">
+              <tr className="border-b border-gray-100 text-[11px] font-bold text-gray-400">
                 <th className="py-3 px-3">Ambassadeur</th>
                 <th className="py-3 px-3">Code Parrain</th>
                 <th className="py-3 px-3 text-center">Vendeurs</th>
@@ -340,7 +345,7 @@ export const AdminAmbassadorsTab: React.FC = () => {
                     </td>
                     <td className="py-3 px-3">
                       <span className="text-[11px] text-gray-600">
-                        <strong className="uppercase">{amb.payout_network}</strong> : {amb.payout_number}
+                        <strong className="">{amb.payout_network}</strong> : {amb.payout_number}
                       </span>
                     </td>
                   </tr>

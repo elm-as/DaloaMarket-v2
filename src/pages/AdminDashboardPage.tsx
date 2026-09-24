@@ -1,6 +1,22 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Flag, Bell, FileText, Users, Truck, MessageSquare, Lightbulb, Sliders, Award, Banknote } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Flag,
+  FileText,
+  Users,
+  Truck,
+  ShieldAlert,
+  Banknote,
+  MessageSquare,
+  Lightbulb,
+  Award,
+  Bell,
+  Rocket,
+  CreditCard,
+  Wrench,
+  type LucideIcon,
+} from 'lucide-react';
 import { useSupabase } from '../hooks/useSupabase';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -9,28 +25,84 @@ import { useAdminPendingCounts } from '../hooks/useAdminPendingCounts';
 
 import { AdminKpisTab } from '../components/admin/AdminKpisTab';
 import { AdminReportsTab } from '../components/admin/AdminReportsTab';
-import { AdminNotificationsTab } from '../components/admin/AdminNotificationsTab';
 import { AdminListingsTab } from '../components/admin/AdminListingsTab';
-import { AdminUsersTab } from '../components/admin/AdminUsersTab';
+import { AdminUsersPage } from '../components/admin/AdminUsersPage';
 import { AdminDeliveriesTab } from '../components/admin/AdminDeliveriesTab';
+import { AdminDisputesTab } from '../components/admin/AdminDisputesTab';
 import { AdminPayoutsTab } from '../components/admin/AdminPayoutsTab';
-import { AdminSettingsTab } from '../components/admin/AdminSettingsTab';
 import { AdminFeedbacksTab } from '../components/admin/AdminFeedbacksTab';
 import { AdminFeaturesTab } from '../components/admin/AdminFeaturesTab';
 import { AdminAmbassadorsTab } from '../components/admin/AdminAmbassadorsTab';
+import { AdminNotificationsTab } from '../components/admin/AdminNotificationsTab';
+import { AdminMonetisationSettings } from '../components/admin/config/AdminMonetisationSettings';
+import { AdminPaymentSettings } from '../components/admin/config/AdminPaymentSettings';
+import { AdminMaintenanceSettings } from '../components/admin/config/AdminMaintenanceSettings';
 
-const TABS = [
-  { key: 'kpis', label: 'KPIs', icon: BarChart3, paths: ['/admin', '/admin/kpis'] },
-  { key: 'ambassadeurs', label: 'Ambassadeurs', icon: Award, paths: ['/admin/ambassadeurs'] },
-  { key: 'feedbacks', label: 'Feedbacks & Avis', icon: MessageSquare, paths: ['/admin/feedbacks'] },
-  { key: 'features', label: 'Idées Features', icon: Lightbulb, paths: ['/admin/features'] },
-  { key: 'reports', label: 'Signalements', icon: Flag, paths: ['/admin/reports'] },
-  { key: 'livraisons', label: 'Livraisons & Litiges', icon: Truck, paths: ['/admin/livraisons', '/admin/litiges'] },
-  { key: 'payouts', label: 'Versements & Règlements', icon: Banknote, paths: ['/admin/payouts', '/admin/versements'] },
-  { key: 'settings', label: 'Configuration & Urgences', icon: Sliders, paths: ['/admin/settings'] },
-  { key: 'notifications', label: 'Notifications', icon: Bell, paths: ['/admin/notifications'] },
-  { key: 'annonces', label: 'Annonces', icon: FileText, paths: ['/admin/listings'] },
-  { key: 'utilisateurs', label: 'Utilisateurs', icon: Users, paths: ['/admin/users'] },
+interface AdminPage {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  /** Premier chemin = chemin canonique ; les suivants restent acceptés. */
+  paths: string[];
+  /** Réservé aux rôles admin et superadmin (pas aux modérateurs). */
+  adminOnly?: boolean;
+  render: () => React.ReactNode;
+}
+
+/**
+ * Administration : pages rangées par groupe, chaque fonction à un seul endroit.
+ *
+ * Avant : onze onglets à plat, avec des doublons (litiges tranchés dans
+ * Livraisons ET Versements, versement livreur déclenché à deux endroits,
+ * resynchronisation des versements dans la Configuration ET dans Versements)
+ * et une page « Configuration & Urgences » qui mélangeait monétisation,
+ * maintenance, paiements et bannissements d'IP.
+ */
+const GROUPS: { label: string; pages: AdminPage[] }[] = [
+  {
+    label: 'Pilotage',
+    pages: [
+      { key: 'kpis', label: 'Tableau de bord', icon: LayoutDashboard, paths: ['/admin', '/admin/kpis'], adminOnly: true, render: () => <AdminKpisTab /> },
+    ],
+  },
+  {
+    label: 'Modération',
+    pages: [
+      { key: 'reports', label: 'Signalements', icon: Flag, paths: ['/admin/reports'], render: () => <AdminReportsTab /> },
+      { key: 'annonces', label: 'Annonces', icon: FileText, paths: ['/admin/listings'], render: () => <AdminListingsTab /> },
+      { key: 'utilisateurs', label: 'Utilisateurs', icon: Users, paths: ['/admin/users'], adminOnly: true, render: () => <AdminUsersPage /> },
+    ],
+  },
+  {
+    label: 'Opérations',
+    pages: [
+      { key: 'livraisons', label: 'Livraisons', icon: Truck, paths: ['/admin/livraisons'], render: () => <AdminDeliveriesTab /> },
+      { key: 'litiges', label: 'Litiges', icon: ShieldAlert, paths: ['/admin/litiges'], render: () => <AdminDisputesTab /> },
+      { key: 'versements', label: 'Versements', icon: Banknote, paths: ['/admin/versements', '/admin/payouts'], adminOnly: true, render: () => <AdminPayoutsTab /> },
+    ],
+  },
+  {
+    label: 'Communauté',
+    pages: [
+      { key: 'feedbacks', label: 'Avis', icon: MessageSquare, paths: ['/admin/feedbacks'], render: () => <AdminFeedbacksTab /> },
+      { key: 'features', label: 'Idées', icon: Lightbulb, paths: ['/admin/features'], render: () => <AdminFeaturesTab /> },
+      { key: 'ambassadeurs', label: 'Ambassadeurs', icon: Award, paths: ['/admin/ambassadeurs'], adminOnly: true, render: () => <AdminAmbassadorsTab /> },
+    ],
+  },
+  {
+    label: 'Communication',
+    pages: [
+      { key: 'notifications', label: 'Notifications', icon: Bell, paths: ['/admin/notifications'], render: () => <AdminNotificationsTab /> },
+    ],
+  },
+  {
+    label: 'Réglages',
+    pages: [
+      { key: 'monetisation', label: 'Monétisation', icon: Rocket, paths: ['/admin/monetisation', '/admin/settings'], adminOnly: true, render: () => <AdminMonetisationSettings /> },
+      { key: 'paiements', label: 'Paiements', icon: CreditCard, paths: ['/admin/paiements'], adminOnly: true, render: () => <AdminPaymentSettings /> },
+      { key: 'maintenance', label: 'Maintenance', icon: Wrench, paths: ['/admin/maintenance'], adminOnly: true, render: () => <AdminMaintenanceSettings /> },
+    ],
+  },
 ];
 
 export default function AdminDashboardPage() {
@@ -38,142 +110,96 @@ export default function AdminDashboardPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, userProfile, isAdmin } = useSupabase();
-  const { byTab, total: totalAttente } = useAdminPendingCounts(Boolean(isAdmin));
+  const { byTab } = useAdminPendingCounts(Boolean(isAdmin));
 
-  const role =
-    userProfile?.role?.toLowerCase() ||
-    (user?.user_metadata as any)?.role?.toLowerCase() ||
-    (user?.app_metadata as any)?.role?.toLowerCase() ||
-    'user';
-  const visibleTabs = TABS.filter((tab) => {
-    if (tab.key === 'kpis' || tab.key === 'utilisateurs' || tab.key === 'settings' || tab.key === 'ambassadeurs' || tab.key === 'payouts') {
-      return ['superadmin', 'admin'].includes(role);
-    }
-    return true;
-  });
+  const role = String(userProfile?.role || '').toLowerCase();
+  const isFullAdmin = role === 'admin' || role === 'superadmin';
 
-  const activeTab = visibleTabs.find((t) => t.paths.includes(location.pathname))?.key || visibleTabs[0]?.key || 'reports';
-
-  const switchTab = (tabKey: string) => {
-    if (tabKey === 'kpis') navigate('/admin/kpis');
-    else if (tabKey === 'ambassadeurs') navigate('/admin/ambassadeurs');
-    else if (tabKey === 'feedbacks') navigate('/admin/feedbacks');
-    else if (tabKey === 'features') navigate('/admin/features');
-    else if (tabKey === 'reports') navigate('/admin/reports');
-    else if (tabKey === 'livraisons') navigate('/admin/livraisons');
-    else if (tabKey === 'payouts') navigate('/admin/payouts');
-    else if (tabKey === 'settings') navigate('/admin/settings');
-    else if (tabKey === 'notifications') navigate('/admin/notifications');
-    else if (tabKey === 'annonces') navigate('/admin/listings');
-    else if (tabKey === 'utilisateurs') navigate('/admin/users');
-    else navigate(`/admin`, { state: { activeTab: tabKey } });
-  };
+  const groups = GROUPS.map((g) => ({
+    ...g,
+    pages: g.pages.filter((p) => !p.adminOnly || isFullAdmin),
+  })).filter((g) => g.pages.length > 0);
+  const pages = groups.flatMap((g) => g.pages);
 
   if (!user || !isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="flex min-h-screen items-center justify-center p-4">
         <ErrorState message="Accès non autorisé" />
       </div>
     );
   }
 
-  // Handle local state override for tabs without specific paths
-  let currentTab = location.state?.activeTab || activeTab;
-  if (!visibleTabs.some((t) => t.key === currentTab)) {
-    currentTab = visibleTabs[0]?.key || 'reports';
-  }
+  const current = pages.find((p) => p.paths.includes(location.pathname)) || pages[0];
+  const go = (page: AdminPage) => navigate(page.paths[0]);
 
   return (
-    <div className="pb-20 min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-amber-600 px-4 py-5 text-white">
-        <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/10" />
-        <div className="relative flex items-center gap-3">
-        <div className="w-10 h-10 flex items-center justify-center bg-white shadow-sm rounded-2xl p-1.5">
-          <img src="/logo.png" alt="DaloaMarket" className="w-full h-full object-contain" />
-        </div>
-        <div>
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-orange-100">Espace sécurisé</p>
-          <h1 className="text-lg font-extrabold tracking-tight leading-tight">Administration</h1>
-          <p className="text-xs text-orange-100">
-            {totalAttente > 0
-              ? `${totalAttente} élément${totalAttente > 1 ? 's' : ''} en attente de traitement`
-              : 'Rien en attente. Modération, paiements et opérations.'}
-          </p>
-        </div>
-        </div>
+    <div className="min-h-screen bg-gray-50 pb-20">
+      {/* Navigation mobile : un sélecteur groupé */}
+      <div className="sticky top-0 z-20 border-b border-gray-200 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
+        <label className="sr-only" htmlFor="admin-page">
+          Page d’administration
+        </label>
+        <select
+          id="admin-page"
+          value={current?.key}
+          onChange={(e) => {
+            const page = pages.find((p) => p.key === e.target.value);
+            if (page) go(page);
+          }}
+          className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-medium text-gray-900 outline-none"
+        >
+          {groups.map((g) => (
+            <optgroup key={g.label} label={g.label}>
+              {g.pages.map((p) => {
+                const n = byTab[p.key] || 0;
+                return (
+                  <option key={p.key} value={p.key}>
+                    {n > 0 ? `${p.label} (${n})` : p.label}
+                  </option>
+                );
+              })}
+            </optgroup>
+          ))}
+        </select>
       </div>
 
-      {/* Mobile Tab Bar */}
-      <div className="lg:hidden sticky top-0 z-20 bg-gray-50/95 px-4 py-3 backdrop-blur-md">
-        <div className="rounded-2xl border border-gray-100 bg-white p-1.5 shadow-sm">
-          <label className="sr-only" htmlFor="admin-module">Module d'administration</label>
-          <select
-            id="admin-module"
-            value={currentTab}
-            onChange={(event) => switchTab(event.target.value)}
-            className="h-11 w-full appearance-none rounded-xl bg-gray-50 px-3 text-sm font-extrabold text-gray-900 outline-none"
-          >
-            {visibleTabs.map((tab) => {
-              const n = byTab[tab.key] || 0;
-              return (
-                <option key={tab.key} value={tab.key}>
-                  {n > 0 ? `${tab.label} (${n})` : tab.label}
-                </option>
-              );
-            })}
-          </select>
-        </div>
-      </div>
-
-      {/* Desktop Admin Layout: Sidebar + Main Area */}
-      <div className="max-w-7xl mx-auto px-4 lg:px-6 mt-6 lg:flex lg:gap-8 lg:items-start">
-        {/* Desktop Sidebar */}
-        <div className="hidden lg:flex lg:flex-col lg:w-64 lg:flex-shrink-0 bg-white rounded-2xl p-3 border border-gray-100 shadow-sm sticky top-20 gap-1">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-3 py-2">Module Admin</p>
-          {visibleTabs.map((tab) => {
-            const isActive = currentTab === tab.key;
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => switchTab(tab.key)}
-                className={cn(
-                  'flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors text-left',
-                  isActive
-                    ? 'bg-[var(--color-primary-50)] text-[var(--color-primary)] font-bold'
-                    : 'text-gray-600 hover:bg-gray-50'
-                )}
-              >
-                <Icon size={18} className={isActive ? 'text-[var(--color-primary)]' : 'text-gray-400'} />
-                <span className="flex-1">{tab.label}</span>
-                {(byTab[tab.key] || 0) > 0 && (
-                  <span
-                    className="min-w-[20px] rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white"
-                    aria-label={`${byTab[tab.key]} en attente`}
+      <div className="mx-auto mt-6 max-w-7xl px-4 lg:flex lg:items-start lg:gap-8 lg:px-6">
+        {/* Navigation bureau : groupes */}
+        <nav className="sticky top-20 hidden w-60 shrink-0 space-y-5 rounded-2xl border border-gray-200 bg-white p-3 lg:block">
+          <p className="px-2 pt-1 text-sm font-semibold text-gray-900">Administration</p>
+          {groups.map((g) => (
+            <div key={g.label}>
+              <p className="px-2 pb-1 text-xs font-medium text-gray-400">{g.label}</p>
+              {g.pages.map((p) => {
+                const active = current?.key === p.key;
+                const Icon = p.icon;
+                const n = byTab[p.key] || 0;
+                return (
+                  <button
+                    key={p.key}
+                    onClick={() => go(p)}
+                    className={cn(
+                      'flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm transition-colors',
+                      active
+                        ? 'bg-[var(--color-primary-50)] font-medium text-[var(--color-primary-dark)]'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    )}
                   >
-                    {byTab[tab.key]}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+                    <Icon size={16} className={active ? 'text-[var(--color-primary)]' : 'text-gray-400'} />
+                    <span className="flex-1">{p.label}</span>
+                    {n > 0 && (
+                      <span className="rounded-full bg-red-500 px-1.5 text-xs font-medium tabular-nums text-white" aria-label={`${n} en attente`}>
+                        {n}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
 
-        {/* Content Area */}
-        <div className="flex-1 min-w-0">
-          {currentTab === 'kpis' && <AdminKpisTab />}
-          {currentTab === 'ambassadeurs' && <AdminAmbassadorsTab />}
-          {currentTab === 'feedbacks' && <AdminFeedbacksTab />}
-          {currentTab === 'features' && <AdminFeaturesTab />}
-          {currentTab === 'reports' && <AdminReportsTab />}
-          {currentTab === 'livraisons' && <AdminDeliveriesTab />}
-          {currentTab === 'payouts' && <AdminPayoutsTab />}
-          {currentTab === 'settings' && <AdminSettingsTab />}
-          {currentTab === 'notifications' && <AdminNotificationsTab />}
-          {currentTab === 'annonces' && <AdminListingsTab />}
-          {currentTab === 'utilisateurs' && <AdminUsersTab />}
-        </div>
+        <main className="min-w-0 flex-1">{current?.render()}</main>
       </div>
     </div>
   );
