@@ -40,7 +40,13 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({ item, photoUrl }) =>
   const payoutPaid = payout?.status === 'paid' || payout?.status === 'completed';
   const payoutPending = payout?.status === 'pending' || payout?.status === 'processing';
   const payoutFailed = payout?.status === 'failed';
-  const driverToPay = withDriver && item.status === 'delivered' && driverNetFee > 0 && !payoutPaid;
+  // Paiement à la livraison : aucun séquestre, le livreur encaisse sa course
+  // en espèces à la remise ; aucun virement n'est attendu.
+  const paidInCash = item.order?.payment_method === 'cod' && !payout;
+  const driverToPay = withDriver && item.status === 'delivered' && driverNetFee > 0 && !payoutPaid && !paidInCash;
+  // Course annulée sans versement : rien n'est dû au livreur (s'il a été
+  // dédommagé lors d'un litige, le versement existe et s'affiche normalement).
+  const cancelledUnpaid = item.status === 'cancelled' && !payout;
 
   const from = item.pickup_location || 'Vendeur';
   const to = withDriver ? item.dropoff_location || 'Adresse de livraison' : 'Retrait en boutique';
@@ -61,7 +67,14 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({ item, photoUrl }) =>
           {from} → {to}
         </span>
         {withDriver && (
-          <span className="hidden shrink-0 text-sm tabular-nums text-gray-700 sm:inline">{formatPrice(deliveryFee)}</span>
+          <span
+            className={cn(
+              'hidden shrink-0 text-sm tabular-nums sm:inline',
+              cancelledUnpaid ? 'text-gray-400 line-through' : 'text-gray-700'
+            )}
+          >
+            {formatPrice(deliveryFee)}
+          </span>
         )}
         {(driverToPay || payoutFailed) && <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" title="Livreur à régler" />}
         <span className="hidden w-24 shrink-0 text-right text-xs text-gray-500 md:inline">{formatDate(item.created_at)}</span>
@@ -85,8 +98,14 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({ item, photoUrl }) =>
               <>
                 <dt className="text-gray-500">Course</dt>
                 <dd className="text-gray-900">
-                  {formatPrice(deliveryFee)} · livreur {formatPrice(driverNetFee)} · commission{' '}
-                  {formatPrice(deliveryFee - driverNetFee)}
+                  {cancelledUnpaid ? (
+                    <>{formatPrice(deliveryFee)} prévus · non dus, course annulée</>
+                  ) : (
+                    <>
+                      {formatPrice(deliveryFee)} · livreur {formatPrice(driverNetFee)} · commission{' '}
+                      {formatPrice(deliveryFee - driverNetFee)}
+                    </>
+                  )}
                 </dd>
                 <dt className="text-gray-500">Versement livreur</dt>
                 <dd>
@@ -100,6 +119,10 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({ item, photoUrl }) =>
                     <AdminBadge tone="danger">Échec</AdminBadge>
                   ) : driverToPay ? (
                     <AdminBadge tone="danger">Non créé</AdminBadge>
+                  ) : paidInCash && item.status !== 'cancelled' ? (
+                    <span className="text-gray-500">En espèces à la remise (pas de virement)</span>
+                  ) : cancelledUnpaid ? (
+                    <span className="text-gray-500">Aucun : course annulée</span>
                   ) : (
                     <span className="text-gray-500">Après la livraison</span>
                   )}

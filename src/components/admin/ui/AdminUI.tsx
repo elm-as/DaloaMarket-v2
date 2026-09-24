@@ -130,24 +130,34 @@ export const AdminToggleRow: React.FC<{
       <span className="block text-sm font-medium text-[var(--color-on-surface)]">{label}</span>
       {description && <span className="mt-0.5 block text-xs text-gray-500">{description}</span>}
     </span>
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={cn(
-        'relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors',
-        checked ? 'bg-[var(--color-primary)]' : 'bg-gray-300'
-      )}
-    >
-      <span
+    <span className="mt-0.5 flex shrink-0 items-center gap-2">
+      <span className={cn('w-16 text-right text-xs font-medium', checked ? 'text-[var(--color-primary-dark)]' : 'text-gray-400')}>
+        {checked ? 'Activé' : 'Désactivé'}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        disabled={disabled}
+        onClick={(e) => {
+          e.preventDefault();
+          onChange(!checked);
+        }}
         className={cn(
-          'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
-          checked ? 'translate-x-[22px]' : 'translate-x-0.5'
+          'relative h-6 w-11 shrink-0 rounded-full transition-colors',
+          checked ? 'bg-[var(--color-primary)]' : 'bg-gray-300'
         )}
-      />
-    </button>
+      >
+        {/* left-0 : sans lui, le rond part du centre et sort de la piste une fois décalé. */}
+        <span
+          className={cn(
+            'absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
+            checked ? 'translate-x-[22px]' : 'translate-x-0.5'
+          )}
+        />
+      </button>
+    </span>
   </label>
 );
 

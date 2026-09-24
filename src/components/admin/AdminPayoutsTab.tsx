@@ -94,9 +94,9 @@ export const AdminPayoutsTab: React.FC = () => {
           hint={`${stats.totalFailedCount} à reprendre`}
         />
         <AdminStatCard
-          label="Répartition versée"
+          label="Dont vendeurs"
           value={formatPrice(stats.sellerPaidAmount)}
-          hint={`Livreurs ${formatPrice(stats.driverPaidAmount)} · Remboursements ${formatPrice(stats.refundPaidAmount)}`}
+          hint={`+ livreurs ${formatPrice(stats.driverPaidAmount)} + remboursements acheteurs ${formatPrice(stats.refundPaidAmount)}`}
         />
       </AdminStatGrid>
 

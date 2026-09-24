@@ -181,6 +181,22 @@ export const AdminListingsTab: React.FC = () => {
     }
 
     try {
+      // Une annonce qui a des commandes ne peut pas disparaître : la base
+      // refuse (orders.listing_id est obligatoire) et les lignes de commande
+      // partiraient en cascade. Elle reste dans la corbeille, invisible du public.
+      const [{ count: orderCount }, { count: itemCount }] = await Promise.all([
+        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('listing_id', id),
+        supabase.from('order_items').select('id', { count: 'exact', head: true }).eq('listing_id', id),
+      ]);
+      const linked = Math.max(orderCount || 0, itemCount || 0);
+      if (linked > 0) {
+        toast.error(
+          `Suppression définitive impossible : ${linked} commande${linked > 1 ? 's' : ''} liée${linked > 1 ? 's' : ''} à cette annonce. Elle reste dans la corbeille, invisible du public, pour garder l’historique des commandes et des versements.`,
+          { duration: 7000 }
+        );
+        return;
+      }
+
       const { error: err } = await supabase.from('listings').delete().eq('id', id);
       if (err) throw err;
 

@@ -7,6 +7,9 @@ import { type AdminDeliveryItem, isDriverDelivery } from '../deliveries/types';
 import type { PayoutItem } from './types';
 import { AdminStatGrid, AdminStatCard } from '../ui/AdminUI';
 
+/** Paiement à la livraison : le livreur encaisse sa course en espèces, aucun virement attendu. */
+const isCash = (d: AdminDeliveryItem) => d.order?.payment_method === 'cod';
+
 interface DriverPayoutsFlowTableProps {
   deliveries: AdminDeliveryItem[];
   payouts: PayoutItem[];
@@ -45,7 +48,7 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
     }, 0);
 
   const missingPayoutsCount = deliveries.filter(
-    (d) => isDriverDelivery(d) && d.status === 'delivered' && !d.driver_payout
+    (d) => isDriverDelivery(d) && d.status === 'delivered' && !d.driver_payout && !isCash(d)
   ).length;
 
   const handleTriggerDriverPayout = async (item: AdminDeliveryItem) => {
@@ -70,7 +73,7 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
     const isPaid = p?.status === 'paid' || p?.status === 'completed';
     const isPending = p?.status === 'pending' || p?.status === 'processing';
     const isFailed = p?.status === 'failed';
-    const isMissing = d.status === 'delivered' && !p;
+    const isMissing = d.status === 'delivered' && !p && !isCash(d);
 
     if (statusFilter === 'paid' && !isPaid) return false;
     if (statusFilter === 'pending' && !isPending) return false;
@@ -178,7 +181,7 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
                   const isPaid = p?.status === 'paid' || p?.status === 'completed';
                   const isPending = p?.status === 'pending' || p?.status === 'processing';
                   const isFailed = p?.status === 'failed';
-                  const isMissing = item.status === 'delivered' && !p;
+                  const isMissing = item.status === 'delivered' && !p && !isCash(item);
                   const isProcessing = processingId === item.id;
 
                   return (
@@ -234,7 +237,9 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
                             Non généré
                           </span>
                         ) : (
-                          <span className="text-[11px] text-slate-400 italic">En cours</span>
+                          <span className="text-[11px] text-slate-400 italic">
+                            {isCash(item) && item.status === 'delivered' ? 'Espèces à la remise' : item.status === 'cancelled' ? 'Annulée, rien à verser' : 'En cours'}
+                          </span>
                         )}
                       </td>
 

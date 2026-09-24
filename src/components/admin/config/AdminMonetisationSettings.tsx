@@ -125,7 +125,7 @@ export const AdminMonetisationSettings: React.FC = () => {
       <AdminSection
         icon={Store}
         title="Services ouverts à tous les vendeurs"
-        description="Désactivés, ils deviennent des avantages du Pass Pro."
+        description="Activé : tous les vendeurs y ont accès. Désactivé : réservé aux vendeurs Pass Pro. En phase 0, tout est activé ; en phase 1, tout passe au Pro."
         bodyClassName="divide-y divide-gray-100 py-1"
       >
         <AdminToggleRow

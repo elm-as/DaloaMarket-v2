@@ -124,7 +124,7 @@ export function useAdminFinanceData() {
         const orderIds = [...new Set(((rawAssignments as any[]) || []).map((a) => a.order_id).filter(Boolean))];
         const { data: orders } = await supabase
           .from('orders')
-          .select('id, status, product_amount, delivery_fee, total_amount, delivery_mode, delivery_address, buyer_id, seller_id')
+          .select('id, status, product_amount, delivery_fee, total_amount, delivery_mode, payment_method, delivery_address, buyer_id, seller_id')
           .in('id', orderIds);
 
         const orderMap = new Map((orders || []).map((o: any) => [o.id, o]));

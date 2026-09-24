@@ -33,6 +33,7 @@ export interface AdminDeliveryItem {
     delivery_fee: number;
     total_amount: number;
     delivery_mode?: string | null;
+    payment_method?: string | null;
     delivery_address?: string | null;
     buyer_id: string;
     seller_id: string;
