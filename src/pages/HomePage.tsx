@@ -300,15 +300,15 @@ const HomePage: React.FC = () => {
     const visibleFeedIds = new Set(listings.slice(0, 8).map((l) => l.id));
 
     const personalized = userBehaviorService
-      .getPersonalizedRecommendations(listings, { limit: 4, minScore: 20 })
+      .getPersonalizedRecommendations(listings, { limit: 8, minScore: 20 })
       .filter((r) => !visibleFeedIds.has(r.item.id));
 
-    if (personalized.length >= 4) return personalized.slice(0, 4);
+    if (personalized.length >= 8) return personalized.slice(0, 8);
 
     const usedIds = new Set([...visibleFeedIds, ...personalized.map((r) => r.item.id)]);
-    const fill = getTrendingRecommendations(listings, 8).filter((r) => !usedIds.has(r.item.id));
+    const fill = getTrendingRecommendations(listings, 16).filter((r) => !usedIds.has(r.item.id));
 
-    return [...personalized, ...fill].slice(0, 4);
+    return [...personalized, ...fill].slice(0, 8);
   }, [listings, selectedCategory]);
 
   const currentCategoryObj = CATEGORIES.find((cat) => cat.id === selectedCategory);

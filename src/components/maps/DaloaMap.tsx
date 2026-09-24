@@ -25,6 +25,12 @@ interface DaloaMapProps {
   onRouteReady?: (info: RouteInfo) => void;
   className?: string;
   height?: string;
+  /**
+   * `compact` : la carte seule, pour un bandeau (suivi de commande). Sans
+   * en-tête, sans sélecteur de fond de carte, avec une simple pastille
+   * distance · durée.
+   */
+  variant?: 'full' | 'compact';
 }
 
 export default function DaloaMap({
@@ -34,6 +40,7 @@ export default function DaloaMap({
   onRouteReady,
   className = '',
   height = '420px',
+  variant = 'full',
 }: DaloaMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -204,6 +211,19 @@ export default function DaloaMap({
       courierMarkerRef.current = marker;
     }
   }, [deliveryPersonPosition]);
+
+  if (variant === 'compact') {
+    return (
+      <div className={`relative ${className}`}>
+        <div ref={containerRef} style={{ width: '100%', height }} className="overflow-hidden bg-gray-100" />
+        {routeInfo && (
+          <span className="absolute bottom-3 left-3 z-[400] rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold tabular-nums text-gray-800 shadow-sm backdrop-blur">
+            {routeInfo.distanceKm} km · {routeInfo.timeMinutes} min
+          </span>
+        )}
+      </div>
+    );
+  }
 
   return (
     <section className={`overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-xl shadow-gray-200/50 ${className}`}>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, MapPin, Target, ShoppingBag, Compass } from 'lucide-react';
+import { Sparkles, MapPin } from 'lucide-react';
 import { formatPrice, getListingPath, getOptimizedImageUrl } from '../../lib/utils';
 import { resolveListingPhoto } from '../../lib/availability';
 import FavoriteButton from '../listings/FavoriteButton';
@@ -14,118 +14,82 @@ interface HomeForYouSectionProps {
   }>;
 }
 
-export const HomeForYouSection: React.FC<HomeForYouSectionProps> = ({ recommendations }) => {
-  const items = (recommendations || []).slice(0, 6);
+/** Raisons posées par la tendance : sans elles, la sélection est vraiment personnelle. */
+const TRENDING_REASONS = new Set(['Populaire à Daloa', 'En vedette']);
 
+/**
+ * « Pour vous » : un carrousel horizontal de cartes photo (2 cartes et demie
+ * visibles sur téléphone, défilement aimanté), en grille sur grand écran.
+ */
+export const HomeForYouSection: React.FC<HomeForYouSectionProps> = ({ recommendations }) => {
+  const items = (recommendations || []).slice(0, 8);
   if (items.length === 0) return null;
 
+  const personal = items.some((r) => r.matchReason && !TRENDING_REASONS.has(r.matchReason));
+
   return (
-    <section className="pt-2 pb-4">
-      <div className="px-4 lg:px-8 max-w-5xl mx-auto">
-        {/* Conteneur Bento Curation Personnalisée */}
-        <div className="rounded-3xl border border-emerald-100 bg-linear-to-br from-emerald-50/40 via-white to-slate-50/60 p-4 sm:p-5 shadow-2xs">
-          {/* En-tête Curation & Match Personnalisé */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-600">
-                <Sparkles size={17} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base sm:text-lg font-black text-gray-900 tracking-tight">
-                    Pour vous
-                  </h2>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                    <Target size={10} />
-                    Sur-mesure
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 font-medium">
-                  Sélectionné d’après vos favoris et vos consultations
-                </p>
-              </div>
-            </div>
+    <section className="pt-2 pb-5" aria-labelledby="for-you-title">
+      <div className="max-w-5xl mx-auto lg:px-8">
+        <div className="flex items-center gap-2.5 px-4 lg:px-1 mb-3">
+          <div className="w-8 h-8 rounded-xl bg-[var(--color-primary-50)] flex items-center justify-center text-[var(--color-primary)]">
+            <Sparkles size={16} />
           </div>
-
-          {/* Grille de Fiches Horizontales / Format Paysage (Split Image / Infos) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {items.map(({ item, matchReason, similarityPercent }) => {
-              const photoUrl = resolveListingPhoto(item);
-              const optimizedPhoto = getOptimizedImageUrl(photoUrl, 200, 200);
-
-              const affinityLabel = similarityPercent && similarityPercent > 70
-                ? `${similarityPercent}% affinité`
-                : (matchReason || 'Suggéré pour vous');
-
-              return (
-                <div
-                  key={`foryou-${item.id}`}
-                  className="bg-white rounded-2xl border border-gray-200/80 p-2.5 flex gap-3 shadow-2xs hover:shadow-sm hover:border-emerald-200 transition-all group relative overflow-hidden"
-                >
-                  {/* Photo carrée gauche */}
-                  <div className="relative w-20 h-20 sm:w-22 sm:h-22 shrink-0 rounded-xl overflow-hidden bg-gray-100">
-                    <Link to={getListingPath(item.id, item.title)} className="block w-full h-full">
-                      {photoUrl ? (
-                        <img
-                          src={optimizedPhoto}
-                          alt={item.title}
-                          loading="lazy"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
-                          <ShoppingBag size={20} />
-                        </div>
-                      )}
-                    </Link>
-
-                    {/* Favori discret */}
-                    <div className="absolute top-1.5 left-1.5 scale-90">
-                      <FavoriteButton listingId={item.id} />
-                    </div>
-                  </div>
-
-                  {/* Détails fiche affinité à droite */}
-                  <div className="flex-1 flex flex-col justify-between py-0.5 min-w-0">
-                    <div>
-                      {/* Tag d'affinité vert émeraude */}
-                      <div className="inline-flex items-center gap-1 bg-emerald-50 px-1.5 py-0.5 rounded text-[9.5px] font-bold text-emerald-800 max-w-full truncate mb-1">
-                        <Compass size={10} className="shrink-0 text-emerald-600" />
-                        <span className="truncate">{affinityLabel}</span>
-                      </div>
-
-                      <Link
-                        to={getListingPath(item.id, item.title)}
-                        className="block text-xs font-semibold text-gray-800 hover:text-emerald-700 line-clamp-2 leading-snug"
-                      >
-                        {item.title}
-                      </Link>
-                    </div>
-
-                    <div className="flex items-end justify-between gap-1 pt-1 border-t border-gray-100/80 mt-1">
-                      <div>
-                        <span className="font-mono tabular-nums font-black text-xs text-emerald-700">
-                          {formatPrice(item.price)}
-                        </span>
-                        <div className="flex items-center gap-1 text-[10px] text-gray-400">
-                          <MapPin size={9} className="shrink-0" />
-                          <span className="truncate max-w-[80px]">{item.district || 'Daloa'}</span>
-                        </div>
-                      </div>
-
-                      <Link
-                        to={getListingPath(item.id, item.title)}
-                        className="text-[10px] font-bold text-emerald-700 hover:underline shrink-0"
-                      >
-                        Voir
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="min-w-0">
+            <h2 id="for-you-title" className="text-base font-bold text-gray-900 leading-tight">
+              Pour vous
+            </h2>
+            <p className="text-xs text-gray-500">
+              {personal ? 'D’après les articles que vous regardez' : 'Les articles les plus demandés à Daloa'}
+            </p>
           </div>
         </div>
+
+        <ul
+          className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-px-4 px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-1"
+        >
+          {items.map(({ item, matchReason, similarityPercent }) => {
+            const photoUrl = resolveListingPhoto(item.photos);
+            const path = getListingPath(item.id, item.title);
+            const reason =
+              similarityPercent && similarityPercent > 70 ? `${similarityPercent} % pour vous` : matchReason || 'Pour vous';
+
+            return (
+              <li
+                key={`foryou-${item.id}`}
+                className="group relative w-[40%] min-w-[148px] max-w-[190px] shrink-0 snap-start lg:w-auto lg:max-w-none"
+              >
+                <Link to={path} className="block">
+                  <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-gray-100">
+                    <img
+                      src={getOptimizedImageUrl(photoUrl, 360, 450)}
+                      alt={item.title}
+                      loading="lazy"
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/55 to-transparent" />
+                    <span className="absolute bottom-2 left-2 right-2 truncate text-[11px] font-medium text-white">
+                      {reason}
+                    </span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-[13px] font-medium leading-snug text-gray-800 group-hover:text-gray-950">
+                    {item.title}
+                  </p>
+                  <p className="mt-0.5 text-sm font-bold tabular-nums text-[var(--color-primary-dark)]">
+                    {formatPrice(item.price)}
+                  </p>
+                  <p className="mt-0.5 flex items-center gap-1 text-[11px] text-gray-400">
+                    <MapPin size={10} className="shrink-0" />
+                    <span className="truncate">{item.district || 'Daloa'}</span>
+                  </p>
+                </Link>
+                {/* Hors du lien : cliquer le cœur ne doit pas ouvrir l'annonce. */}
+                <div className="absolute right-1.5 top-1.5 rounded-full bg-black/25 backdrop-blur-sm">
+                  <FavoriteButton listingId={item.id} />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </section>
   );
