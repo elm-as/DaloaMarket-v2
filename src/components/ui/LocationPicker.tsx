@@ -29,6 +29,13 @@ interface LocationPickerProps {
   zoom?: number;
   className?: string;
   userType?: 'seller' | 'buyer';
+  /**
+   * Point de départ à afficher (boutique du vendeur). Renseigné uniquement au
+   * checkout, côté acheteur : c'est lui qui a besoin de voir d'où part la
+   * course pour comprendre la distance et le tarif. Le vendeur qui place sa
+   * propre boutique n'a rien à comparer, et le livreur a sa carte dédiée.
+   */
+  sellerCoords?: { latitude: number; longitude: number } | null;
 }
 
 const LocationPicker: React.FC<LocationPickerProps> = ({
@@ -40,6 +47,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   zoom = 14,
   className,
   userType = 'buyer',
+  sellerCoords = null,
 }) => {
   const { userProfile, isAdmin } = useSupabase();
   const isSuperOrAdmin = isAdmin || userProfile?.role === 'superadmin' || userProfile?.role === 'admin';
@@ -48,6 +56,8 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const sellerMarkerRef = useRef<L.CircleMarker | null>(null);
+  const routeLineRef = useRef<L.Polyline | null>(null);
   
   const [lat, setLat] = useState(initialLat ?? DALOA_CENTER_COORDS.lat);
   const [lng, setLng] = useState(initialLng ?? DALOA_CENTER_COORDS.lng);
@@ -154,9 +164,48 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
         delete (containerRef.current as any)._leaflet_id;
       }
       markerRef.current = null;
+      sellerMarkerRef.current = null;
+      routeLineRef.current = null;
       tileLayerRef.current = null;
     };
   }, []);
+
+  /* Repère de départ : pastille verte sur la boutique et trait pointillé
+     jusqu'au repère de livraison, comme sur la carte mobile. */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+
+    if (sellerMarkerRef.current) {
+      sellerMarkerRef.current.remove();
+      sellerMarkerRef.current = null;
+    }
+    if (routeLineRef.current) {
+      routeLineRef.current.remove();
+      routeLineRef.current = null;
+    }
+
+    if (!sellerCoords) return;
+
+    const sellerPoint: L.LatLngExpression = [sellerCoords.latitude, sellerCoords.longitude];
+
+    sellerMarkerRef.current = L.circleMarker(sellerPoint, {
+      radius: 8,
+      fillColor: '#10B981',
+      color: '#ffffff',
+      weight: 2,
+      fillOpacity: 0.95,
+    })
+      .addTo(map)
+      .bindPopup('<b>Boutique du vendeur</b>');
+
+    routeLineRef.current = L.polyline([sellerPoint, [lat, lng]], {
+      color: '#EA580C',
+      weight: 3,
+      opacity: 0.7,
+      dashArray: '6 6',
+    }).addTo(map);
+  }, [sellerCoords?.latitude, sellerCoords?.longitude, lat, lng, mapReady]);
 
   // Bascule Mode Plan (Mapbox / CartoDB HD) / Satellite HD
   const toggleMapMode = () => {

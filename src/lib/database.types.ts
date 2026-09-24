@@ -813,6 +813,30 @@ export interface Database {
         Args: { p_order_id: string }
         Returns: Json
       }
+      create_cod_order: {
+        Args: {
+          p_items: Json
+          p_delivery_mode: string
+          p_payment_method: string
+          p_delivery_address: string
+          p_delivery_lat?: number | null
+          p_delivery_lng?: number | null
+          p_delivery_district?: string | null
+          p_road_km?: Json
+        }
+        Returns: Json
+      }
+      fn_delivery_quote: {
+        Args: {
+          p_seller_id: string
+          p_buyer_lat: number | null
+          p_buyer_lng: number | null
+          p_buyer_district: string | null
+          p_road_km?: number | null
+          p_is_pickup?: boolean
+        }
+        Returns: { distance_km: number; delivery_fee: number }[]
+      }
       report_delivery_dispute: {
         Args: {
           p_assignment_id: string

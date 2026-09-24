@@ -31,13 +31,18 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { LocationPicker } from "../components/ui/LocationPicker";
 import {
   calculateOrderPricing,
-  haversineDistance,
   BUYER_FEE_RATE,
   DELIVERY_MIN,
   DELIVERY_RATE_PER_KM,
   DELIVERY_FREE_KM,
 } from "../lib/pricing";
 import type { LatLng } from "../lib/pricing";
+import {
+  resolveSellerPoint,
+  resolveBuyerPoint,
+  resolveBillableDistanceKm,
+} from "../lib/daloaGeo";
+import { calculateDeliveryFee } from "../lib/delivery";
 import { affiliatedDeliverersService } from "../services/affiliatedDeliverersService";
 import type { ListingVariant } from "../types/listing";
 
@@ -52,6 +57,7 @@ interface ListingData {
   original_price: number | null;
   seller_shop_latitude: number | null;
   seller_shop_longitude: number | null;
+  seller_district: string | null;
   is_seller_pro?: boolean;
   variants?: ListingVariant[];
 }
@@ -79,7 +85,12 @@ const CheckoutPage: React.FC = () => {
   const [deliveryLongitude, setDeliveryLongitude] = useState<number>(-6.4502);
   const [paying, setPaying] = useState(false);
   const [distanceKm, setDistanceKm] = useState(0);
-  const [cartSellers, setCartSellers] = useState<Map<string, { lat: number; lng: number; isPro?: boolean }>>(new Map());
+  const [cartSellers, setCartSellers] = useState<Map<string, { sellerId: string; lat: number; lng: number; isPro?: boolean }>>(new Map());
+  /* Frais de livraison par VENDEUR : le serveur en facture un par vendeur
+     (payments.js), le checkout n'en affichait qu'un seul, calculé sur la
+     distance maximale. Un panier chez deux vendeurs affichait 500 et en
+     facturait 1 000. */
+  const [deliveryFeesBySeller, setDeliveryFeesBySeller] = useState<Map<string, number>>(new Map());
   const [isCartSelfCheckout, setIsCartSelfCheckout] = useState(false);
   const [sellerSettings, setSellerSettings] = useState<{ home_delivery_enabled: boolean; cash_on_delivery_enabled: boolean }>({
     home_delivery_enabled: true,
@@ -127,12 +138,17 @@ const CheckoutPage: React.FC = () => {
       ? { latitude: deliveryLatitude, longitude: deliveryLongitude }
       : null;
 
-  const sellerCoords: LatLng | null =
-    listing?.seller_shop_latitude != null && listing?.seller_shop_longitude != null
-      ? { latitude: listing.seller_shop_latitude, longitude: listing.seller_shop_longitude }
-      : listing?.latitude != null && listing?.longitude != null
-        ? { latitude: listing.latitude, longitude: listing.longitude }
-        : null;
+  /* L'ancien « repli » sur listing.latitude/longitude n'en était pas un : ces
+     champs reçoivent déjà shop_latitude/shop_longitude. Sans GPS boutique,
+     sellerCoords valait null, la distance tombait à 0 km et la livraison
+     s'affichait à 500 FCFA pendant que le serveur facturait la vraie distance. */
+  const sellerCoords: LatLng | null = listing
+    ? resolveSellerPoint({
+        shop_latitude: listing.seller_shop_latitude,
+        shop_longitude: listing.seller_shop_longitude,
+        district: listing.seller_district,
+      })
+    : null;
 
   useEffect(() => {
     if (isCartMode) {
@@ -146,22 +162,30 @@ const CheckoutPage: React.FC = () => {
 
         const { data, error } = await supabase
           .from("listings")
-          .select("id, user_id, stock, status, title, variants, seller:users!listings_user_id_fkey(shop_latitude, shop_longitude, pro_until)")
+          .select("id, user_id, stock, status, title, variants, seller:users!listings_user_id_fkey(shop_latitude, shop_longitude, district, pro_until)")
           .in("id", sellerIds);
 
         if (!error && data) {
-          const sellerMap = new Map<string, { lat: number; lng: number; isPro?: boolean }>();
+          const sellerMap = new Map<string, { sellerId: string; lat: number; lng: number; isPro?: boolean }>();
           let hasSelfItem = false;
           let hasInvalidItem = false;
 
           (data as any[]).forEach(item => {
             if (item.user_id === user?.id) hasSelfItem = true;
-            const lat = item.seller?.shop_latitude;
-            const lng = item.seller?.shop_longitude;
             const isPro = item.seller?.pro_until ? new Date(item.seller.pro_until) > new Date() : false;
-            if (lat != null && lng != null) {
-              sellerMap.set(item.id, { lat, lng, isPro });
-            }
+            // Un vendeur sans GPS n'était tout simplement pas inscrit ici, donc
+            // ignoré dans le calcul de distance. Il a désormais un point de repli.
+            const point = resolveSellerPoint({
+              shop_latitude: item.seller?.shop_latitude,
+              shop_longitude: item.seller?.shop_longitude,
+              district: item.seller?.district,
+            });
+            sellerMap.set(item.id, {
+              sellerId: item.user_id,
+              lat: point.latitude,
+              lng: point.longitude,
+              isPro,
+            });
           });
 
           // Validate stock and status for each cart item
@@ -234,7 +258,7 @@ const CheckoutPage: React.FC = () => {
 
       const { data, error } = await supabase
         .from("listings")
-        .select("id, title, price, photos, user_id, original_price, stock, status, variants, seller:users!listings_user_id_fkey(shop_latitude, shop_longitude, pro_until)")
+        .select("id, title, price, photos, user_id, original_price, stock, status, variants, seller:users!listings_user_id_fkey(shop_latitude, shop_longitude, district, pro_until)")
         .eq("id", listingId)
         .single();
 
@@ -275,6 +299,7 @@ const CheckoutPage: React.FC = () => {
         original_price: listingData.original_price,
         seller_shop_latitude: listingData.seller?.shop_latitude ?? null,
         seller_shop_longitude: listingData.seller?.shop_longitude ?? null,
+        seller_district: listingData.seller?.district ?? null,
         is_seller_pro: isSellerPro,
         variants: listingVariants,
       };
@@ -299,34 +324,74 @@ const CheckoutPage: React.FC = () => {
     fetchListing();
   }, [listingId, isCartMode, cartItems, user?.id]);
 
+  /* Distance routière réelle (Mapbox, repli OSRM puis vol d'oiseau × 1,3), et
+     un frais par vendeur — c'est ce que facture le serveur. L'ancien calcul
+     retenait la distance MAXIMALE du panier pour un frais unique. */
   useEffect(() => {
-    if (!buyerCoords) {
-      setDistanceKm(0);
-      return;
-    }
+    let active = true;
 
-    if (isCartMode) {
-      if (cartSellers.size === 0) {
-        setDistanceKm(0);
+    const compute = async () => {
+      const buyerPoint = resolveBuyerPoint(buyerCoords, null);
+
+      if (isCartMode) {
+        const bySeller = new Map<string, { latitude: number; longitude: number }>();
+        cartSellers.forEach((seller) => {
+          if (!bySeller.has(seller.sellerId)) {
+            bySeller.set(seller.sellerId, { latitude: seller.lat, longitude: seller.lng });
+          }
+        });
+
+        if (bySeller.size === 0) {
+          if (active) {
+            setDistanceKm(0);
+            setDeliveryFeesBySeller(new Map());
+          }
+          return;
+        }
+
+        const fees = new Map<string, number>();
+        let maxKm = 0;
+        for (const [sellerId, point] of bySeller.entries()) {
+          const km = await resolveBillableDistanceKm(point, buyerPoint);
+          fees.set(sellerId, calculateDeliveryFee(km));
+          if (km > maxKm) maxKm = km;
+        }
+
+        if (active) {
+          setDistanceKm(maxKm);
+          setDeliveryFeesBySeller(fees);
+        }
         return;
       }
 
-      let maxDistance = 0;
-      cartSellers.forEach(seller => {
-        const d = haversineDistance(buyerCoords, { latitude: seller.lat, longitude: seller.lng });
-        if (d > maxDistance) maxDistance = d;
-      });
-      setDistanceKm(Number(maxDistance.toFixed(1)));
-    } else {
-      if (!sellerCoords) {
-        setDistanceKm(0);
+      if (!sellerCoords || !listing) {
+        if (active) {
+          setDistanceKm(0);
+          setDeliveryFeesBySeller(new Map());
+        }
         return;
       }
 
-      const d = haversineDistance(buyerCoords, sellerCoords);
-      setDistanceKm(Number(d.toFixed(1)));
-    }
-  }, [buyerCoords?.latitude, buyerCoords?.longitude, sellerCoords?.latitude, sellerCoords?.longitude, isCartMode, cartSellers]);
+      const km = await resolveBillableDistanceKm(sellerCoords, buyerPoint);
+      if (active) {
+        setDistanceKm(km);
+        setDeliveryFeesBySeller(new Map([[listing.user_id, calculateDeliveryFee(km)]]));
+      }
+    };
+
+    compute();
+    return () => {
+      active = false;
+    };
+  }, [
+    buyerCoords?.latitude,
+    buyerCoords?.longitude,
+    sellerCoords?.latitude,
+    sellerCoords?.longitude,
+    listing?.user_id,
+    isCartMode,
+    cartSellers,
+  ]);
 
   const isSellerPro = isCartMode
     ? (cartItems.length > 0 && cartItems.every(item => cartSellers.get(item.listing_id)?.isPro === true))
@@ -361,7 +426,10 @@ const CheckoutPage: React.FC = () => {
 
   const isPickup = deliveryMode === 'pickup';
   const pricing = calculateOrderPricing(productAmount, distanceKm, isSellerPro);
-  const deliveryFee = isPickup ? 0 : pricing.delivery;
+  const sumOfSellerFees = Array.from(deliveryFeesBySeller.values()).reduce((sum, fee) => sum + fee, 0);
+  // Un frais par vendeur, comme le serveur. Tant que les distances ne sont pas
+  // encore revenues, on retombe sur la grille appliquée à la distance affichée.
+  const deliveryFee = isPickup ? 0 : sumOfSellerFees || pricing.delivery;
   const buyerFee = pricing.buyerFee;
   const deliveryAndFees = deliveryFee + buyerFee;
   const total = productAmount + deliveryAndFees;
@@ -372,36 +440,6 @@ const CheckoutPage: React.FC = () => {
         ? `Commander · ${formatPrice(total)}`
         : `Payer ${formatPrice(total)}`;
   const isSelfCheckout = isCartMode ? isCartSelfCheckout : listing?.user_id === user?.id;
-
-  const resolveOrderSelection = async (targetListingId: string, targetVariantId?: string, targetQuantity: number = 1) => {
-    const { data, error } = await supabase
-      .from('listings')
-      .select('user_id, price, stock, variants')
-      .eq('id', targetListingId)
-      .single();
-
-    if (error || !data) throw new Error("Impossible de trouver le vendeur de cet article");
-
-    const variants: ListingVariant[] = Array.isArray((data as any).variants) ? (data as any).variants : [];
-    const variant = targetVariantId ? variants.find((candidate) => candidate.id === targetVariantId) : undefined;
-    const quantity = Math.max(1, targetQuantity);
-    const availableStock = variant ? Number(variant.stock) || 0 : Number((data as any).stock) || 0;
-
-    if (variants.length > 0 && (!variant || variant.active === false)) {
-      throw new Error('La taille ou option sélectionnée n\'est plus disponible');
-    }
-    if (availableStock < quantity) {
-      throw new Error('La quantité demandée n\'est plus disponible en stock');
-    }
-
-    return {
-      sellerId: (data as any).user_id as string,
-      variantId: variant?.id || null,
-      variantLabel: variant?.label || null,
-      unitPrice: variant?.price != null ? Number(variant.price) : Number((data as any).price),
-      quantity,
-    };
-  };
 
   const handlePay = async () => {
     if (!user) return;
@@ -432,159 +470,69 @@ const CheckoutPage: React.FC = () => {
       // ─────────────────────────────────────────────────────────────
       // SCÉNARIO 4 : Retrait en boutique + Paiement au retrait (Cash at shop)
       // ─────────────────────────────────────────────────────────────
-      if (paymentMethod === 'cash_at_shop') {
-        const itemsToProcess = isCartMode
-          ? cartItems.map((ci) => ({ listingId: ci.listing_id, variantId: ci.variant_id, quantity: ci.quantity }))
-          : [{ listingId: listing!.id, variantId: requestedVariantId, quantity: 1 }];
+      if (paymentMethod === 'cash_at_shop' || paymentMethod === 'cod') {
+        // Les montants ne sont plus composés ici. `create_cod_order` relit les
+        // prix, résout les positions, calcule la distance et les frais, puis
+        // écrit une commande et une course PAR VENDEUR. Le découpage précédent
+        // créait une commande par ARTICLE en divisant un frais de livraison
+        // unique entre elles — un livreur pouvait se voir proposer 250 FCFA.
+        const items = isCartMode
+          ? cartItems.map((ci) => ({
+              listing_id: ci.listing_id,
+              variant_id: ci.variant_id || null,
+              variant_label: ci.variant_label || null,
+              quantity: ci.quantity,
+            }))
+          : [
+              {
+                listing_id: listing!.id,
+                variant_id: requestedVariantId || null,
+                variant_label: directSelectedVariant?.label || null,
+                quantity: 1,
+              },
+            ];
 
-        for (const item of itemsToProcess) {
-          const selection = await resolveOrderSelection(item.listingId, item.variantId, item.quantity);
-          const itemProductAmount = selection.unitPrice * selection.quantity;
-          const itemBuyerFee = Math.round(itemProductAmount * BUYER_FEE_RATE);
-          const itemTotal = itemProductAmount + itemBuyerFee;
+        const isShopPickup = paymentMethod === 'cash_at_shop';
+        const roadKmBySeller: Record<string, number> = {};
+        deliveryFeesBySeller.forEach((_fee, sellerId) => {
+          if (distanceKm > 0) roadKmBySeller[sellerId] = distanceKm;
+        });
 
-          const rawOrderPayload: Record<string, any> = {
-            buyer_id: user.id,
-            seller_id: selection.sellerId,
-            listing_id: item.listingId,
-            unit_price: selection.unitPrice,
-            quantity: selection.quantity,
-            product_amount: itemProductAmount,
-            delivery_fee: 0,
-            platform_commission: itemBuyerFee,
-            reserve_fee: 0,
-            total_amount: itemTotal,
-            delivery_address: "Retrait en boutique",
-            delivery_mode: "pickup_point",
-            payment_method: "cash_at_shop",
-            status: "pending",
-          };
-          if (selection.variantId) rawOrderPayload.variant_id = selection.variantId;
-          if (selection.variantLabel) rawOrderPayload.variant_label = selection.variantLabel;
+        const { data: rpcData, error: rpcError } = await supabase.rpc('create_cod_order', {
+          p_items: items,
+          p_delivery_mode: isShopPickup ? 'pickup' : 'delivery',
+          p_payment_method: isShopPickup ? 'cash_at_shop' : 'cod',
+          p_delivery_address: isShopPickup ? 'Retrait en boutique' : (deliveryAddress || 'Daloa'),
+          p_delivery_lat: isShopPickup ? null : deliveryLatitude,
+          p_delivery_lng: isShopPickup ? null : deliveryLongitude,
+          p_delivery_district: null,
+          p_road_km: isShopPickup ? {} : roadKmBySeller,
+        });
 
-          let { error: orderErr } = await supabase
-            .from("orders")
-            .insert(rawOrderPayload as any);
+        if (rpcError) throw new Error(rpcError.message || 'Erreur de création de la commande');
 
-          if (orderErr && (orderErr.code === 'PGRST204' || orderErr.message?.includes('column') || (orderErr as any).status === 400)) {
-            const fallbackPayload = { ...rawOrderPayload };
-            delete fallbackPayload.variant_id;
-            delete fallbackPayload.variant_label;
-            const retryRes = await supabase.from("orders").insert(fallbackPayload as any);
-            orderErr = retryRes.error;
-          }
-
-          if (orderErr) {
-            throw new Error(orderErr.message || "Erreur de création de la réservation");
-          }
+        const result = rpcData as { success?: boolean; reason?: string; order_ids?: string[] } | null;
+        if (!result?.success) {
+          throw new Error(
+            result?.reason === 'no_active_listing'
+              ? "Ces articles ne sont plus disponibles à la vente."
+              : result?.reason || 'Erreur de création de la commande'
+          );
         }
 
         if (isCartMode) clearCart();
 
+        const orderCount = result.order_ids?.length || 1;
         toast.success(
-          itemsToProcess.length > 1
-            ? "Vos réservations en boutique ont été enregistrées avec succès ! Vous réglerez directement sur place."
-            : "Réservation enregistrée ! Vous réglerez le vendeur directement à sa boutique."
+          isShopPickup
+            ? orderCount > 1
+              ? 'Vos réservations en boutique ont été enregistrées ! Vous réglerez directement sur place.'
+              : 'Réservation enregistrée ! Vous réglerez le vendeur directement à sa boutique.'
+            : orderCount > 1
+              ? 'Vos commandes (Paiement à la livraison) ont été enregistrées ! Les vendeurs vont confirmer la disponibilité.'
+              : 'Commande enregistrée (Paiement à la livraison) ! Le vendeur va confirmer la disponibilité.'
         );
-        navigate("/mes-commandes");
-        return;
-      }
-
-      // ─────────────────────────────────────────────────────────────
-      // SCÉNARIO 2 : Livraison à domicile + Paiement à la livraison (COD)
-      // ─────────────────────────────────────────────────────────────
-      if (paymentMethod === 'cod') {
-        const itemsToProcess = isCartMode
-          ? cartItems.map((ci) => ({ listingId: ci.listing_id, variantId: ci.variant_id, quantity: ci.quantity }))
-          : [{ listingId: listing!.id, variantId: requestedVariantId, quantity: 1 }];
-
-        const perItemDeliveryFee = Math.round(deliveryFee / itemsToProcess.length);
-
-        for (let i = 0; i < itemsToProcess.length; i++) {
-          const item = itemsToProcess[i];
-          const selection = await resolveOrderSelection(item.listingId, item.variantId, item.quantity);
-          const itemProductAmount = selection.unitPrice * selection.quantity;
-          const itemBuyerFee = Math.round(itemProductAmount * BUYER_FEE_RATE);
-          const itemDelivery = i === 0 ? (deliveryFee - perItemDeliveryFee * (itemsToProcess.length - 1)) : perItemDeliveryFee;
-          const itemTotal = itemProductAmount + itemBuyerFee + itemDelivery;
-
-          const rawCodPayload: Record<string, any> = {
-            buyer_id: user.id,
-            seller_id: selection.sellerId,
-            listing_id: item.listingId,
-            unit_price: selection.unitPrice,
-            quantity: selection.quantity,
-            product_amount: itemProductAmount,
-            delivery_fee: itemDelivery,
-            platform_commission: itemBuyerFee,
-            reserve_fee: 0,
-            total_amount: itemTotal,
-            delivery_address: deliveryAddress || "Daloa",
-            delivery_lat: deliveryLatitude || null,
-            delivery_lng: deliveryLongitude || null,
-            delivery_mode: "delivery",
-            payment_method: "cod",
-            status: "pending",
-          };
-          if (selection.variantId) rawCodPayload.variant_id = selection.variantId;
-          if (selection.variantLabel) rawCodPayload.variant_label = selection.variantLabel;
-
-          let orderData: { id: string } | null = null;
-          let orderErr: any = null;
-
-          const insertRes = await supabase
-            .from("orders")
-            .insert(rawCodPayload as any)
-            .select("id")
-            .single();
-
-          orderData = insertRes.data;
-          orderErr = insertRes.error;
-
-          if (orderErr && (orderErr.code === 'PGRST204' || orderErr.message?.includes('column') || orderErr.status === 400)) {
-            const fallbackCodPayload = { ...rawCodPayload };
-            delete fallbackCodPayload.variant_id;
-            delete fallbackCodPayload.variant_label;
-            const retryRes = await supabase
-              .from("orders")
-              .insert(fallbackCodPayload as any)
-              .select("id")
-              .single();
-            orderData = retryRes.data;
-            orderErr = retryRes.error;
-          }
-
-          if (orderErr || !orderData) {
-            throw new Error(orderErr?.message || "Erreur de création de la commande");
-          }
-
-          const { error: assignErr } = await supabase
-            .from("delivery_assignments")
-            .insert({
-              order_id: orderData.id,
-              seller_id: selection.sellerId,
-              is_private: true,
-              status: "pending_seller_confirmation",
-              delivery_price: itemDelivery,
-              dropoff_location: deliveryAddress || "Daloa",
-              pickup_location: "Boutique du vendeur",
-              pickup_otp: Math.floor(100000 + Math.random() * 900000).toString(),
-              delivery_otp: Math.floor(100000 + Math.random() * 900000).toString(),
-            } as any);
-
-          if (assignErr) {
-            console.error("Assignment creation error:", assignErr);
-          }
-        }
-
-        if (isCartMode) clearCart();
-
-        toast.success(
-          itemsToProcess.length > 1
-            ? "Vos commandes (Paiement à la livraison) ont été enregistrées ! Les vendeurs vont confirmer la disponibilité."
-            : "Commande enregistrée (Paiement à la livraison) ! Le vendeur va confirmer la disponibilité."
-        );
-        navigate("/mes-commandes");
+        navigate('/mes-commandes');
         return;
       }
 
@@ -1070,8 +1018,20 @@ const CheckoutPage: React.FC = () => {
                   }}
                   placeholder="Cliquez sur la carte pour affiner la position"
                   className="w-full h-56 bg-gray-100"
+                  sellerCoords={isCartMode ? null : sellerCoords}
                 />
               </div>
+
+              {/* Retour immédiat en déplaçant le repère : sans cela, la distance
+                  et le tarif n'apparaissaient qu'à l'étape suivante. */}
+              {!isPickup && distanceKm > 0 && (
+                <div className="flex items-center justify-center gap-2 rounded-2xl bg-orange-50 border border-orange-100 px-4 py-2.5 text-xs font-bold text-orange-700">
+                  <Navigation size={14} />
+                  <span>Distance : {distanceKm} km</span>
+                  <span className="text-orange-300">·</span>
+                  <span>Frais : {formatPrice(deliveryFee)}</span>
+                </div>
+              )}
 
               {/* Textarea */}
               <div className="space-y-1.5">

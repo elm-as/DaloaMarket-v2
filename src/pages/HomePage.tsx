@@ -39,7 +39,6 @@ import ListingCard from '../components/listings/ListingCard';
 import ListingCardSkeleton from '../components/listings/ListingCardSkeleton';
 import { userBehaviorService } from '../services/userBehaviorService';
 import { getTrendingRecommendations } from '../lib/feedCuration';
-import { HomeTrendingSection } from '../components/home/HomeTrendingSection';
 import { HomeForYouSection } from '../components/home/HomeForYouSection';
 
 const CATEGORY_STYLE: Record<string, { icon: React.ReactNode; bg: string; border: string; emoji: string }> = {
@@ -289,16 +288,27 @@ const HomePage: React.FC = () => {
     cart_qty: cartQtyByListingId[l.id] || 0,
   });
 
-  // Calcul des recommandations personnalisées IA Machine Learning
-  const personalizedRecommendations = useMemo(() => {
+  /* Une seule section de recommandations, comme sur mobile.
+     « Populaire à Daloa » et « Pour vous » puisaient dans la même liste que le
+     fil « Dernières annonces » juste en dessous : le même article pouvait
+     apparaître trois fois sur un écran. Le personnalisé passe devant, la
+     tendance complète les places libres, et les articles déjà visibles en tête
+     de fil sont écartés. */
+  const forYouRecommendations = useMemo(() => {
     if (selectedCategory !== 'all' || listings.length === 0) return [];
-    return userBehaviorService.getPersonalizedRecommendations(listings, { limit: 4, minScore: 20 });
-  }, [listings, selectedCategory]);
 
-  // Calcul des annonces tendances "Populaire à Daloa" (Gravity Velocity)
-  const trendingRecommendations = useMemo(() => {
-    if (selectedCategory !== 'all' || listings.length === 0) return [];
-    return getTrendingRecommendations(listings, 4);
+    const visibleFeedIds = new Set(listings.slice(0, 8).map((l) => l.id));
+
+    const personalized = userBehaviorService
+      .getPersonalizedRecommendations(listings, { limit: 4, minScore: 20 })
+      .filter((r) => !visibleFeedIds.has(r.item.id));
+
+    if (personalized.length >= 4) return personalized.slice(0, 4);
+
+    const usedIds = new Set([...visibleFeedIds, ...personalized.map((r) => r.item.id)]);
+    const fill = getTrendingRecommendations(listings, 8).filter((r) => !usedIds.has(r.item.id));
+
+    return [...personalized, ...fill].slice(0, 4);
   }, [listings, selectedCategory]);
 
   const currentCategoryObj = CATEGORIES.find((cat) => cat.id === selectedCategory);
@@ -547,14 +557,9 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* SECTION POPULAIRE À DALOA (DA Top Chart / Ruban Vélocité) */}
-      {selectedCategory === 'all' && trendingRecommendations.length > 0 && !loading && (
-        <HomeTrendingSection recommendations={trendingRecommendations} />
-      )}
-
-      {/* SECTION RECOMMANDATIONS PERSONNALISÉES (DA Curation Bento / Fiches Paysage) */}
-      {selectedCategory === 'all' && personalizedRecommendations.length > 0 && !loading && (
-        <HomeForYouSection recommendations={personalizedRecommendations} />
+      {/* RECOMMANDATIONS : personnalisé d'abord, tendance en complément */}
+      {selectedCategory === 'all' && forYouRecommendations.length > 0 && !loading && (
+        <HomeForYouSection recommendations={forYouRecommendations} />
       )}
 
       {/* LISTINGS FEED */}
