@@ -24,6 +24,7 @@ import { ListingDetailsSection } from '../components/listings/create/ListingDeta
 import { ListingPricingSection } from '../components/listings/create/ListingPricingSection';
 import { ListingLogisticsSection } from '../components/listings/create/ListingLogisticsSection';
 import { ListingSuccessModal } from '../components/listings/create/ListingSuccessModal';
+import { ensureUuid } from '../lib/uuid';
 
 export interface ListingFormValues {
   title: string;
@@ -233,7 +234,7 @@ const ListingCreatePage: React.FC = () => {
 
         const loadedVariants = Array.isArray((data as any).variants) ? (data as any).variants : [];
         setVariants(loadedVariants.map((variant: any, index: number) => ({
-          id: String(variant.id || `variant_${index}_${Date.now()}`),
+          id: ensureUuid(variant.id),
           label: String(variant.label || ''),
           price: variant.price == null || variant.price === '' ? null : Number(variant.price),
           stock: Math.max(0, Number(variant.stock) || 0),
@@ -350,7 +351,7 @@ const ListingCreatePage: React.FC = () => {
         }
 
         return {
-          id: variant.id || `variant_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          id: ensureUuid(variant.id),
           label,
           color,
           color_code,

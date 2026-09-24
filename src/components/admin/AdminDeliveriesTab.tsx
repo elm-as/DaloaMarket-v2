@@ -60,7 +60,7 @@ export const AdminDeliveriesTab: React.FC = () => {
       let userMap = new Map<string, any>();
       if (allUserIds.length > 0) {
         const { data: users } = await supabase
-          .from('users')
+          .from('users_private')
           .select('id, full_name, phone')
           .in('id', allUserIds);
         userMap = new Map((users || []).map((u: any) => [u.id, u]));

@@ -47,7 +47,7 @@ export function useAdminFinanceData() {
       let userMap = new Map<string, any>();
       if (userIds.length > 0) {
         const { data: users } = await supabase
-          .from('users')
+          .from('users_private')
           .select('id, full_name, phone, role')
           .in('id', userIds);
         userMap = new Map((users || []).map((u: any) => [u.id, u]));
@@ -139,7 +139,7 @@ export function useAdminFinanceData() {
         let actorsMap = new Map<string, any>();
         if (allActorIds.length > 0) {
           const { data: actors } = await supabase
-            .from('users')
+            .from('users_private')
             .select('id, full_name, phone')
             .in('id', allActorIds);
           actorsMap = new Map((actors || []).map((u: any) => [u.id, u]));
@@ -189,7 +189,7 @@ export function useAdminFinanceData() {
         let adminMap = new Map<string, any>();
         if (adminIds.length > 0) {
           const { data: admins } = await supabase
-            .from('users')
+            .from('users_private')
             .select('id, full_name, phone, role')
             .in('id', adminIds);
           adminMap = new Map((admins || []).map((u: any) => [u.id, u]));

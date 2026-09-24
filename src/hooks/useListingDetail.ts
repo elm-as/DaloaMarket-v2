@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
+import { attachContactPhones } from '../lib/contacts';
 import { extractUuid, formatListingShareText, shareWithImage } from '../lib/utils';
 import type { ListingFull, ReviewData, SimilarListing } from '../types/listing';
 import { findSimilarListings } from '../lib/recommendationEngine';
@@ -63,7 +64,7 @@ export function useListingDetail(id: string | undefined, userId: string | undefi
       let listingData: ListingFull | null = null;
       const targetUuid = extractUuid(id);
       const selectCols =
-        '*, users!listings_user_id_fkey(id, full_name, avatar_url, phone, rating, pro_until, created_at, shop_name, shop_logo_url)';
+        '*, users!listings_user_id_fkey(id, full_name, avatar_url, rating, pro_until, created_at, shop_name, shop_logo_url)';
 
       if (targetUuid) {
         const { data, error: fetchErr } = await supabase
@@ -179,6 +180,9 @@ export function useListingDetail(id: string | undefined, userId: string | undefi
         if (!cachedData) setNotFound(true);
         return;
       }
+
+      // Téléphone du vendeur (bouton WhatsApp) : public tant qu'il a une annonce en ligne.
+      await attachContactPhones([(listingData as any).users]);
 
       setListing(listingData);
 

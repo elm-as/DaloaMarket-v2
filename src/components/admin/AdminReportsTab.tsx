@@ -21,7 +21,7 @@ export const AdminReportsTab: React.FC = () => {
     try {
       const { data, error: err } = await supabase
         .from('reports')
-        .select('*, reporter:users!reports_reporter_id_fkey(*), listing:listings(*)')
+        .select('*, reporter:users!reports_reporter_id_fkey(id, full_name, shop_name, avatar_url), listing:listings(*)')
         .order('created_at', { ascending: false });
       if (err) throw err;
       setReports(data || []);

@@ -22,7 +22,7 @@ export const AdminKpisTab: React.FC = () => {
     setError(null);
     try {
       const results = await Promise.allSettled([
-        supabase.from('users').select('*', { count: 'exact', head: true }),
+        supabase.from('users').select('id', { count: 'exact', head: true }),
         supabase.from('listings').select('*', { count: 'exact', head: true }).eq('status', 'active'),
         supabase.from('orders').select('*', { count: 'exact', head: true }),
         supabase.from('reports').select('*', { count: 'exact', head: true }),

@@ -130,6 +130,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "delivery_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "delivery_requests_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
@@ -141,6 +148,13 @@ export type Database = {
             columns: ["seller_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_requests_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -254,6 +268,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "reservations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "reservations_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
@@ -265,6 +286,13 @@ export type Database = {
             columns: ["seller_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservations_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -309,6 +337,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_reliability_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -428,6 +463,13 @@ export type Database = {
             columns: ["admin_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_financial_audit_logs_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -567,6 +609,13 @@ export type Database = {
             columns: ["converted_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ambassador_prospects_converted_user_id_fkey"
+            columns: ["converted_user_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -740,6 +789,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "banned_ips_banned_by_fkey"
+            columns: ["banned_by"]
+            isOneToOne: false
+            referencedRelation: "users_private"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cod_receivables: {
@@ -797,6 +853,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cod_receivables_debtor_user_id_fkey"
+            columns: ["debtor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cod_receivables_delivery_person_id_fkey"
             columns: ["delivery_person_id"]
             isOneToOne: false
@@ -822,6 +885,13 @@ export type Database = {
             columns: ["settled_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cod_receivables_settled_by_fkey"
+            columns: ["settled_by"]
+            isOneToOne: false
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -1040,10 +1110,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "delivery_assignments_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users_private"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "delivery_assignments_seller_id_fkey"
             columns: ["seller_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_assignments_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -1096,6 +1180,13 @@ export type Database = {
             columns: ["reviewer_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_person_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -1333,6 +1424,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "favorites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -1575,10 +1673,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "listings_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "users_private"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "listings_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -1627,10 +1739,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "messages_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "messages_sender_id_fkey"
             columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -1694,6 +1820,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monetization_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -1912,10 +2045,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "orders_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "orders_seller_id_fkey"
             columns: ["seller_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -2033,6 +2180,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
+            referencedColumns: ["id"]
+          },
         ]
       }
       refund_reserve: {
@@ -2135,8 +2289,29 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "reports_reported_user_id_fkey"
+            columns: ["reported_user_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "reports_reporter_id_fkey"
             columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_resolved_by_fkey"
+            columns: ["resolved_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -2145,7 +2320,7 @@ export type Database = {
             foreignKeyName: "reports_resolved_by_fkey"
             columns: ["resolved_by"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -2194,10 +2369,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "reviews_reviewed_id_fkey"
+            columns: ["reviewed_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "reviews_reviewer_id_fkey"
             columns: ["reviewer_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -2249,6 +2438,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "seller_delivery_affiliations_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
+            referencedColumns: ["id"]
+          },
         ]
       }
       seller_delivery_settings: {
@@ -2281,6 +2477,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "seller_delivery_settings_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: true
+            referencedRelation: "users_private"
+            referencedColumns: ["id"]
+          },
         ]
       }
       system_settings: {
@@ -2308,6 +2511,13 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -2379,10 +2589,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "user_feedbacks_replied_by_fkey"
+            columns: ["replied_by"]
+            isOneToOne: false
+            referencedRelation: "users_private"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "user_feedbacks_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_feedbacks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
             referencedColumns: ["id"]
           },
         ]
@@ -2572,6 +2796,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cod_receivables_debtor_user_id_fkey"
+            columns: ["debtor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users_private"
+            referencedColumns: ["id"]
+          },
         ]
       }
       delivery_persons_directory: {
@@ -2637,6 +2868,141 @@ export type Database = {
           vehicle_details?: string | null
           vehicle_type?: string | null
           verification_status?: never
+        }
+        Relationships: []
+      }
+      users_private: {
+        Row: {
+          avatar_url: string | null
+          ban_appeal_reason: string | null
+          ban_appeal_status: string | null
+          ban_appealed_at: string | null
+          ban_reason: string | null
+          banned: boolean | null
+          cancellation_count: number | null
+          consecutive_cancellations: number | null
+          created_at: string | null
+          deleted_at: string | null
+          deletion_requested_at: string | null
+          district: string | null
+          email: string | null
+          first_listing_at: string | null
+          full_name: string | null
+          id: string | null
+          last_cancellation_at: string | null
+          last_ip: string | null
+          listing_credits: number | null
+          payout_network: string | null
+          payout_number: string | null
+          phone: string | null
+          pro_free_boost_used: boolean | null
+          pro_source: string | null
+          pro_until: string | null
+          rating: number | null
+          referred_by_code: string | null
+          registration_ip: string | null
+          role: string | null
+          shop_banner_url: string | null
+          shop_description: string | null
+          shop_latitude: number | null
+          shop_logo_url: string | null
+          shop_longitude: number | null
+          shop_name: string | null
+          shop_slug: string | null
+          shop_theme_color: string | null
+          shop_updated_at: string | null
+          shop_whatsapp: string | null
+          suspect: boolean | null
+          suspect_at: string | null
+          suspect_reason: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          ban_appeal_reason?: string | null
+          ban_appeal_status?: string | null
+          ban_appealed_at?: string | null
+          ban_reason?: string | null
+          banned?: boolean | null
+          cancellation_count?: number | null
+          consecutive_cancellations?: number | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deletion_requested_at?: string | null
+          district?: string | null
+          email?: string | null
+          first_listing_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          last_cancellation_at?: string | null
+          last_ip?: string | null
+          listing_credits?: number | null
+          payout_network?: string | null
+          payout_number?: string | null
+          phone?: string | null
+          pro_free_boost_used?: boolean | null
+          pro_source?: string | null
+          pro_until?: string | null
+          rating?: number | null
+          referred_by_code?: string | null
+          registration_ip?: string | null
+          role?: string | null
+          shop_banner_url?: string | null
+          shop_description?: string | null
+          shop_latitude?: number | null
+          shop_logo_url?: string | null
+          shop_longitude?: number | null
+          shop_name?: string | null
+          shop_slug?: string | null
+          shop_theme_color?: string | null
+          shop_updated_at?: string | null
+          shop_whatsapp?: string | null
+          suspect?: boolean | null
+          suspect_at?: string | null
+          suspect_reason?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          ban_appeal_reason?: string | null
+          ban_appeal_status?: string | null
+          ban_appealed_at?: string | null
+          ban_reason?: string | null
+          banned?: boolean | null
+          cancellation_count?: number | null
+          consecutive_cancellations?: number | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deletion_requested_at?: string | null
+          district?: string | null
+          email?: string | null
+          first_listing_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          last_cancellation_at?: string | null
+          last_ip?: string | null
+          listing_credits?: number | null
+          payout_network?: string | null
+          payout_number?: string | null
+          phone?: string | null
+          pro_free_boost_used?: boolean | null
+          pro_source?: string | null
+          pro_until?: string | null
+          rating?: number | null
+          referred_by_code?: string | null
+          registration_ip?: string | null
+          role?: string | null
+          shop_banner_url?: string | null
+          shop_description?: string | null
+          shop_latitude?: number | null
+          shop_logo_url?: string | null
+          shop_longitude?: number | null
+          shop_name?: string | null
+          shop_slug?: string | null
+          shop_theme_color?: string | null
+          shop_updated_at?: string | null
+          shop_whatsapp?: string | null
+          suspect?: boolean | null
+          suspect_at?: string | null
+          suspect_reason?: string | null
         }
         Relationships: []
       }
@@ -2864,6 +3230,13 @@ export type Database = {
           }
         | { Args: { p_limit?: number }; Returns: Json }
       get_auth_provider_for_email: { Args: { p_email: string }; Returns: Json }
+      get_contact_phones: {
+        Args: { p_user_ids: string[] }
+        Returns: {
+          phone: string
+          user_id: string
+        }[]
+      }
       handle_delivery_no_show_timeout: {
         Args: never
         Returns: {

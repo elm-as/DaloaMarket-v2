@@ -13,6 +13,16 @@ const isProfileFullyFilled = (profile: UserProfile): boolean => {
     .every((v) => v.trim().length > 0);
 };
 
+/**
+ * Profil complet de l'utilisateur connecté. `users` ne rend plus les colonnes
+ * privées (e-mail, téléphone, Mobile Money…) : elles se lisent dans la vue
+ * `users_private`, qui ne renvoie que sa propre ligne (ou toutes pour un admin).
+ */
+const readOwnProfile = async (id: string): Promise<UserProfile> => {
+  const { data } = await supabase.from('users_private').select('*').eq('id', id).maybeSingle();
+  return (data as unknown as UserProfile) ?? null;
+};
+
 export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -33,20 +43,21 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setProfileLoading(true);
     try {
       const { data: byIdRaw, error: byIdErrorRaw } = await supabase
-        .from('users').select('*').eq('id', userId).maybeSingle();
+        .from('users_private').select('*').eq('id', userId).maybeSingle();
       const byIdError = byIdErrorRaw as unknown as { code?: string; status?: number } | null;
       const isByIdNotAcceptable = !!byIdError && (byIdError.code === 'PGRST116' || byIdError.status === 406);
       if (byIdErrorRaw && !isByIdNotAcceptable) throw byIdErrorRaw;
-      const byId = isByIdNotAcceptable ? null : byIdRaw;
+      const byId = (isByIdNotAcceptable ? null : byIdRaw) as UserProfile;
 
       let data = byId;
       const effectiveEmail = (typeof email === 'string' && email.trim().length > 0) ? email.trim() : null;
       if (data == null && effectiveEmail) {
         const { data: byEmailRows, error: byEmailError } = await supabase
-          .from('users').select('*').eq('email', effectiveEmail)
+          .from('users_private').select('*').eq('email', effectiveEmail)
           .order('created_at', { ascending: false }).limit(5);
         if (!byEmailError && Array.isArray(byEmailRows) && byEmailRows.length > 0) {
-          const best = (byEmailRows.find((p) => isProfileFullyFilled(p)) ?? byEmailRows[0]) as NonNullable<UserProfile>;
+          const rows = byEmailRows as unknown as NonNullable<UserProfile>[];
+          const best = (rows.find((p) => isProfileFullyFilled(p)) ?? rows[0]) as NonNullable<UserProfile>;
           data = best;
           if (best?.id && best.id !== userId) {
             try {
@@ -54,8 +65,8 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 .from('users').upsert({
                   id: userId, email: effectiveEmail,
                   full_name: best.full_name ?? null, phone: best.phone ?? null, district: best.district ?? null,
-                }, { onConflict: 'id' }).select('*').maybeSingle();
-              if (!repairError && repaired) data = repaired;
+                }, { onConflict: 'id' }).select('id').maybeSingle();
+              if (!repairError && repaired) data = (await readOwnProfile(userId)) ?? data;
             } catch (err) { console.error('Error repairing user profile:', err); }
           }
         }
@@ -76,8 +87,8 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             if (needsAvatar) patch.avatar_url = googleAvatar;
             try {
               const { data: patched, error: patchErr } = await supabase
-                .from('users').update(patch).eq('id', userId).select('*').maybeSingle();
-              if (!patchErr && patched) data = patched;
+                .from('users').update(patch).eq('id', userId).select('id').maybeSingle();
+              if (!patchErr && patched) data = (await readOwnProfile(userId)) ?? data;
             } catch (err) { console.error('Error auto-filling Google profile:', err); }
           }
         }
@@ -97,11 +108,11 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 full_name: googleName,
                 avatar_url: googleAvatar,
               }, { onConflict: 'id' })
-              .select('*')
+              .select('id')
               .maybeSingle();
 
             if (!createErr && created) {
-              data = created;
+              data = (await readOwnProfile(userId)) ?? data;
             }
           } catch (err) {
             console.error('Error auto-creating initial profile for OAuth user:', err);
@@ -165,6 +176,12 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     if (!isSupabaseConfigured) { setLoading(false); return; }
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      // Lien « mot de passe oublié » arrivé ailleurs que sur la page prévue
+      // (ancien e-mail, adresse de retour par défaut) : sans cela, l'utilisateur
+      // se retrouvait connecté sur l'accueil sans pouvoir changer son mot de passe.
+      if (_event === 'PASSWORD_RECOVERY' && window.location.pathname !== '/auth/update-password') {
+        window.location.replace('/auth/update-password');
+      }
       if (session) {
         type SessionWithRefresh = Session & { refresh_token?: string; expires_at?: number };
         const s = session as SessionWithRefresh;
@@ -263,8 +280,8 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       const { data: dataRaw, error: errorRaw } = await supabase
-        .from('users').update({ ...profile }).eq('id', user.id).select('*').maybeSingle();
-      let data = dataRaw;
+        .from('users').update({ ...profile }).eq('id', user.id).select('id').maybeSingle();
+      let data: UserProfile = dataRaw ? await readOwnProfile(user.id) : null;
       let error = errorRaw as unknown as { code?: string; status?: number } | null;
       if (!!error && (error.code === 'PGRST116' || error.status === 406)) { data = null; error = null; }
 
@@ -276,9 +293,9 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             full_name: (profile.full_name ?? null) as string | null,
             phone: (profile.phone ?? null) as string | null,
             district: (profile.district ?? null) as string | null,
-          }, { onConflict: 'id' }).select('*').maybeSingle();
+          }, { onConflict: 'id' }).select('id').maybeSingle();
         if (upsertError) return { error: upsertError };
-        if (upserted) { setUserProfile(upserted); await fetchUserProfile(user.id); return { error: null }; }
+        if (upserted) { await fetchUserProfile(user.id); return { error: null }; }
       }
 
       if (!error) {

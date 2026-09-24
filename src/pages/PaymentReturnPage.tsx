@@ -10,6 +10,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { checkPaymentStatus, type PaymentStatusResponse } from '../lib/payment';
 import { useCart } from '../contexts/CartContext';
 import { supabase } from '../lib/supabase';
+import { fetchContactPhones } from '../lib/contacts';
 import { PaymentReceiptA4 } from '../components/payment/PaymentReceiptA4';
 import { PaymentSuccessMobile } from '../components/payment/PaymentSuccessMobile';
 import type { Order } from '../types/order';
@@ -62,13 +63,14 @@ export default function PaymentReturnPage() {
         if (ord.buyer_id) {
           const { data: buyer } = await supabase
             .from('users')
-            .select('full_name, phone')
+            .select('full_name')
             .eq('id', ord.buyer_id)
             .maybeSingle();
+          const phones = await fetchContactPhones([ord.buyer_id]);
           if (buyer) {
             ord.buyer_name = buyer.full_name || undefined;
-            ord.buyer_phone = buyer.phone || undefined;
           }
+          ord.buyer_phone = phones.get(ord.buyer_id) || undefined;
         }
         setOrderDetails(ord);
       }

@@ -77,7 +77,7 @@ export function AdminFeedbacksTab() {
       if (error) {
         const { data: fallbackData, error: fallbackError } = await (supabase as any)
           .from('user_feedbacks')
-          .select('*, users!user_id(full_name, shop_name, phone, district)')
+          .select('*, users!user_id(full_name, shop_name, district)')
           .order('created_at', { ascending: false })
           .limit(200);
         if (fallbackError) throw fallbackError;

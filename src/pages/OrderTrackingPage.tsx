@@ -7,6 +7,7 @@ import {
   AlertTriangle, Clock, MessageCircle, ChevronRight, Eye, EyeOff, Store
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { fetchContactPhones } from '../lib/contacts';
 import { useSupabase } from '../hooks/useSupabase';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { formatPrice, formatDate, cn } from '../lib/utils';
@@ -148,14 +149,16 @@ const OrderTrackingPage: React.FC = () => {
       if (orderData.buyer_id) {
         const { data: buyerData } = await supabase
           .from('users')
-          .select('full_name, phone')
+          .select('full_name')
           .eq('id', orderData.buyer_id)
           .single();
 
         if (buyerData) {
           orderData.buyer_name = buyerData.full_name || 'Acheteur';
-          orderData.buyer_phone = buyerData.phone || '';
         }
+        // Téléphone de l'acheteur : réservé aux parties de la commande.
+        const phones = await fetchContactPhones([orderData.buyer_id]);
+        orderData.buyer_phone = phones.get(orderData.buyer_id) || '';
       }
 
       if (orderData.seller_id) {
@@ -164,7 +167,7 @@ const OrderTrackingPage: React.FC = () => {
           // `public.users` n'a pas de colonnes `latitude`/`longitude` : les demander
           // faisait échouer toute la requête en 400 et le nom du vendeur restait vide.
           // Les coordonnées de la boutique sont dans `shop_latitude`/`shop_longitude`.
-          .select('full_name, district, phone, shop_latitude, shop_longitude')
+          .select('full_name, district, shop_latitude, shop_longitude')
           .eq('id', orderData.seller_id)
           .single();
 

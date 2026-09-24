@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useSupabase } from '../hooks/useSupabase';
 import { supabase } from '../lib/supabase';
+import { PUBLIC_USER_COLUMNS, attachContactPhones } from '../lib/contacts';
 import { cn, formatDate, extractUuid, formatShopShareText, shareWithImage, getSellerPath, getSellerShareUrl, formatWhatsAppPhone } from '../lib/utils';
 import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -173,13 +174,13 @@ const SellerProfilePage: React.FC = () => {
       const targetUuid = extractUuid(sellerId);
 
       if (targetUuid) {
-        const { data } = await supabase.from('users').select('*').eq('id', targetUuid).maybeSingle();
+        const { data } = await supabase.from('users').select(PUBLIC_USER_COLUMNS).eq('id', targetUuid).maybeSingle();
         sellerData = data as any;
       } else if (sellerId) {
         // Essayer d'abord par shop_slug (URLs lisibles /shop/mon-slug)
         const { data: slugMatch } = await supabase
           .from('users')
-          .select('*')
+          .select(PUBLIC_USER_COLUMNS)
           .eq('shop_slug' as any, sellerId)
           .maybeSingle();
         if (slugMatch) {
@@ -188,7 +189,7 @@ const SellerProfilePage: React.FC = () => {
           // Fallback par shop_name
           const { data: shopMatch } = await supabase
             .from('users')
-            .select('*')
+            .select(PUBLIC_USER_COLUMNS)
             .ilike('shop_name', sellerId)
             .maybeSingle();
           if (shopMatch) {
@@ -204,7 +205,7 @@ const SellerProfilePage: React.FC = () => {
 
               const { data: rangeSeller } = await supabase
                 .from('users')
-                .select('*')
+                .select(PUBLIC_USER_COLUMNS)
                 .gte('id', minUuid)
                 .lte('id', maxUuid)
                 .limit(1)
@@ -232,6 +233,8 @@ const SellerProfilePage: React.FC = () => {
       }
 
       if (!sellerData) throw new Error('Vendeur introuvable');
+      // Téléphone du bouton WhatsApp : via get_contact_phones (vendeur en ligne).
+      await attachContactPhones([sellerData as any]);
       const finalSeller = sellerData as unknown as SellerProfile;
       setSeller(finalSeller);
 

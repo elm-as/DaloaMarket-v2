@@ -60,7 +60,7 @@ export default function BannedPage() {
     setCheckingStatus(true);
     try {
       const { data, error } = await supabase
-        .from('users')
+        .from('users_private')
         .select('banned, ban_reason, ban_appeal_status, ban_appeal_reason')
         .eq('id', user.id)
         .single();

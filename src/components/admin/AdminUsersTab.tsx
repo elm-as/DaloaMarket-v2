@@ -78,14 +78,15 @@ export const AdminUsersTab: React.FC = () => {
     try {
       // 1. Récupération de l'ensemble des utilisateurs (sans tronquage artificiel)
       const { data: usersData, count, error: fetchErr } = await supabase
-        .from('users')
+        .from('users_private')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
         .limit(2000);
 
       if (fetchErr) throw fetchErr;
 
-      const rawUsers = usersData || [];
+      // Vue users_private : champs déclarés nullables, mais `id` ne l'est jamais.
+      const rawUsers = (usersData || []) as Array<(typeof usersData extends (infer R)[] | null ? R : never) & { id: string }>;
       const userIds = rawUsers.map((u) => u.id).filter(Boolean);
 
       // 2. Récupération des profils livreurs associés (dans delivery_persons)

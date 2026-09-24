@@ -3,6 +3,7 @@ import { Plus, Palette, Shirt, Footprints, Tag, Trash2, Minus, X, Check } from '
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../../lib/utils';
 import type { ListingVariant } from '../../../types/listing';
+import { generateUuidV4 } from '../../../lib/uuid';
 
 interface ListingVariantsSectionProps {
   variants: ListingVariant[];
@@ -28,13 +29,7 @@ export const PRESET_CLOTHING_SIZES = ['S', 'M', 'L', 'XL', 'XXL', '3XL', 'Unique
 export const PRESET_SHOE_SIZES = ['37', '38', '39', '40', '41', '42', '43', '44', '45', '46'];
 export const PRESET_STORAGE_SIZES = ['64 Go', '128 Go', '256 Go', '512 Go'];
 
-const makeVariantId = () => {
-  try {
-    return crypto.randomUUID();
-  } catch {
-    return `variant_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  }
-};
+const makeVariantId = () => generateUuidV4();
 
 type ActiveDrawerType = 'color' | 'clothing_size' | 'shoe_size' | 'custom' | null;
 

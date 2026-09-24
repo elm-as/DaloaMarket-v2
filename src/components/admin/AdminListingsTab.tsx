@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { attachContactPhones } from '../../lib/contacts';
 import { EmptyState } from '../ui/EmptyState';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorState } from '../ui/ErrorState';
@@ -102,7 +103,7 @@ export const AdminListingsTab: React.FC = () => {
 
       let query = supabase
         .from('listings')
-        .select('*, user:users!listings_user_id_fkey(id, full_name, phone, avatar_url, shop_name, shop_slug)', { count: 'exact' })
+        .select('*, user:users!listings_user_id_fkey(id, full_name, avatar_url, shop_name, shop_slug)', { count: 'exact' })
         .order('created_at', { ascending: false });
 
       if (status !== 'all') {
@@ -119,7 +120,9 @@ export const AdminListingsTab: React.FC = () => {
 
       if (err) throw err;
 
-      setListings((data as AdminListing[]) || []);
+      // Téléphones des vendeurs (partage WhatsApp) : l'admin les voit tous via get_contact_phones.
+      await attachContactPhones(((data as any[]) || []).map((l) => l.user));
+      setListings((data as unknown as AdminListing[]) || []);
       setListingTotal(count || 0);
     } catch (err: any) {
       setError(err.message);
