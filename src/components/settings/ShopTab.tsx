@@ -66,6 +66,7 @@ export const ShopTab: React.FC = () => {
       const lng = up.shop_longitude;
       if (lat != null) setShopLatitude(lat);
       if (lng != null) setShopLongitude(lng);
+      setSavedPosition(lat != null && lng != null ? { lat, lng } : null);
       resetShop({
         shop_name: up.shop_name || '',
         shop_description: up.shop_description || '',
@@ -109,6 +110,15 @@ export const ShopTab: React.FC = () => {
   };
 
   const [locationSaving, setLocationSaving] = useState(false);
+  // Position réellement enregistrée. Un clic sur la carte ne fait que déplacer
+  // l'épingle : l'ancienne sauvegarde automatique déplaçait la boutique au
+  // moindre clic égaré (jusqu'à 17 km du centre), et avec elle tous les frais
+  // de livraison calculés pour les acheteurs.
+  const [savedPosition, setSavedPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const positionDirty =
+    !savedPosition ||
+    Math.abs(savedPosition.lat - shopLatitude) > 1e-6 ||
+    Math.abs(savedPosition.lng - shopLongitude) > 1e-6;
 
   const handleLocationSave = useCallback(async (lat: number, lng: number) => {
     setLocationSaving(true);
@@ -116,7 +126,9 @@ export const ShopTab: React.FC = () => {
       await updateUserProfile({
         shop_latitude: lat,
         shop_longitude: lng,
+        shop_updated_at: new Date().toISOString(),
       } as any);
+      setSavedPosition({ lat, lng });
       toast.success('Position enregistrée');
     } catch (err: any) {
       toast.error(friendlyError(err));
@@ -132,8 +144,6 @@ export const ShopTab: React.FC = () => {
         shop_name: data.shop_name,
         shop_description: data.shop_description,
         shop_theme_color: data.shop_theme_color,
-        shop_latitude: shopLatitude,
-        shop_longitude: shopLongitude,
       } as any);
       toast.success('Boutique mise à jour !');
     } catch (err: any) {
@@ -167,13 +177,47 @@ export const ShopTab: React.FC = () => {
           onLocationChange={(lat, lng) => {
             setShopLatitude(lat);
             setShopLongitude(lng);
-            handleLocationSave(lat, lng);
           }}
           placeholder="Cliquez sur la carte pour placer votre boutique"
         />
-        <p className="text-[10px] font-bold text-gray-400 mt-2.5">
-          Coordonnées actuelles : {shopLatitude.toFixed(5)}, {shopLongitude.toFixed(5)} · Sauvegarde automatique
-        </p>
+        {positionDirty && savedPosition ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-orange-200 bg-orange-50 p-3">
+            <span className="flex-1 min-w-[10rem] text-xs font-semibold text-orange-900">
+              Nouvelle position non enregistrée ({shopLatitude.toFixed(5)}, {shopLongitude.toFixed(5)})
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setShopLatitude(savedPosition.lat);
+                setShopLongitude(savedPosition.lng);
+              }}
+              className="rounded-xl px-3 py-2 text-xs font-bold text-gray-600 hover:bg-white"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              disabled={locationSaving}
+              onClick={() => handleLocationSave(shopLatitude, shopLongitude)}
+              className="rounded-xl bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-orange-600 disabled:opacity-60"
+            >
+              Enregistrer cette position
+            </button>
+          </div>
+        ) : positionDirty ? (
+          <button
+            type="button"
+            disabled={locationSaving}
+            onClick={() => handleLocationSave(shopLatitude, shopLongitude)}
+            className="mt-3 w-full rounded-xl bg-orange-500 px-3 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-orange-600 disabled:opacity-60"
+          >
+            Enregistrer cette position
+          </button>
+        ) : (
+          <p className="text-[10px] font-bold text-gray-400 mt-2.5">
+            Position enregistrée : {shopLatitude.toFixed(5)}, {shopLongitude.toFixed(5)}
+          </p>
+        )}
       </div>
 
       {/* ── Section Personnalisation Vitrine (Réservée aux PRO) ── */}
