@@ -29,6 +29,7 @@ import {
   Phone,
 } from 'lucide-react';
 import { useSEO } from '../hooks/useSEO';
+import { usePhase } from '../contexts/PhaseContext';
 import { affiliatedDeliverersService, type SellerDeliverySettings } from '../services/affiliatedDeliverersService';
 
 interface SellerProfile {
@@ -104,6 +105,9 @@ const SellerProfilePage: React.FC = () => {
 
   const shopTitle = seller?.shop_name || seller?.full_name || 'Boutique';
   const isPro = seller?.pro_until ? new Date(seller.pro_until) > new Date() : false;
+  const { phaseConfig } = usePhase();
+  // Ce que l'acheteur pourra réellement choisir au paiement (même règle que le checkout).
+  const codAvailable = isPro || Boolean(phaseConfig.allow_cod_for_all);
   const themeColor = seller?.shop_theme_color || '#FF7F00';
 
   const storeSchema = seller
@@ -307,7 +311,7 @@ const SellerProfilePage: React.FC = () => {
     const { title, text } = formatShopShareText({
       ...seller,
       listing_count: listings.length,
-      cash_on_delivery: deliverySettings?.cash_on_delivery_enabled || false,
+      cash_on_delivery: codAvailable || false,
     });
     const imageUrl = seller.shop_logo_url || seller.shop_banner_url || seller.avatar_url || null;
     const res = await shareWithImage(title, text, imageUrl);
@@ -494,7 +498,7 @@ const SellerProfilePage: React.FC = () => {
                   {seller.district}
                 </span>
               )}
-              {deliverySettings?.cash_on_delivery_enabled && (
+              {codAvailable && (
                 <span className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200/70 shadow-2xs">
                   <HandCoins className="w-3.5 h-3.5 text-emerald-600" />
                   Paiement à la livraison
@@ -602,7 +606,7 @@ const SellerProfilePage: React.FC = () => {
               </div>
               <div className="px-1">
                 <span className="block text-sm font-black text-emerald-700 leading-tight">
-                  {deliverySettings?.cash_on_delivery_enabled ? 'COD Activé' : 'Sur place'}
+                  {codAvailable ? 'COD Activé' : 'Sur place'}
                 </span>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Paiement</span>
               </div>
@@ -752,7 +756,7 @@ const SellerProfilePage: React.FC = () => {
           {activeTab === 'about' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Carte Paiement à la Livraison */}
-              {deliverySettings?.cash_on_delivery_enabled ? (
+              {codAvailable ? (
                 <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-3xl p-5 space-y-2 relative overflow-hidden sm:col-span-2">
                   <div className="flex items-center gap-3 text-emerald-800">
                     <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">

@@ -12,11 +12,17 @@ import {
   PAYMENT_NETWORKS,
   MAX_CONSECUTIVE_CANCELLATIONS,
 } from '../content/legalFacts';
+import { usePhaseFacts } from '../content/usePhaseFacts';
 
-const FAQ_ITEMS = [
+type PhaseFacts = ReturnType<typeof usePhaseFacts>;
+
+/** Questions-réponses, construites d'après le régime en vigueur (lu en base). */
+const buildFaqItems = (phase: PhaseFacts) => [
   {
     question: "Publier une annonce, ça coûte quelque chose ?",
-    answer: `Non. Pendant la phase de lancement, la publication est gratuite et sans plafond : vous pouvez mettre en ligne autant d'annonces actives que vous le souhaitez, et DaloaMarket ne prélève aucune commission sur vos ventes.\n\nÀ la fin de cette phase, une commission vendeur de ${FEES.sellerStandardPct} s'appliquera sur le prix des articles vendus (${FEES.sellerProPct} pour les Vendeurs Pro). Vous serez prévenu avant toute mise en application.`,
+    answer: phase.noSellerCommission
+      ? `Non. La publication est gratuite et sans plafond : vous pouvez mettre en ligne autant d'annonces actives que vous le souhaitez, et pendant la phase de lancement DaloaMarket ne prélève aucune commission sur vos ventes.\n\nÀ la fin de cette phase, une commission vendeur de ${FEES.sellerStandardPct} s'appliquera sur le prix des articles vendus (${FEES.sellerProPct} pour les Vendeurs Pro). Vous serez prévenu avant toute mise en application.`
+      : `La publication est gratuite et sans plafond : vous pouvez mettre en ligne autant d'annonces actives que vous le souhaitez.\n\nUne commission vendeur de ${phase.sellerFeeText} est prélevée uniquement sur le prix des articles effectivement vendus.`,
   },
   {
     question: "Quels frais l'acheteur paie-t-il exactement ?",
@@ -28,7 +34,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "Quels moyens de paiement sont acceptés ?",
-    answer: `Le paiement Mobile Money est accepté via ${PAYMENT_NETWORKS}, à travers notre agrégateur Money Fusion.\n\nLe paiement en espèces à la livraison est également disponible : pendant la phase de lancement, il est ouvert à tous les vendeurs et proposé par défaut. En espèces, le règlement se fait directement entre vous et le livreur ou le vendeur, sans passer par le paiement sécurisé.`,
+    answer: `Le paiement Mobile Money est accepté via ${PAYMENT_NETWORKS}, à travers notre agrégateur Money Fusion.\n\n${phase.codOpenToAll ? 'Le paiement en espèces à la livraison est également disponible : il est actuellement ouvert à tous les vendeurs.' : 'Le paiement en espèces à la livraison est proposé pour les articles des Vendeurs Pro.'} En espèces, le règlement se fait directement entre vous et le livreur ou le vendeur, sans passer par le paiement sécurisé.`,
   },
   {
     question: "Combien coûte la livraison ?",
@@ -48,7 +54,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "À quoi sert le Pass Vendeur Pro ?",
-    answer: `Le Pass Vendeur Pro est à ${PRO_PASS.monthly} par mois, ou ${PRO_PASS.yearly} par an (deux mois offerts). Il donne le badge Pro vérifié sur votre profil et vos annonces, une priorité de classement, et une commission vendeur réduite à ${FEES.sellerProPct} au lieu de ${FEES.sellerStandardPct} lorsque la grille de commission entrera en vigueur.\n\nÀ noter pendant la phase de lancement : les annonces illimitées, le paiement à la livraison, le retrait sur place et les livreurs affiliés sont ouverts à tous les vendeurs, Pro ou non. Ces fonctionnalités redeviendront des avantages Pro à la fin de la phase.`,
+    answer: `Le Pass Vendeur Pro est à ${PRO_PASS.monthly} par mois, ou ${PRO_PASS.yearly} par an (deux mois offerts). Il donne le badge Pro vérifié sur votre profil et vos annonces, une priorité de classement, et une commission vendeur réduite à ${FEES.sellerProPct} au lieu de ${FEES.sellerStandardPct}${phase.noSellerCommission ? ' lorsque la grille de commission entrera en vigueur' : ''}.\n\n${phase.proFeaturesOpenToAll ? 'À noter pendant la phase de lancement : le paiement à la livraison, le retrait sur place et les livreurs affiliés sont ouverts à tous les vendeurs, Pro ou non. Ces fonctionnalités redeviendront des avantages Pro à la fin de la phase.' : 'Il donne aussi accès au paiement à la livraison, au retrait sur place et aux livreurs affiliés.'}`,
   },
   {
     question: "Comment fonctionnent les livreurs affiliés ?",
@@ -122,6 +128,7 @@ function FaqItem({ question, answer, isOpen, onToggle }: {
 }
 
 export default function FAQPage() {
+  const FAQ_ITEMS = buildFaqItems(usePhaseFacts());
   const faqSchema = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',

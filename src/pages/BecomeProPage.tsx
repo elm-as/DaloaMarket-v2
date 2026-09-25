@@ -234,7 +234,7 @@ export default function BecomeProPage() {
               {/* Standard Comparison Note */}
               <div className="pt-3 border-t border-gray-100 text-[11px] text-gray-500 flex items-center justify-between font-medium">
                 <span>Standard (Gratuit) :</span>
-                <span className="font-bold text-gray-800">Max 10 annonces</span>
+                <span className="font-bold text-gray-800">Annonces illimitées</span>
               </div>
             </div>
 

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { DollarSign, Clock, CheckCircle, XCircle, TrendingUp, Phone, AlertTriangle, Package, ShieldCheck } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useSupabase } from '../hooks/useSupabase';
+import { CodDebtBanner } from '../components/payment/CodDebtBanner';
 import { useSEO } from '../hooks/useSEO';
 import { formatPrice, formatDate, cn } from '../lib/utils';
 import { Button } from '../components/ui/Button';
@@ -288,6 +289,7 @@ const MesRevenusPage: React.FC = () => {
       )}
 
       <div className="relative z-10 px-4 mt-5 mb-6">
+        <CodDebtBanner userId={user?.id} role="seller" />
         <div className="grid grid-cols-2 gap-3">
           <Card elevation={2} padding="md" className="rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50">
             <div className="flex items-center gap-2 mb-2">

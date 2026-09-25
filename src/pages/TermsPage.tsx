@@ -11,8 +11,11 @@ import {
   MAX_CONSECUTIVE_CANCELLATIONS,
   LEGAL_LAST_UPDATED,
 } from '../content/legalFacts';
+import { usePhaseFacts } from '../content/usePhaseFacts';
 
 export default function TermsPage() {
+  // Régime en vigueur, lu dans la configuration réelle (pas figé sur le lancement).
+  const phase = usePhaseFacts();
   useSEO("Conditions Générales d'Utilisation : DaloaMarket", {
     description: "Conditions Générales d'Utilisation de la plateforme DaloaMarket.",
     canonical: 'https://daloamarket.com/terms'
@@ -139,7 +142,7 @@ export default function TermsPage() {
                     <li>Indiquer le stock disponible si l'article est vendu en plusieurs exemplaires</li>
                   </ul>
                   <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">4.4 Limites de publication</h4>
-                  <p><strong>Pendant la phase de lancement, la publication d'annonces est gratuite et sans plafond</strong>, pour tous les comptes. Aucune limite d'annonces actives simultanées n'est appliquée.</p>
+                  <p><strong>La publication d'annonces est gratuite et sans plafond</strong>, pour tous les comptes. Aucune limite d'annonces actives simultanées n'est appliquée.</p>
                   <p>À l'issue de cette phase, un plafond d'annonces actives pourra être rétabli pour les comptes Vendeurs Standards, la publication illimitée devenant un avantage du Pass Vendeur Pro. Tout rétablissement de ce plafond sera annoncé aux utilisateurs avant son entrée en vigueur.</p>
                 </div>
               </div>
@@ -163,7 +166,11 @@ export default function TermsPage() {
                   <p>Pour être parfaitement clair sur ce point : DaloaMarket n'est pas un établissement de paiement et ne détient pas de compte de cantonnement bancaire. Les sommes sont détenues par Money Fusion, prestataire agréé, jusqu'au déblocage. Le terme « séquestre » décrit ce mécanisme de blocage technique, et non un compte séparé ouvert par DaloaMarket.</p>
                   <p>Le détail de ces montants est affiché à l'acheteur, ligne par ligne, avant toute validation de commande. Aucun frais n'est ajouté après cet affichage.</p>
                   <p>Une fois la livraison validée, <strong>les fonds sont reversés sur le numéro Mobile Money ({PAYMENT_NETWORKS}) associé au compte du vendeur</strong>. Le vendeur doit donc s'assurer que le numéro enregistré sur la plateforme correspond à un compte Mobile Money valide et actif. Le versement est déclenché après validation de la livraison ; un délai de traitement peut s'écouler avant sa réception effective, celle-ci dépendant également des délais propres à l'opérateur Mobile Money.</p>
-                  <p><strong>Commission de vente.</strong> Pendant la phase de lancement, <strong>aucune commission n'est prélevée sur les ventes</strong> : le vendeur reçoit l'intégralité du prix de son article. À l'issue de cette phase, une commission de {FEES.sellerStandardPct} s'appliquera pour les Vendeurs Standards et de {FEES.sellerProPct} pour les Vendeurs Pro, déduite du montant versé au vendeur. Ce changement sera annoncé aux utilisateurs avant son entrée en vigueur.</p>
+                  {phase.noSellerCommission ? (
+                    <p><strong>Commission de vente.</strong> Pendant la phase de lancement, <strong>aucune commission n'est prélevée sur les ventes</strong> : le vendeur reçoit l'intégralité du prix de son article. À l'issue de cette phase, une commission de {FEES.sellerStandardPct} s'appliquera pour les Vendeurs Standards et de {FEES.sellerProPct} pour les Vendeurs Pro, déduite du montant versé au vendeur. Ce changement sera annoncé aux utilisateurs avant son entrée en vigueur.</p>
+                  ) : (
+                    <p><strong>Commission de vente.</strong> Une commission de <strong>{phase.sellerFeeText}</strong> est prélevée sur le prix des articles vendus. Elle est déduite du montant versé au vendeur pour un paiement en ligne ; pour une vente encaissée en espèces, elle est due à DaloaMarket et doit lui être reversée.</p>
+                  )}
                   <p>Les frais de livraison sont calculés selon la distance et reversés au livreur, déduction faite d'une retenue de {FEES.driverPlatformPct} conservée par la plateforme au titre de la mise en relation, du suivi GPS et du traitement du paiement.</p>
 
                   <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">5.3 Livraison avec géolocalisation (GPS) et code de vérification (OTP)</h4>
@@ -196,10 +203,14 @@ export default function TermsPage() {
                     <li>Boost d'annonce : mise en avant prioritaire avec badge « Sponsorisé », payée en crédits : {VISIBILITY.boostOptions}.</li>
                     <li>Packs de crédits : {VISIBILITY.creditPacks}.</li>
                   </ul>
-                  <p><strong>Précision sur la phase de lancement.</strong> La publication illimitée d'annonces, le paiement à la livraison, le retrait sur place et l'affiliation de livreurs sont actuellement <strong>ouverts à tous les vendeurs</strong>, qu'ils soient titulaires du Pass Vendeur Pro ou non. Ces fonctionnalités redeviendront des avantages réservés au Pass Vendeur Pro à l'issue de la phase de lancement, après information préalable des utilisateurs.</p>
+                  {phase.proFeaturesOpenToAll ? (
+                    <p><strong>Précision sur la phase de lancement.</strong> Le paiement à la livraison, le retrait sur place et l'affiliation de livreurs sont actuellement <strong>ouverts à tous les vendeurs</strong>, qu'ils soient titulaires du Pass Vendeur Pro ou non. Ces fonctionnalités redeviendront des avantages réservés au Pass Vendeur Pro à l'issue de la phase de lancement, après information préalable des utilisateurs.</p>
+                  ) : (
+                    <p><strong>Avantages du Pass Vendeur Pro.</strong> Le paiement à la livraison, le retrait sur place et l'affiliation de livreurs sont <strong>réservés aux titulaires du Pass Vendeur Pro</strong>, sauf mention contraire affichée sur la plateforme.</p>
+                  )}
 
                   <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">5.7 Livreurs Affiliés et Responsabilité du Vendeur</h4>
-                  <p>Les vendeurs ont la possibilité d'affilier leurs propres livreurs de confiance pour assurer l'expédition de leurs commandes ou l'encaissement du paiement à la livraison. Cette possibilité est ouverte à tous les vendeurs pendant la phase de lancement, et sera réservée aux Vendeurs Pro à l'issue de celle-ci.</p>
+                  <p>Les vendeurs ont la possibilité d'affilier leurs propres livreurs de confiance pour assurer l'expédition de leurs commandes ou l'encaissement du paiement à la livraison. {phase.proFeaturesOpenToAll ? "Cette possibilité est ouverte à tous les vendeurs pendant la phase de lancement, et sera réservée aux Vendeurs Pro à l'issue de celle-ci." : 'Cette possibilité est réservée aux Vendeurs Pro.'}</p>
                   <ul className="list-disc pl-5 space-y-1">
                     <li><strong className="text-[var(--color-on-surface)]">Responsabilité du Vendeur :</strong> Le Vendeur Pro assume la responsabilité exclusive des actes, retards, négligences, pertes ou vols commis par ses livreurs affiliés.</li>
                     <li><strong className="text-[var(--color-on-surface)]">Protection de l'Acheteur :</strong> En cas de litige, vol, perte ou non-livraison d'une commande par un livreur affilié, <strong>l'acheteur est intégralement remboursé ou conserve l'intégralité de son argent</strong>. DaloaMarket n'accorde aucun dédommagement au vendeur pour la faute ou le vol commis par son propre livreur affilié.</li>

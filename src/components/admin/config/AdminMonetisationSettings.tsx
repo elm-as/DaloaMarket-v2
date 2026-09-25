@@ -32,6 +32,10 @@ const PRESETS: Record<0 | 1, Partial<PhaseConfig>> = {
     allow_affiliated_deliverers_for_all: false,
     default_payment_method: 'online',
     seller_fee_override: null,
+    // Les services ci-dessus deviennent des avantages Pro : le Pass Pro doit
+    // pouvoir s'acheter (il était désactivé en phase 0, le préréglage le laissait tel quel).
+    enable_seller_badge: true,
+    enable_boost: true,
   },
 };
 

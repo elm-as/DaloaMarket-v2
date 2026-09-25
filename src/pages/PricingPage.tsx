@@ -9,8 +9,16 @@ import { useSupabase } from '../hooks/useSupabase';
 import { SELLER_BADGE_PRICE, SELLER_BADGE_YEARLY_PRICE } from '../lib/featureFlags';
 import { formatPrice } from '../lib/utils';
 import toast from 'react-hot-toast';
+import { usePhaseFacts } from '../content/usePhaseFacts';
+import { usePhase } from '../contexts/PhaseContext';
+import { FEES, pct } from '../content/legalFacts';
 
 export default function PricingPage() {
+  // Régime en vigueur, lu dans la configuration (plus de 3,5 % affichés en phase de lancement).
+  const phase = usePhaseFacts();
+  const { phaseConfig } = usePhase();
+  const standardFeePct =
+    phaseConfig.seller_fee_override != null ? pct(Number(phaseConfig.seller_fee_override)) : FEES.sellerStandardPct;
   const navigate = useNavigate();
   const { user } = useSupabase();
 
@@ -18,7 +26,7 @@ export default function PricingPage() {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: 'Tarifs et Abonnements DaloaMarket',
-    description: 'Modèle 100% gratuit à l\'entrée avec commission au succès de 3,5% et formule Vendeur PRO à 2 500 FCFA pour développer vos ventes à Daloa.',
+    description: 'Publication gratuite et illimitée, commission uniquement sur les ventes conclues, et formule Vendeur PRO à 2 500 FCFA pour développer vos ventes à Daloa.',
     offers: [
       {
         '@type': 'Offer',
@@ -48,7 +56,7 @@ export default function PricingPage() {
   };
 
   useSEO('Tarifs & Transparence : Formule Lancement & Pass Pro', {
-    description: 'Découvrez la tarification transparente de DaloaMarket : 100% gratuit jusqu\'à 20 articles, commission au succès de 3,5% et Pass Vendeur Pro à 2 500 FCFA.',
+    description: 'Découvrez la tarification transparente de DaloaMarket : publication gratuite et illimitée, commission uniquement au succès et Pass Vendeur Pro à 2 500 FCFA.',
     keywords: 'tarifs DaloaMarket, vendeur pro Daloa, commission marketplace Daloa, e-commerce Côte d\'Ivoire',
     canonical: 'https://daloamarket.com/pricing',
     jsonLd: pricingSchema,
@@ -114,14 +122,18 @@ export default function PricingPage() {
                   <span className="text-xs text-gray-500 font-semibold">à l'inscription</span>
                 </div>
                 <p className="text-[11px] text-gray-600 mt-1 font-medium">
-                  Commission au succès : <strong className="text-emerald-700 font-bold">3,5% par vente conclue</strong>
+                  {phase.noSellerCommission ? (
+                    <>Commission : <strong className="text-emerald-700 font-bold">aucune pendant la phase de lancement</strong>, puis {FEES.sellerStandardPct} par vente conclue</>
+                  ) : (
+                    <>Commission au succès : <strong className="text-emerald-700 font-bold">{standardFeePct} par vente conclue</strong></>
+                  )}
                 </p>
               </div>
 
               <ul className="space-y-3 mb-6">
                 <li className="flex items-start gap-2.5 text-xs text-gray-700 font-medium">
                   <CheckCircle className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                  <span><strong>Jusqu'à 20 articles</strong> publiés gratuitement</span>
+                  <span><strong>Annonces illimitées</strong>, publiées gratuitement</span>
                 </li>
                 <li className="flex items-start gap-2.5 text-xs text-gray-700 font-medium">
                   <CheckCircle className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
@@ -185,7 +197,7 @@ export default function PricingPage() {
               <ul className="space-y-3 mb-6">
                 <li className="flex items-start gap-2.5 text-xs text-gray-900 font-bold">
                   <CheckCircle className="h-4 w-4 text-orange-600 flex-shrink-0 mt-0.5" />
-                  <span><strong>Dépassement de quota</strong> : publications & stock illimités (+20 articles)</span>
+                  <span><strong>Paiement à la livraison, retrait sur place et livreurs affiliés</strong>{phase.proFeaturesOpenToAll ? ' (ouverts à tous pendant le lancement)' : ''}</span>
                 </li>
                 <li className="flex items-start gap-2.5 text-xs text-gray-900 font-bold">
                   <CheckCircle className="h-4 w-4 text-orange-600 flex-shrink-0 mt-0.5" />
@@ -197,7 +209,7 @@ export default function PricingPage() {
                 </li>
                 <li className="flex items-start gap-2.5 text-xs text-gray-900 font-bold">
                   <CheckCircle className="h-4 w-4 text-orange-600 flex-shrink-0 mt-0.5" />
-                  <span><strong>Commission réduite à 2,5%</strong> (au lieu de 3,5%)</span>
+                  <span><strong>Commission réduite à {FEES.sellerProPct}</strong> (au lieu de {FEES.sellerStandardPct}){phase.noSellerCommission ? ', dès la fin du lancement' : ''}</span>
                 </li>
                 <li className="flex items-start gap-2.5 text-xs text-gray-700 font-medium">
                   <CheckCircle className="h-4 w-4 text-orange-600 flex-shrink-0 mt-0.5" />

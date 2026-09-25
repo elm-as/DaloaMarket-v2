@@ -419,7 +419,9 @@ const CheckoutPage: React.FC = () => {
     ? (cartItems.length > 0 && cartItems.every(item => cartSellers.get(item.listing_id)?.isPro === true))
     : (listing?.is_seller_pro ?? false);
 
-  const isCodAllowed = isSellerPro || phaseConfig.allow_cod_for_all || sellerSettings.cash_on_delivery_enabled;
+  // Même règle que create_cod_order : Pro, ou phase qui l'ouvre à tous. Le
+  // réglage personnel du vendeur l'ouvrait à tort en phase 1 (règle en « ou »).
+  const isCodAllowed = isSellerPro || phaseConfig.allow_cod_for_all;
   const isPickupAllowed = isSellerPro || phaseConfig.allow_pickup_for_all;
 
   useEffect(() => {
@@ -545,7 +547,11 @@ const CheckoutPage: React.FC = () => {
           throw new Error(
             result?.reason === 'no_active_listing'
               ? "Ces articles ne sont plus disponibles à la vente."
-              : result?.reason || 'Erreur de création de la commande'
+              : result?.reason === 'cod_not_allowed'
+                ? 'Le paiement à la livraison n’est pas disponible pour cet article. Choisissez le paiement en ligne.'
+                : result?.reason === 'pickup_not_allowed'
+                  ? 'Le retrait en boutique n’est pas disponible pour cet article. Choisissez la livraison.'
+                  : result?.reason || 'Erreur de création de la commande'
           );
         }
 
