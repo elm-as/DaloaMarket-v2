@@ -60,10 +60,11 @@ const MyStatsPage: React.FC = () => {
 
       if (listingsError) throw listingsError;
 
-      const totalViews = (listings || []).reduce(
-        (sum, l) => sum + (l.view_count || 0),
-        0
-      );
+      // Vraies visites : visiteurs enregistrés (une personne par annonce, vous
+      // exclu). `view_count` a été pré-rempli à l'import et ne sert plus qu'au
+      // classement « Populaire à Daloa ».
+      const { data: visitors } = await (supabase.rpc as any)('get_my_listing_visitors');
+      const totalViews = Number(visitors) || 0;
 
       const activeListings = (listings || []).filter(
         (l) => l.status === 'active'
@@ -253,12 +254,12 @@ const MyStatsPage: React.FC = () => {
                   desc: 'Commandes livrées',
                 },
                 {
-                  label: 'Vues totales',
+                  label: 'Visiteurs',
                   value: kpi.totalViews,
                   icon: <Eye className="w-6 h-6" />,
                   color: 'text-blue-600',
                   bg: 'bg-blue-50',
-                  desc: 'Visites sur vos fiches',
+                  desc: 'Personnes ayant vu vos annonces',
                 },
                 {
                   label: 'Messages reçus',
