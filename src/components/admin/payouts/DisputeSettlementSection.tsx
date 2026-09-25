@@ -132,7 +132,7 @@ export const DisputeSettlementSection: React.FC<DisputeSettlementSectionProps> =
             const status = deliveryStatus(item.status);
             const productAmount = item.order?.product_amount || 0;
             const deliveryFee = item.order?.delivery_fee || 0;
-            const driverPay = Math.max(0, deliveryFee - Math.ceil(deliveryFee * 0.1));
+            const driverPay = Math.max(0, deliveryFee - Math.round(deliveryFee * 0.1));
             const isProcessing = processingId === item.id;
             const confirm = pending?.id === item.id ? ACTIONS.find((a) => a.key === pending.action) : undefined;
 

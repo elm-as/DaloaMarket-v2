@@ -44,7 +44,7 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
     .filter((d) => isDriverDelivery(d) && d.status === 'delivered')
     .reduce((sum, d) => {
       const fee = d.delivery_price || d.order?.delivery_fee || 0;
-      return sum + Math.ceil(fee * 0.10);
+      return sum + Math.round(fee * 0.10);
     }, 0);
 
   const missingPayoutsCount = deliveries.filter(
@@ -175,7 +175,7 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
               <tbody className="divide-y divide-slate-100">
                 {filteredItems.map((item) => {
                   const fee = item.delivery_price || item.order?.delivery_fee || 0;
-                  const platformFee = Math.ceil(fee * 0.10);
+                  const platformFee = Math.round(fee * 0.10);
                   const netFee = Math.max(0, fee - platformFee);
                   const p = item.driver_payout;
                   const isPaid = p?.status === 'paid' || p?.status === 'completed';
