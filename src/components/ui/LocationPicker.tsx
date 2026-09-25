@@ -44,7 +44,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   onLocationChange,
   placeholder = "Cliquez sur la carte ou recherchez pour affiner la position",
   readOnly = false,
-  zoom = 14,
+  zoom = 13,
   className,
   userType = 'buyer',
   sellerCoords = null,

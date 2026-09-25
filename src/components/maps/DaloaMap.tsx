@@ -75,8 +75,8 @@ export default function DaloaMap({
 
     const map = L.map(containerRef.current, {
       center: DALOA_CENTER,
-      zoom: 14,
-      minZoom: 12,
+      zoom: 13,
+      minZoom: 11,
       maxBounds: L.latLngBounds(DALOA_BOUNDS[0], DALOA_BOUNDS[1]),
       maxBoundsViscosity: 0.9,
       zoomControl: false,
@@ -118,13 +118,22 @@ export default function DaloaMap({
 
     if (points.length >= 2) {
       const bounds = L.latLngBounds(points);
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
     } else if (points.length === 1) {
-      map.setView(points[0], 15);
+      map.setView(points[0], 14);
     } else {
-      map.setView(DALOA_CENTER, 14);
+      map.setView(DALOA_CENTER, 13);
     }
   }, [sellerPosition, buyerPosition, deliveryPersonPosition]);
+
+  // Les positions arrivent en tableaux recréés à chaque rendu (et à chaque
+  // position du livreur) : l'effet ci-dessous recadrait la carte et relançait
+  // le calcul d'itinéraire en boucle, et le zoom choisi était perdu. On ne
+  // réagit plus qu'à un vrai changement du vendeur ou de l'acheteur.
+  const sellerKey = sellerPosition ? sellerPosition.map((v) => v.toFixed(5)).join(',') : '';
+  const buyerKey = buyerPosition ? buyerPosition.map((v) => v.toFixed(5)).join(',') : '';
+  const fitRef = useRef(fitAllPoints);
+  fitRef.current = fitAllPoints;
 
   // Mise à jour des marqueurs et calcul de l'itinéraire
   useEffect(() => {
@@ -153,7 +162,7 @@ export default function DaloaMap({
     }
 
     if (sellerPosition && buyerPosition) {
-      fitAllPoints();
+      fitRef.current();
       setIsRouting(true);
 
       calculateRoute(sellerPosition, buyerPosition).then((info) => {
@@ -192,7 +201,8 @@ export default function DaloaMap({
         }
       });
     }
-  }, [sellerPosition, buyerPosition, onRouteReady, fitAllPoints]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sellerKey, buyerKey]);
 
   // Mise à jour de la position du livreur
   useEffect(() => {
