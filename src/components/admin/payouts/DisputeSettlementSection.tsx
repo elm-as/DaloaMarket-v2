@@ -73,7 +73,13 @@ export const DisputeSettlementSection: React.FC<DisputeSettlementSectionProps> =
       });
       if (error) throw error;
       if (data && data.success === false) {
-        throw new Error(data.reason || 'Action non autorisée');
+        throw new Error(
+          data.reason === 'conflict_of_interest'
+            ? 'Vous êtes partie prenante de cette course (livreur, acheteur ou vendeur) : un autre admin doit arbitrer.'
+            : data.reason === 'unauthorized'
+              ? 'Action réservée à l’administration.'
+              : data.reason || 'Action non autorisée'
+        );
       }
       toast.success(SUCCESS[action]);
       // Envoie tout de suite les versements créés par l'arbitrage.
