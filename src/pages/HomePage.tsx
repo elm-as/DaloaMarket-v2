@@ -483,7 +483,7 @@ const HomePage: React.FC = () => {
       {/* DALOADELIVERY LINK BANNER */}
       <section className="px-4 pt-3 pb-1">
         <a
-          href="https://delivery.daloamarket.com"
+          href="https://delivery.daloamarket.com/annuaire"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-between gap-2.5 max-w-2xl lg:max-w-5xl mx-auto px-3.5 py-2 bg-white rounded-2xl shadow-xs border border-orange-100/80 no-underline active:scale-[0.99] hover:bg-orange-50/50 transition-all group"
