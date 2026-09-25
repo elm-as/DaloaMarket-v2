@@ -58,9 +58,39 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   const markerRef = useRef<L.Marker | null>(null);
   const sellerMarkerRef = useRef<L.CircleMarker | null>(null);
   const routeLineRef = useRef<L.Polyline | null>(null);
-  
+
   const [lat, setLat] = useState(initialLat ?? DALOA_CENTER_COORDS.lat);
   const [lng, setLng] = useState(initialLng ?? DALOA_CENTER_COORDS.lng);
+  // Dernière position acceptée : un repère refusé y revient.
+  const lastValidRef = useRef<{ lat: number; lng: number }>({
+    lat: initialLat ?? DALOA_CENTER_COORDS.lat,
+    lng: initialLng ?? DALOA_CENTER_COORDS.lng,
+  });
+
+  /**
+   * Livraison et boutiques : Daloa uniquement. Un acheteur pouvait poser son
+   * repère n'importe où (ex. au Bénin) : le calcul retombait alors en silence sur
+   * le centre de Daloa, et la distance restait figée quel que soit le point choisi.
+   * Seuls les admins peuvent placer une boutique de test hors zone.
+   */
+  const rejectIfOutside = (la: number, ln: number): boolean => {
+    if (isLocationInDaloa(la, ln)) return false;
+    if (userType === 'seller' && isSuperOrAdmin) return false;
+    toast.error(
+      userType === 'buyer'
+        ? "Nous livrons uniquement à Daloa. Placez le repère sur votre adresse à Daloa."
+        : "Emplacement hors de Daloa. DaloaMarket est réservé aux vendeurs locaux.",
+      { icon: "🚫", duration: 4500 }
+    );
+    return true;
+  };
+
+  const acceptPosition = (la: number, ln: number) => {
+    lastValidRef.current = { lat: la, lng: ln };
+    setLat(la);
+    setLng(ln);
+    onLocationChange(la, ln);
+  };
   const [locating, setLocating] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const [mapMode, setMapMode] = useState<'street' | 'satellite'>('street');
@@ -124,30 +154,18 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     if (!readOnly) {
       map.on("click", (e: L.LeafletMouseEvent) => {
         const { lat: newLat, lng: newLng } = e.latlng;
-        
-        if (userType === 'seller' && !isLocationInDaloa(newLat, newLng) && !isSuperOrAdmin) {
-          toast.error("Veuillez sélectionner un emplacement situé à Daloa (Côte d'Ivoire).", { icon: "🚫" });
-          return;
-        }
-
-        setLat(newLat);
-        setLng(newLng);
+        if (rejectIfOutside(newLat, newLng)) return;
         marker.setLatLng([newLat, newLng]);
-        onLocationChange(newLat, newLng);
+        acceptPosition(newLat, newLng);
       });
 
       marker.on("dragend", () => {
         const position = marker.getLatLng();
-        
-        if (userType === 'seller' && !isLocationInDaloa(position.lat, position.lng) && !isSuperOrAdmin) {
-          toast.error("Emplacement déplacé hors de Daloa. Replacé au centre.", { icon: "⚠️" });
-          marker.setLatLng([lat, lng]);
+        if (rejectIfOutside(position.lat, position.lng)) {
+          marker.setLatLng([lastValidRef.current.lat, lastValidRef.current.lng]);
           return;
         }
-
-        setLat(position.lat);
-        setLng(position.lng);
-        onLocationChange(position.lat, position.lng);
+        acceptPosition(position.lat, position.lng);
       });
     }
 
@@ -238,16 +256,11 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   const handleSearchResult = (result: LocationSearchResult) => {
     if (!mapRef.current || !markerRef.current) return;
 
-    if (userType === 'seller' && !isLocationInDaloa(result.lat, result.lng) && !isSuperOrAdmin) {
-      toast.error("Emplacement hors de Daloa. DaloaMarket est réservé aux vendeurs locaux.", { icon: "🚫" });
-      return;
-    }
+    if (rejectIfOutside(result.lat, result.lng)) return;
 
-    setLat(result.lat);
-    setLng(result.lng);
     mapRef.current.flyTo([result.lat, result.lng], 15, { duration: 1.2 });
     markerRef.current.setLatLng([result.lat, result.lng]);
-    onLocationChange(result.lat, result.lng);
+    acceptPosition(result.lat, result.lng);
     toast.success(`Position centrée sur ${result.name}`, { icon: "📍", duration: 2500 });
   };
 
@@ -291,18 +304,20 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     const { lat: newLat, lng: newLng } = pendingCoords;
     const inDaloa = isLocationInDaloa(newLat, newLng);
 
-    if (userType === 'seller' && !inDaloa && !isSuperOrAdmin) {
-      toast.error("Impossible d'enregistrer une boutique en dehors de Daloa.", { icon: "🚫" });
+    // Position GPS hors de Daloa (souvent une position réseau très approximative
+    // sur ordinateur) : on garde le repère à Daloa et on explique.
+    if (rejectIfOutside(newLat, newLng)) {
+      setShowConfirmModal(false);
+      setPendingCoords(null);
+      mapRef.current?.setView([lastValidRef.current.lat, lastValidRef.current.lng], zoom);
       return;
     }
 
-    setLat(newLat);
-    setLng(newLng);
     if (mapRef.current && markerRef.current) {
       mapRef.current.setView([newLat, newLng], zoom);
       markerRef.current.setLatLng([newLat, newLng]);
     }
-    onLocationChange(newLat, newLng);
+    acceptPosition(newLat, newLng);
     setShowConfirmModal(false);
     setPendingCoords(null);
 

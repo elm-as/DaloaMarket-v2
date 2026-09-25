@@ -23,7 +23,7 @@ import { useSupabase } from "../hooks/useSupabase";
 import { useSystemSettings } from "../hooks/useSystemSettings";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { isCurfewActive } from "../utils/timeConstraints";
-import { formatPrice, cn } from "../lib/utils";
+import { formatPrice, cn, isLocationInDaloa } from "../lib/utils";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -85,6 +85,8 @@ const CheckoutPage: React.FC = () => {
   const [deliveryLongitude, setDeliveryLongitude] = useState<number>(-6.4502);
   const [paying, setPaying] = useState(false);
   const [distanceKm, setDistanceKm] = useState(0);
+  // Itinéraire en cours de calcul (Mapbox puis OSRM : jusqu'à quelques secondes).
+  const [routing, setRouting] = useState(false);
   const [cartSellers, setCartSellers] = useState<Map<string, { sellerId: string; lat: number; lng: number; isPro?: boolean }>>(new Map());
   /* Frais de livraison par VENDEUR : le serveur en facture un par vendeur
      (payments.js), le checkout n'en affichait qu'un seul, calculé sur la
@@ -112,6 +114,15 @@ const CheckoutPage: React.FC = () => {
     }
   };
 
+  // Livraison à Daloa uniquement. Hors zone, le tarif n'a pas de sens : on
+  // bloque au lieu d'afficher un prix calculé depuis le centre-ville.
+  const isOutOfZone =
+    deliveryMode === 'delivery' &&
+    deliveryLatitude != null &&
+    deliveryLongitude != null &&
+    !isLocationInDaloa(deliveryLatitude, deliveryLongitude);
+  const OUT_OF_ZONE_MESSAGE = 'Nous livrons uniquement à Daloa. Placez le repère sur votre adresse à Daloa.';
+
   const handleStep1Next = () => {
     if (deliveryMode === 'pickup') {
       setStep(3);
@@ -128,6 +139,10 @@ const CheckoutPage: React.FC = () => {
     }
     if (deliveryMode === 'delivery' && (deliveryLatitude == null || deliveryLongitude == null || isNaN(deliveryLatitude) || isNaN(deliveryLongitude))) {
       toast.error("Veuillez positionner votre adresse sur la carte ou activer votre GPS.");
+      return;
+    }
+    if (isOutOfZone) {
+      toast.error(OUT_OF_ZONE_MESSAGE);
       return;
     }
     setStep(3);
@@ -379,9 +394,16 @@ const CheckoutPage: React.FC = () => {
       }
     };
 
-    compute();
+    // Petite attente : glisser le repère ne relance pas un calcul à chaque pixel.
+    setRouting(true);
+    const timer = setTimeout(() => {
+      compute().finally(() => {
+        if (active) setRouting(false);
+      });
+    }, 350);
     return () => {
       active = false;
+      clearTimeout(timer);
     };
   }, [
     buyerCoords?.latitude,
@@ -452,6 +474,12 @@ const CheckoutPage: React.FC = () => {
 
     if (deliveryMode === 'delivery' && (deliveryLatitude == null || deliveryLongitude == null || isNaN(deliveryLatitude) || isNaN(deliveryLongitude))) {
       toast.error("Coordonnées GPS manquantes. Veuillez positionner votre repère de livraison.");
+      return;
+    }
+
+    if (isOutOfZone) {
+      toast.error(OUT_OF_ZONE_MESSAGE);
+      setStep(2);
       return;
     }
 
@@ -742,6 +770,11 @@ const CheckoutPage: React.FC = () => {
                   setStep(2);
                   return;
                 }
+                if (isOutOfZone) {
+                  toast.error(OUT_OF_ZONE_MESSAGE);
+                  setStep(2);
+                  return;
+                }
                 setStep(3);
               }}
               className="relative z-10 flex flex-col items-center gap-1 group focus:outline-none"
@@ -974,12 +1007,28 @@ const CheckoutPage: React.FC = () => {
 
               {/* Retour immédiat en déplaçant le repère : sans cela, la distance
                   et le tarif n'apparaissaient qu'à l'étape suivante. */}
-              {!isPickup && distanceKm > 0 && (
-                <div className="flex items-center justify-center gap-2 rounded-2xl bg-orange-50 border border-orange-100 px-4 py-2.5 text-xs font-bold text-orange-700">
-                  <Navigation size={14} />
-                  <span>Distance : {distanceKm} km</span>
-                  <span className="text-orange-300">·</span>
-                  <span>Frais : {formatPrice(deliveryFee)}</span>
+              {!isPickup && isOutOfZone && (
+                <div className="flex items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-bold text-red-700" role="alert">
+                  <MapPin size={14} />
+                  <span>{OUT_OF_ZONE_MESSAGE}</span>
+                </div>
+              )}
+              {!isPickup && !isOutOfZone && distanceKm > 0 && (
+                <div className="flex items-center justify-center gap-2 rounded-2xl bg-orange-50 border border-orange-100 px-4 py-2.5 text-xs font-bold text-orange-700" aria-live="polite">
+                  <Navigation size={14} className={routing ? 'animate-pulse' : undefined} />
+                  {routing ? (
+                    <span>Calcul de l'itinéraire…</span>
+                  ) : (
+                    <>
+                      <span>Distance : {distanceKm} km</span>
+                      <span className="text-orange-300">·</span>
+                      <span>
+                        Frais : {formatPrice(deliveryFee)}
+                        {/* Un frais par vendeur, comme le serveur : 2 vendeurs = 2 courses. */}
+                        {deliveryFeesBySeller.size > 1 && ` (${deliveryFeesBySeller.size} vendeurs)`}
+                      </span>
+                    </>
+                  )}
                 </div>
               )}
 

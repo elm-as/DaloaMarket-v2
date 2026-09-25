@@ -124,10 +124,24 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
  * Distance facturable : itinéraire routier réel (Mapbox puis OSRM), à défaut le
  * vol d'oiseau majoré. Même cascade que les applications et le serveur.
  */
+/** Itinéraires déjà calculés, pour ne pas réinterroger Mapbox/OSRM au même point. */
+const routeCache = new Map<string, number>();
+
 export async function resolveBillableDistanceKm(
   origin: LatLng,
   destination: LatLng
 ): Promise<number> {
+  const key = [origin.latitude, origin.longitude, destination.latitude, destination.longitude]
+    .map((v) => v.toFixed(4))
+    .join(',');
+  const cached = routeCache.get(key);
+  if (cached != null) return cached;
+  const km = await computeBillableDistanceKm(origin, destination);
+  routeCache.set(key, km);
+  return km;
+}
+
+async function computeBillableDistanceKm(origin: LatLng, destination: LatLng): Promise<number> {
   const straight = haversineDistance(origin, destination);
 
   if (MAPBOX_TOKEN) {
@@ -136,7 +150,7 @@ export async function resolveBillableDistanceKm(
         `https://api.mapbox.com/directions/v5/mapbox/driving/` +
         `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}` +
         `?overview=false&access_token=${MAPBOX_TOKEN}`;
-      const res = await fetchWithTimeout(url, 4000);
+      const res = await fetchWithTimeout(url, 3000);
       if (res.ok) {
         const data = await res.json();
         const route = data?.routes?.[0];
@@ -151,7 +165,7 @@ export async function resolveBillableDistanceKm(
     const url =
       `https://router.project-osrm.org/route/v1/driving/` +
       `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}?overview=false`;
-    const res = await fetchWithTimeout(url, 3500);
+    const res = await fetchWithTimeout(url, 2500);
     if (res.ok) {
       const data = await res.json();
       const route = data?.routes?.[0];

@@ -26,8 +26,12 @@ interface KPIData {
   messagesReceived: number;
   activeListings: number;
   salesCount: number;
+  /** Articles vendus et livrés (montant des articles, hors livraison). */
   totalEarnings: number;
+  /** Commandes pas encore livrées. */
   pendingEarnings: number;
+  /** Virements vendeur réellement arrivés sur le Mobile Money. */
+  paidOut: number;
 }
 
 const MyStatsPage: React.FC = () => {
@@ -76,9 +80,9 @@ const MyStatsPage: React.FC = () => {
       const completedOrders = (orders || []).filter(
         (o) => o.status === 'delivered' || o.status === 'completed'
       );
-      const pendingOrders = (orders || []).filter(
-        (o) => ['paid', 'confirmed', 'awaiting_pickup', 'accepted', 'picked_up', 'in_transit'].includes(o.status)
-      );
+      // Statuts réels de `orders` (CHECK) : les anciens filtres visaient aussi
+      // des statuts de course (awaiting_pickup, picked_up…) qui n'y existent pas.
+      const pendingOrders = (orders || []).filter((o) => ['pending', 'paid', 'in_transit'].includes(o.status));
 
       const salesCount = completedOrders.length;
       const orderCompletedEarnings = completedOrders.reduce(
@@ -98,27 +102,27 @@ const MyStatsPage: React.FC = () => {
 
       if (msgError) throw msgError;
 
-      // Fetch direct payouts if any
+      // Virements de vente uniquement : un remboursement d'achat ou une paie de
+      // livreur n'est pas un revenu de vendeur. Ils ne s'ajoutent plus aux ventes
+      // livrées, qu'ils comptaient une deuxième fois.
       const { data: payouts } = await (supabase as any)
         .from('payouts')
         .select('amount, status')
-        .eq('user_id', currentUserId);
+        .eq('user_id', currentUserId)
+        .eq('type', 'seller');
 
-      const payoutCompletedEarnings = (payouts || [])
-        .filter((p: any) => p.status === 'paid' || p.status === 'completed' || p.status === 'confirmed')
-        .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-
-      const payoutPendingEarnings = (payouts || [])
-        .filter((p: any) => p.status === 'pending' || p.status === 'processing')
-        .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      const paidOut = (payouts || [])
+        .filter((p: any) => p.status === 'paid' || p.status === 'completed')
+        .reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
 
       setKpi({
         totalViews,
         messagesReceived: msgCount || 0,
         activeListings,
         salesCount,
-        totalEarnings: orderCompletedEarnings + payoutCompletedEarnings,
-        pendingEarnings: orderPendingEarnings + payoutPendingEarnings,
+        totalEarnings: orderCompletedEarnings,
+        pendingEarnings: orderPendingEarnings,
+        paidOut,
       });
     } catch (err) {
       console.error('Error fetching stats:', err);
@@ -207,7 +211,7 @@ const MyStatsPage: React.FC = () => {
                 </div>
 
                 <div className="mt-2">
-                  <p className="text-xs text-white/70 font-medium">Revenus encaissés</p>
+                  <p className="text-xs text-white/70 font-medium">Ventes livrées</p>
                   <p className="text-4xl font-extrabold tracking-tight mt-0.5">
                     {formatPrice(kpi.totalEarnings)}
                   </p>
@@ -215,22 +219,17 @@ const MyStatsPage: React.FC = () => {
 
                 <div className="h-[1px] bg-white/10 my-4" />
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-white/90">
-                      <Clock className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-white/70 font-medium">En attente (~10 min)</p>
-                      <p className="text-base font-bold text-white/95">
-                        {formatPrice(kpi.pendingEarnings)}
-                      </p>
-                    </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl bg-white/10 px-3 py-2.5">
+                    <p className="text-[11px] text-white/75 font-medium">Versé sur Mobile Money</p>
+                    <p className="text-base font-bold text-white">{formatPrice(kpi.paidOut)}</p>
                   </div>
-
-                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-white/15 text-white border border-white/10 backdrop-blur-sm">
-                    Sécurisé
-                  </span>
+                  <div className="rounded-2xl bg-white/10 px-3 py-2.5">
+                    <p className="flex items-center gap-1 text-[11px] text-white/75 font-medium">
+                      <Clock className="w-3 h-3" /> En cours
+                    </p>
+                    <p className="text-base font-bold text-white">{formatPrice(kpi.pendingEarnings)}</p>
+                  </div>
                 </div>
               </div>
             </motion.div>
