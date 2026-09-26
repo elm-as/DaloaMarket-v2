@@ -37,6 +37,11 @@ export function friendlyError(err: unknown, fallback = 'Une erreur est survenue.
     return 'Le serveur met trop de temps à répondre. Réessayez dans un instant.';
   }
 
+  // Position de boutique refusée par la base (hors de la zone de Daloa)
+  if (/shop_location_outside_zone/i.test(raw)) {
+    return 'La boutique doit être placée à Daloa, à moins de 10 km du centre-ville.';
+  }
+
   // Cas Authentification Supabase
   if (/invalid login|invalid credentials|invalid_grant|user not found/i.test(raw)) {
     return 'Adresse email ou mot de passe incorrect.';

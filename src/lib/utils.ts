@@ -41,7 +41,7 @@ export const extractUuid = (input: string): string | null => {
 export const DALOA_CENTER_COORDS = { lat: 6.8773, lng: -6.4502 };
 
 /** Rayon de couverture géographique officiel pour Daloa (en km) */
-export const DALOA_GEOFENCE_RADIUS_KM = 18;
+export const DALOA_GEOFENCE_RADIUS_KM = 10;
 
 /**
  * Calcule la distance en km entre 2 points GPS (formule de Haversine)

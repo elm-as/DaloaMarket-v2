@@ -85,7 +85,9 @@ const POST_JSON = async <T>(url: string, body: unknown): Promise<T> => {
     if (!res.ok) {
       const msg = (data as { message?: string } | null)?.message || `Erreur ${res.status}`;
       console.error('Payment API error:', { status: res.status, message: msg, url });
-      throw new Error(msg);
+      const err = new Error(msg) as Error & { reason?: string };
+      err.reason = (data as { reason?: string } | null)?.reason;
+      throw err;
     }
     return data as T;
   } catch (error) {
@@ -107,6 +109,8 @@ export interface CreateOrderInput {
   delivery_lng?: number;
   delivery_mode: 'delivery' | 'pickup_point';
   amount?: number;
+  /** Devis serveur (POST /quote) : le paiement facture exactement ce devis. */
+  quoteId?: string;
 }
 
 export interface CreateOrderResponse {
@@ -133,12 +137,50 @@ export const createOrder = async (
     userId: input.buyer_id,
     orderInput: input,
     orderInputs: orderInputs && orderInputs.length > 0 ? orderInputs : [input],
+    quoteId: input.quoteId,
   });
 
   if (res) {
     res.payment_url = normalizeMoneyFusionUrl(res.payment_url, res.token, res.total_amount);
   }
   return res;
+};
+
+/** Devis de commande calculé par le serveur : le seul prix qui fait foi. */
+export interface ServerQuote {
+  id: string;
+  expiresAt: string;
+  deliveryMode: 'delivery' | 'pickup_point';
+  sellers: { seller_id: string; distance_km: number; delivery_fee: number; buyer_fee: number; product_amount: number }[];
+  productTotal: number;
+  deliveryTotal: number;
+  buyerFeeTotal: number;
+  totalAmount: number;
+  distanceKm: number;
+}
+
+/** Raisons pour lesquelles un devis doit être redemandé avant de payer. */
+export const QUOTE_RETRY_REASONS = ['quote_expired', 'quote_used', 'quote_stale', 'quote_not_found', 'quote_mismatch'];
+
+export const getOrderQuote = async (
+  items: { listing_id: string; variant_id?: string | null; quantity: number }[],
+  opts: { deliveryMode: 'delivery' | 'pickup'; deliveryLat?: number | null; deliveryLng?: number | null; deliveryAddress?: string }
+): Promise<ServerQuote> => {
+  if (!PAYMENT_API_URL) {
+    throw new Error('Configuration invalide: VITE_PAYMENT_API_URL non définie');
+  }
+  const res = await POST_JSON<{ success: boolean; quote: ServerQuote }>(`${PAYMENT_API_URL}/quote`, {
+    items: items.map((it) => ({
+      listing_id: it.listing_id,
+      variant_id: it.variant_id || undefined,
+      quantity: it.quantity,
+      delivery_mode: opts.deliveryMode,
+      delivery_lat: opts.deliveryMode === 'delivery' ? opts.deliveryLat ?? undefined : undefined,
+      delivery_lng: opts.deliveryMode === 'delivery' ? opts.deliveryLng ?? undefined : undefined,
+      delivery_address: opts.deliveryAddress || undefined,
+    })),
+  });
+  return res.quote;
 };
 
 export const initiatePayment = async (

@@ -45,6 +45,7 @@ import {
 import { calculateDeliveryFee } from "../lib/delivery";
 import { affiliatedDeliverersService } from "../services/affiliatedDeliverersService";
 import type { ListingVariant } from "../types/listing";
+import { getOrderQuote, QUOTE_RETRY_REASONS, type ServerQuote } from '../lib/payment';
 
 interface ListingData {
   id: string;
@@ -101,6 +102,12 @@ const CheckoutPage: React.FC = () => {
   const [deliveryMode, setDeliveryMode] = useState<'delivery' | 'pickup'>('delivery');
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod' | 'cash_at_shop'>('online');
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  // Devis serveur de l'étape Paiement : c'est lui qui est affiché et facturé.
+  const [serverQuote, setServerQuote] = useState<ServerQuote | null>(null);
+  // 'fallback' : serveur de devis injoignable → ancien chemin (le serveur recalcule
+  // et refuse tout total supérieur à celui affiché).
+  const [quoteStatus, setQuoteStatus] = useState<'idle' | 'loading' | 'ready' | 'error' | 'fallback'>('idle');
+  const [quoteNonce, setQuoteNonce] = useState(0);
 
   const handleHeaderBack = () => {
     if (step > 1) {
@@ -453,10 +460,62 @@ const CheckoutPage: React.FC = () => {
   const sumOfSellerFees = Array.from(deliveryFeesBySeller.values()).reduce((sum, fee) => sum + fee, 0);
   // Un frais par vendeur, comme le serveur. Tant que les distances ne sont pas
   // encore revenues, on retombe sur la grille appliquée à la distance affichée.
-  const deliveryFee = isPickup ? 0 : sumOfSellerFees || pricing.delivery;
-  const buyerFee = pricing.buyerFee;
+  // ── Devis serveur ──
+  // À l'étape Paiement, on affiche et on facture le devis du serveur (même
+  // calcul, même itinéraire, même position de boutique). Le calcul local ne
+  // sert qu'à estimer pendant le choix de la position.
+  const quoteItemsKey = JSON.stringify(
+    isCartMode
+      ? cartItems.map((ci) => [ci.listing_id, ci.variant_id || null, ci.quantity])
+      : listing ? [[listing.id, requestedVariantId || null, 1]] : []
+  );
+  useEffect(() => {
+    if (step !== 3 || !user || isOutOfZone) return;
+    const items = (JSON.parse(quoteItemsKey) as [string, string | null, number][]).map(([listing_id, variant_id, quantity]) => ({
+      listing_id,
+      variant_id,
+      quantity,
+    }));
+    if (items.length === 0) return;
+    let active = true;
+    setQuoteStatus('loading');
+    const timer = setTimeout(() => {
+      getOrderQuote(items, {
+        deliveryMode,
+        deliveryLat: deliveryLatitude,
+        deliveryLng: deliveryLongitude,
+        deliveryAddress: deliveryMode === 'pickup' ? 'Retrait en boutique' : deliveryAddress || 'Daloa',
+      })
+        .then((q) => {
+          if (!active) return;
+          setServerQuote(q);
+          setQuoteStatus('ready');
+        })
+        .catch((err: Error & { reason?: string }) => {
+          if (!active) return;
+          setServerQuote(null);
+          // Refus métier (article indisponible, retrait refusé…) : bloquant.
+          // Panne technique : on laisse payer par l'ancien chemin.
+          if (err.reason) {
+            setQuoteStatus('error');
+            toast.error(err.message || 'Impossible de calculer le prix.');
+          } else {
+            setQuoteStatus('fallback');
+          }
+        });
+    }, 300);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, user?.id, isOutOfZone, quoteItemsKey, deliveryMode, deliveryLatitude, deliveryLongitude, deliveryAddress, quoteNonce]);
+
+  const quoteReady = step === 3 && quoteStatus === 'ready' && serverQuote != null;
+  const deliveryFee = quoteReady ? serverQuote!.deliveryTotal : isPickup ? 0 : sumOfSellerFees || pricing.delivery;
+  const buyerFee = quoteReady ? serverQuote!.buyerFeeTotal : pricing.buyerFee;
   const deliveryAndFees = deliveryFee + buyerFee;
-  const total = productAmount + deliveryAndFees;
+  const total = quoteReady ? serverQuote!.totalAmount : productAmount + deliveryAndFees;
   const paymentActionLabel =
     paymentMethod === 'cash_at_shop'
       ? 'Réserver en boutique'
@@ -494,6 +553,13 @@ const CheckoutPage: React.FC = () => {
       toast.error("Le paiement à la livraison n'est pas disponible pour ce vendeur.");
       return;
     }
+
+    if (!quoteReady && quoteStatus !== 'fallback') {
+      if (quoteStatus !== 'loading') setQuoteNonce((n) => n + 1);
+      toast.error('Le prix est en cours de calcul, réessayez dans un instant.');
+      return;
+    }
+    const quoteId = quoteReady ? serverQuote!.id : undefined;
 
     setPaying(true);
     try {
@@ -538,12 +604,18 @@ const CheckoutPage: React.FC = () => {
           p_delivery_lng: isShopPickup ? undefined : (deliveryLongitude ?? undefined),
           p_delivery_district: undefined,
           p_road_km: isShopPickup ? {} : roadKmBySeller,
-        });
+          ...(quoteId ? { p_quote_id: quoteId } : {}),
+        } as never);
 
         if (rpcError) throw new Error(rpcError.message || 'Erreur de création de la commande');
 
         const result = rpcData as { success?: boolean; reason?: string; order_ids?: string[] } | null;
         if (!result?.success) {
+          if (result?.reason && QUOTE_RETRY_REASONS.includes(result.reason)) {
+            const e = new Error('Le prix vient d’être recalculé. Vérifiez le nouveau total puis validez.') as Error & { reason?: string };
+            e.reason = result.reason;
+            throw e;
+          }
           throw new Error(
             result?.reason === 'no_active_listing'
               ? "Ces articles ne sont plus disponibles à la vente."
@@ -591,6 +663,7 @@ const CheckoutPage: React.FC = () => {
           delivery_lat: isPickupMode ? undefined : deliveryLatitude,
           delivery_lng: isPickupMode ? undefined : deliveryLongitude,
           amount: targetAmount,
+          quoteId,
         });
         if (result.payment_url) {
           if (isCartMode) clearCart();
@@ -616,6 +689,7 @@ const CheckoutPage: React.FC = () => {
         const result = await createOrder({
           ...first,
           amount: total,
+          quoteId,
         }, allInputs);
         if (result.payment_url) {
           clearCart();
@@ -628,6 +702,9 @@ const CheckoutPage: React.FC = () => {
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erreur lors de la commande";
+      // Devis périmé ou modifié : on en redemande un, rien n'a été débité.
+      const reason = (err as { reason?: string } | null)?.reason;
+      if (reason && QUOTE_RETRY_REASONS.includes(reason)) setQuoteNonce((n) => n + 1);
       toast.error(message);
     } finally {
       setPaying(false);
@@ -1299,13 +1376,13 @@ const CheckoutPage: React.FC = () => {
                 variant="filled"
                 color="primary"
                 size="md"
-                loading={paying}
-                disabled={isSelfCheckout}
+                loading={paying || quoteStatus === 'loading'}
+                disabled={isSelfCheckout || quoteStatus === 'loading'}
                 icon={<CreditCard className="h-4 w-4" />}
                 onClick={handlePay}
                 className="flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 font-bold text-white shadow-sm active:scale-[0.98] whitespace-nowrap"
               >
-                {paymentActionLabel}
+                {quoteStatus === 'loading' ? 'Calcul du prix…' : quoteStatus === 'error' ? 'Recalculer le prix' : paymentActionLabel}
               </Button>
             </div>
 
