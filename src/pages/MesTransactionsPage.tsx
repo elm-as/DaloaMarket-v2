@@ -29,6 +29,7 @@ import {
   MessageCircle,
   ChevronRight,
 } from 'lucide-react';
+import { confirmDialog } from '../components/ui/ConfirmDialog';
 
 interface Transaction {
   id: string;
@@ -128,7 +129,7 @@ const MesTransactionsPage: React.FC = () => {
       return;
     }
 
-    if (!window.confirm('Supprimer définitivement cette transaction de votre historique ?')) return;
+    if (!(await confirmDialog({ message: 'Supprimer définitivement cette transaction de votre historique ?', confirmLabel: 'Supprimer', danger: true }))) return;
 
     setDeletingId(tx.id);
     try {
@@ -169,7 +170,7 @@ const MesTransactionsPage: React.FC = () => {
       return;
     }
 
-    if (!window.confirm(`Supprimer définitivement les ${deletable.length} tentatives non payées ?`)) return;
+    if (!(await confirmDialog({ message: `Supprimer définitivement les ${deletable.length} tentatives non payées ?`, confirmLabel: 'Supprimer', danger: true }))) return;
 
     try {
       const ids = deletable.map(t => t.id);

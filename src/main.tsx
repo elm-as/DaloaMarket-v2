@@ -9,6 +9,7 @@ import './styles/global.css';
 import './styles/flutter.css';
 import { Toaster } from 'react-hot-toast';
 import { captureReferralCode } from './services/referralService';
+import { ConfirmDialogHost } from './components/ui/ConfirmDialog';
 
 // Handle Vite dynamic import chunk load errors (automatically reload page after a deployment update)
 if (typeof window !== 'undefined') {
@@ -33,6 +34,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <SupabaseProvider>
           <App />
+          <ConfirmDialogHost />
           <Toaster
             position="top-center"
             toastOptions={{

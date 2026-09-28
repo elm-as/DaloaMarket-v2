@@ -13,6 +13,7 @@ import {
   adminInputClass,
 } from '../ui/AdminUI';
 import { saveSystemSetting } from './saveSystemSetting';
+import { confirmDialog } from '../../../components/ui/ConfirmDialog';
 
 /**
  * Maintenance générale : coupe l'accès aux sites et aux apps derrière un écran
@@ -40,9 +41,12 @@ export const AdminMaintenanceSettings: React.FC = () => {
 
   const handleSave = async () => {
     if (enabled && !maintenance.enabled) {
-      const ok = window.confirm(
-        'Activer la maintenance coupe immédiatement l’accès à DaloaMarket et DaloaDelivery pour tous les utilisateurs (sauf l’administration). Continuer ?'
-      );
+      const ok = await confirmDialog({
+        title: 'Activer la maintenance ?',
+        message: 'L’accès à DaloaMarket et DaloaDelivery est coupé immédiatement pour tous les utilisateurs (sauf l’administration).',
+        confirmLabel: 'Activer',
+        danger: true,
+      });
       if (!ok) return;
     }
     setSaving(true);

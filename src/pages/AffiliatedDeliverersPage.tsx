@@ -30,6 +30,7 @@ import { AffiliatedNonProUpgradeCard } from '../components/affiliated/Affiliated
 import { AffiliatedDelivererCard } from '../components/affiliated/AffiliatedDelivererCard';
 import { SellerDeliverySettingsCard } from '../components/affiliated/SellerDeliverySettingsCard';
 import { InviteDelivererCard } from '../components/affiliated/InviteDelivererCard';
+import { confirmDialog } from '../components/ui/ConfirmDialog';
 
 export default function AffiliatedDeliverersPage() {
   usePageTitle('Mes livreurs affiliés');
@@ -160,7 +161,7 @@ export default function AffiliatedDeliverersPage() {
       ? `Voulez-vous annuler la demande d'affiliation envoyée à ${driverName} ?`
       : `Voulez-vous vraiment retirer l'affiliation de ${driverName} ?`;
 
-    if (!window.confirm(confirmMessage)) {
+    if (!(await confirmDialog({ message: confirmMessage, confirmLabel: isPending ? 'Annuler la demande' : 'Retirer', cancelLabel: 'Garder', danger: true }))) {
       return;
     }
 

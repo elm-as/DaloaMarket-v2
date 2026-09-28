@@ -14,6 +14,7 @@ import {
   AdminEmpty,
   adminInputClass,
 } from './ui/AdminUI';
+import { confirmDialog } from '../../components/ui/ConfirmDialog';
 
 type Audience = 'all' | 'market' | 'delivery';
 
@@ -88,7 +89,7 @@ export const AdminNotificationsTab: React.FC = () => {
   const handleSend = async () => {
     if (!canSend) return;
     const target = AUDIENCES.find((a) => a.value === audience)?.label || '';
-    if (!window.confirm(`Envoyer cette notification à : ${target} ?`)) return;
+    if (!(await confirmDialog({ title: 'Envoyer la notification ?', message: `Destinataires : ${target}`, confirmLabel: 'Envoyer' }))) return;
 
     setSending(true);
     try {

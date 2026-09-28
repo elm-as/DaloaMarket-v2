@@ -23,6 +23,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { AdminPageHeader, AdminButton } from './ui/AdminUI';
+import { confirmDialog } from '../../components/ui/ConfirmDialog';
 
 interface FeatureSuggestionItem {
   id: string;
@@ -171,7 +172,7 @@ export function AdminFeaturesTab() {
   };
 
   const deleteFeature = async (id: string) => {
-    if (!window.confirm('Supprimer définitivement cette idée de fonctionnalité ?')) return;
+    if (!(await confirmDialog({ message: 'Supprimer définitivement cette idée de fonctionnalité ?', confirmLabel: 'Supprimer', danger: true }))) return;
     try {
       const { error } = await (supabase as any)
         .from('feature_suggestions')

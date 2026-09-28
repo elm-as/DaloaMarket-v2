@@ -185,7 +185,13 @@ export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = 
           .eq('order_id', order.id);
       }
       
-      toast.success('Disponibilité confirmée ! Les livreurs peuvent voir la course.');
+      toast.success(
+        order.payment_method === 'online'
+          ? 'Disponibilité confirmée ! Les livreurs peuvent voir la course.'
+          : order.delivery_mode === 'delivery'
+            ? "Disponibilité confirmée ! Livrez vous-même ou confiez la course à l'un de vos livreurs affiliés."
+            : "Disponibilité confirmée ! L'acheteur vient récupérer l'article et vous paie sur place."
+      );
       onChanged();
     } catch (err: unknown) {
       toast.error(friendlyError(err, 'Erreur lors de la confirmation'));

@@ -26,6 +26,7 @@ import { Button } from '../ui/Button';
 import WhatsAppIcon from '../ui/WhatsAppIcon';
 import { cn, formatPrice, formatDate, getListingPath, formatWhatsAppPhone } from '../../lib/utils';
 import { AdminPageHeader, AdminButton } from './ui/AdminUI';
+import { confirmDialog } from '../../components/ui/ConfirmDialog';
 
 interface AdminListing {
   id: string;
@@ -147,7 +148,10 @@ export const AdminListingsTab: React.FC = () => {
 
   const handleUpdateStatus = async (id: string, newStatus: 'active' | 'sold' | 'deleted') => {
     const actionLabel = newStatus === 'deleted' ? 'supprimer' : newStatus === 'sold' ? 'marquer comme vendue' : 'réactiver';
-    if (newStatus === 'deleted' && !confirm(`Êtes-vous sûr de vouloir ${actionLabel} cette annonce ?`)) return;
+    if (
+      newStatus === 'deleted' &&
+      !(await confirmDialog({ message: `Êtes-vous sûr de vouloir ${actionLabel} cette annonce ?`, confirmLabel: 'Confirmer', danger: true }))
+    ) return;
 
     try {
       const { error: err } = await supabase.from('listings').update({ status: newStatus }).eq('id', id);
@@ -179,7 +183,12 @@ export const AdminListingsTab: React.FC = () => {
   };
 
   const handleDeletePermanent = async (id: string, title: string) => {
-    if (!confirm(`⚠️ SUPPRESSION DÉFINITIVE :\nVoulez-vous supprimer pour toujours l'annonce "${title}" ? Cette action est irréversible.`)) {
+    if (!(await confirmDialog({
+      title: 'Suppression définitive',
+      message: `Voulez-vous supprimer pour toujours l'annonce « ${title} » ? Cette action est irréversible.`,
+      confirmLabel: 'Supprimer',
+      danger: true,
+    }))) {
       return;
     }
 
