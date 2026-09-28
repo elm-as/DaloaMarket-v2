@@ -96,6 +96,27 @@ export default function DeleteAccountPage() {
             </ul>
           </section>
 
+          <section id="donnees">
+            <h2 className="mb-3 text-base font-bold text-gray-900">
+              Supprimer une partie de vos données, sans supprimer le compte
+            </h2>
+            <ul className="list-disc space-y-1 pl-5">
+              <li><strong>Annonces</strong> : Profil → Mes annonces → Supprimer (retrait immédiat).</li>
+              <li><strong>Photo de profil, nom, quartier</strong> : Profil → Paramètres → Informations personnelles.</li>
+              <li><strong>Boutique</strong> (nom, description, logo, bannière, position) : Profil → Paramètres → Paramètres de ma boutique.</li>
+              <li><strong>Numéro de versement Mobile Money</strong> : Profil → Paramètres → Compte de retrait Mobile Money.</li>
+              <li><strong>Favoris</strong> : retirez-les depuis l'onglet Favoris.</li>
+              <li>
+                <strong>Autres données</strong> (messages, historique) : écrivez à{' '}
+                <a className="font-semibold text-orange-600 underline" href={`mailto:${CONTACT.support}?subject=Suppression%20de%20donn%C3%A9es`}>
+                  {CONTACT.support}
+                </a>{' '}
+                en précisant les données concernées ; nous répondons sous 7 jours, dans la limite des obligations légales de
+                conservation indiquées ci-dessus.
+              </li>
+            </ul>
+          </section>
+
           <p className="text-xs text-gray-500">
             Détails complets dans notre{' '}
             <Link to="/privacy" className="font-semibold text-orange-600 underline">
