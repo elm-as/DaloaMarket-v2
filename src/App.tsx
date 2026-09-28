@@ -26,6 +26,7 @@ import AboutPage from './pages/AboutPage';
 import FAQPage from './pages/FAQPage';
 import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
+import DeleteAccountPage from './pages/DeleteAccountPage';
 import HelpPage from './pages/HelpPage';
 import HowItWorksPage from './pages/HowItWorksPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -395,6 +396,7 @@ function AppContent() {
           <Route path="/faq" element={<AppLayout><FAQPage /></AppLayout>} />
           <Route path="/terms" element={<AppLayout><TermsPage /></AppLayout>} />
           <Route path="/privacy" element={<AppLayout><PrivacyPage /></AppLayout>} />
+          <Route path="/supprimer-mon-compte" element={<AppLayout><DeleteAccountPage /></AppLayout>} />
           <Route path="/mentions-legales" element={<AppLayout><MentionsLegalesPage /></AppLayout>} />
           <Route path="/help" element={<AppLayout><HelpPage /></AppLayout>} />
           <Route path="/how-it-works" element={<AppLayout><HowItWorksPage /></AppLayout>} />
