@@ -7,7 +7,6 @@ import { isDriverDelivery } from './deliveries/types';
 import { PayoutsTable } from './payouts/PayoutsTable';
 import { FinancialAuditLogsTable } from './payouts/FinancialAuditLogsTable';
 import { DriverPayoutsFlowTable } from './payouts/DriverPayoutsFlowTable';
-import { CodReceivablesTable } from './payouts/CodReceivablesTable';
 import { useAdminFinanceData } from './payouts/useAdminFinanceData';
 import { runPayoutProcessing } from '../../lib/adminPayouts';
 import {
@@ -19,7 +18,7 @@ import {
   AdminLoading,
 } from './ui/AdminUI';
 
-type PayoutView = 'payouts' | 'driver_flows' | 'cod' | 'audit';
+type PayoutView = 'payouts' | 'driver_flows' | 'audit';
 
 /**
  * Versements : suivi des virements MoneyFusion, versements livreurs à régler
@@ -30,8 +29,6 @@ type PayoutView = 'payouts' | 'driver_flows' | 'cod' | 'audit';
 export const AdminPayoutsTab: React.FC = () => {
   const { loading, refreshing, error, payouts, deliveries, auditLogs, stats, refresh, reload } = useAdminFinanceData();
   const [view, setView] = useState<PayoutView>('payouts');
-  // Nombre de commissions COD à encaisser (mis à jour par l'onglet dédié).
-  const [codCount, setCodCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
 
   const handleSync = async () => {
@@ -109,14 +106,12 @@ export const AdminPayoutsTab: React.FC = () => {
         tabs={[
           { key: 'payouts', label: 'Virements', count: stats.totalPendingCount + stats.totalFailedCount },
           { key: 'driver_flows', label: 'Livreurs à payer', count: driverToPay },
-          { key: 'cod', label: 'Commissions à encaisser', count: codCount },
           { key: 'audit', label: 'Journal' },
         ]}
       />
 
       {view === 'payouts' && <PayoutsTable payouts={payouts} onRefresh={reload} />}
       {view === 'driver_flows' && <DriverPayoutsFlowTable deliveries={deliveries} payouts={payouts} onRefresh={reload} />}
-      {view === 'cod' && <CodReceivablesTable onCountChange={setCodCount} />}
       {view === 'audit' && <FinancialAuditLogsTable logs={auditLogs} onRefresh={reload} />}
     </div>
   );
