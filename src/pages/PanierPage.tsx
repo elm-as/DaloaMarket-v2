@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Truck,
   Lock,
+  Sparkles,
 } from "lucide-react";
 import { useCart } from "../contexts/CartContext";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -18,6 +19,7 @@ import { supabase } from "../lib/supabase";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { EmptyState } from "../components/ui/EmptyState";
+import { PendingOrderBanner } from "../components/payment/PendingOrderBanner";
 import toast from "react-hot-toast";
 
 const MAX_QUANTITY = 99;
@@ -32,19 +34,23 @@ const PanierPage: React.FC = () => {
 
   const getStockKey = (listingId: string, variantId?: string) => `${listingId}::${variantId || 'base'}`;
 
+  const [sellerCount, setSellerCount] = useState(1);
+
   useEffect(() => {
     const listingIds = [...new Set(cartItems.map((i) => i.listing_id))];
     if (listingIds.length === 0) return;
 
     supabase
       .from("listings")
-      .select("id, stock, status, title, variants")
+      .select("id, stock, status, title, variants, user_id")
       .in("id", listingIds)
       .then(({ data, error }) => {
         if (!error && data) {
           const map: Record<string, number> = {};
           const dbListings = new Map<string, { stock: number; status: string; title: string; variants: any[] }>();
+          const uniqueSellers = new Set<string>();
           data.forEach((l: any) => {
+            if (l.user_id) uniqueSellers.add(l.user_id);
             const variants = Array.isArray(l.variants) ? l.variants : [];
             map[getStockKey(l.id)] = l.stock ?? 0;
             variants.forEach((variant: any) => {
@@ -53,6 +59,7 @@ const PanierPage: React.FC = () => {
             dbListings.set(l.id, { stock: l.stock ?? 0, status: l.status, title: l.title, variants });
           });
           setStockMap(map);
+          setSellerCount(uniqueSellers.size || 1);
 
           // Auto-adjust or remove items based on real stock/status
           cartItems.forEach((item) => {
@@ -191,6 +198,7 @@ const PanierPage: React.FC = () => {
       <div className="relative z-10 -mt-5 max-w-4xl mx-auto px-3 sm:px-4 lg:grid lg:grid-cols-[1fr_360px] lg:gap-6 lg:items-start">
         {/* Items List */}
         <div className="space-y-2.5 mb-4 lg:mb-0">
+          <PendingOrderBanner className="mb-3" />
           <AnimatePresence>
             {cartItems.map((item) => {
               const lineTotal = item.listing_price * item.quantity;
@@ -302,12 +310,26 @@ const PanierPage: React.FC = () => {
           </AnimatePresence>
 
           {/* Delivery Note banner */}
-          <div className="rounded-2xl border border-orange-100 bg-orange-50/60 p-2.5 shadow-2xs flex items-center gap-2 text-[11px] text-orange-950">
-            <Truck className="h-3.5 w-3.5 text-orange-600 flex-shrink-0" />
-            <p className="leading-snug">
-              <span className="font-bold">Livraison & Retrait :</span> Frais exacts calculés selon votre quartier à l'étape suivante.
-            </p>
-          </div>
+          {sellerCount > 1 ? (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3 shadow-2xs flex items-start gap-2.5 text-xs text-emerald-950">
+              <Sparkles className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <div className="leading-snug">
+                <p className="font-bold text-emerald-900">
+                  Livraison Groupée Multi-Marchands ({sellerCount} boutiques)
+                </p>
+                <p className="text-emerald-800 text-[11px] mt-0.5">
+                  Vos articles sont mutualisés en une course unique (+300 FCFA par boutique supplémentaire au lieu de payer {sellerCount} courses complètes).
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-orange-100 bg-orange-50/60 p-2.5 shadow-2xs flex items-center gap-2 text-[11px] text-orange-950">
+              <Truck className="h-3.5 w-3.5 text-orange-600 flex-shrink-0" />
+              <p className="leading-snug">
+                <span className="font-bold">Livraison & Retrait :</span> Frais exacts calculés selon votre quartier à l'étape suivante.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Desktop Sticky Summary */}

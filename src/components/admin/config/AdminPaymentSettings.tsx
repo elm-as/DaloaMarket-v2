@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { CreditCard, Ban } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { CreditCard, Ban, Activity, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSystemSettings, type PaymentConfig } from '../../../hooks/useSystemSettings';
+import { getPaymentNetworks, type PaymentNetworkInfo } from '../../../lib/payment';
 import {
   AdminPageHeader,
   AdminSection,
@@ -34,17 +35,36 @@ const STATUS_BADGE: Record<PaymentConfig['status'], React.ReactNode> = {
 export const AdminPaymentSettings: React.FC = () => {
   const { paymentConfig, cancellationSettings, loading, refreshSettings } = useSystemSettings();
 
+  const [provider, setProvider] = useState<'saspay' | 'moneyfusion'>('saspay');
   const [status, setStatus] = useState<PaymentConfig['status']>('normal');
   const [notice, setNotice] = useState('');
   const [codOnly, setCodOnly] = useState(false);
   const [savingPay, setSavingPay] = useState(false);
+
+  const [networks, setNetworks] = useState<PaymentNetworkInfo[]>([]);
+  const [loadingNetworks, setLoadingNetworks] = useState(false);
 
   const [cancelEnabled, setCancelEnabled] = useState(true);
   const [cancelMax, setCancelMax] = useState(3);
   const [cancelNotice, setCancelNotice] = useState('');
   const [savingCancel, setSavingCancel] = useState(false);
 
+  const loadNetworks = useCallback(async () => {
+    setLoadingNetworks(true);
+    try {
+      const list = await getPaymentNetworks();
+      setNetworks(list);
+    } finally {
+      setLoadingNetworks(false);
+    }
+  }, []);
+
   useEffect(() => {
+    loadNetworks();
+  }, [loadNetworks]);
+
+  useEffect(() => {
+    setProvider(paymentConfig.provider || 'saspay');
     setStatus(paymentConfig.status || 'normal');
     setNotice(paymentConfig.notice || '');
     setCodOnly(Boolean(paymentConfig.disable_online_payments));
@@ -57,6 +77,7 @@ export const AdminPaymentSettings: React.FC = () => {
   }, [cancellationSettings]);
 
   const payDirty =
+    provider !== (paymentConfig.provider || 'saspay') ||
     status !== (paymentConfig.status || 'normal') ||
     notice !== (paymentConfig.notice || '') ||
     codOnly !== Boolean(paymentConfig.disable_online_payments);
@@ -70,6 +91,7 @@ export const AdminPaymentSettings: React.FC = () => {
     setSavingPay(true);
     try {
       await saveSystemSetting('payment_settings', {
+        provider,
         status,
         notice: notice.trim(),
         disable_online_payments: codOnly,
@@ -112,15 +134,51 @@ export const AdminPaymentSettings: React.FC = () => {
 
       <AdminSection
         icon={CreditCard}
-        title="Paiement en ligne (MoneyFusion)"
-        description="Wave, Orange Money, MTN et Moov."
+        title="Passerelle & Paiements en ligne"
+        description="Configuration du prestataire de paiement actif et disponibilité du service."
         aside={STATUS_BADGE[paymentConfig.status || 'normal']}
         footer={
           <AdminButton variant="primary" loading={savingPay} disabled={!payDirty} onClick={savePayment}>
-            Enregistrer
+            Enregistrer les réglages
           </AdminButton>
         }
       >
+        <AdminField label="Prestataire actif" hint="Bascule en direct sans redémarrage serveur">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => setProvider('saspay')}
+              className={`p-3.5 rounded-xl border text-left transition-all ${
+                provider === 'saspay'
+                  ? 'border-orange-500 bg-orange-50/50 ring-1 ring-orange-500'
+                  : 'border-gray-200 bg-white hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-gray-900 text-sm">SasPay</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Actif / Recommandé</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Wave, Orange, MTN, Moov, Djamo • Reprise de panier • Webhooks HMAC</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setProvider('moneyfusion')}
+              className={`p-3.5 rounded-xl border text-left transition-all ${
+                provider === 'moneyfusion'
+                  ? 'border-orange-500 bg-orange-50/50 ring-1 ring-orange-500'
+                  : 'border-gray-200 bg-white hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-gray-900 text-sm">MoneyFusion</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-700">Secours</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Passerelle alternative historique</p>
+            </button>
+          </div>
+        </AdminField>
+
         <AdminField label="État de la passerelle" htmlFor="pay-status">
           <select
             id="pay-status"
@@ -155,6 +213,52 @@ export const AdminPaymentSettings: React.FC = () => {
           checked={codOnly}
           onChange={setCodOnly}
         />
+      </AdminSection>
+
+      <AdminSection
+        icon={Activity}
+        title="Surveillance des réseaux télécoms (CI)"
+        description="État en direct de chaque opérateur Mobile Money retourné par SasPay"
+        aside={
+          <button
+            type="button"
+            onClick={loadNetworks}
+            disabled={loadingNetworks}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-95 transition disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingNetworks ? 'animate-spin' : ''}`} />
+            <span>Rafraîchir</span>
+          </button>
+        }
+      >
+        {networks.length === 0 ? (
+          <p className="text-xs text-gray-500 italic">Chargement de l'état des réseaux...</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+            {networks.map((n) => (
+              <div
+                key={n.code}
+                className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/80 shadow-2xs"
+              >
+                <span className="text-xs font-bold text-gray-800">{n.name}</span>
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    n.isActive
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-rose-100 text-rose-800'
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      n.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+                    }`}
+                  />
+                  {n.isActive ? 'Opérationnel' : 'Maintenance'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </AdminSection>
 
       <AdminSection

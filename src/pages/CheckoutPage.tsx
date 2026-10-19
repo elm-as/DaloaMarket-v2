@@ -15,6 +15,8 @@ import {
   ChevronRight,
   Navigation,
   AlertTriangle,
+  Gift,
+  Sparkles,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useCart } from "../contexts/CartContext";
@@ -23,12 +25,13 @@ import { useSupabase } from "../hooks/useSupabase";
 import { useSystemSettings } from "../hooks/useSystemSettings";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { isCurfewActive } from "../utils/timeConstraints";
-import { formatPrice, cn, isLocationInDaloa } from "../lib/utils";
+import { formatPrice, formatDate, cn, isLocationInDaloa } from "../lib/utils";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 import { LocationPicker } from "../components/ui/LocationPicker";
+import { PaymentNetworkStatus } from "../components/payment/PaymentNetworkStatus";
 import {
   calculateOrderPricing,
   BUYER_FEE_RATE,
@@ -67,10 +70,16 @@ const CheckoutPage: React.FC = () => {
   const { listingId } = useParams<{ listingId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useSupabase();
-  const { phaseConfig } = useSystemSettings();
+  const { user, userProfile } = useSupabase();
+  const { phaseConfig, paymentConfig } = useSystemSettings();
   const { items: cartItems, clearCart, removeFromCart, updateQuantity } = useCart();
   usePageTitle("Commander");
+
+  const onlineDisabled = Boolean(
+    paymentConfig?.disable_online_payments ||
+    paymentConfig?.force_cod_only ||
+    paymentConfig?.status === 'down'
+  );
 
   const isCartMode = !listingId || listingId === "cart";
   const requestedVariantId = !isCartMode && location.state && typeof location.state === 'object'
@@ -100,7 +109,12 @@ const CheckoutPage: React.FC = () => {
     cash_on_delivery_enabled: false,
   });
   const [deliveryMode, setDeliveryMode] = useState<'delivery' | 'pickup'>('delivery');
-  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod' | 'cash_at_shop'>('online');
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod' | 'cash_at_shop'>(() => {
+    if (onlineDisabled) {
+      return 'cod';
+    }
+    return phaseConfig?.default_payment_method === 'cod' ? 'cod' : 'online';
+  });
   const [step, setStep] = useState<1 | 2 | 3>(1);
   // Devis serveur de l'étape Paiement : c'est lui qui est affiché et facturé.
   const [serverQuote, setServerQuote] = useState<ServerQuote | null>(null);
@@ -426,22 +440,33 @@ const CheckoutPage: React.FC = () => {
     ? (cartItems.length > 0 && cartItems.every(item => cartSellers.get(item.listing_id)?.isPro === true))
     : (listing?.is_seller_pro ?? false);
 
-  // Même règle que create_cod_order : Pro, ou phase qui l'ouvre à tous. Le
-  // réglage personnel du vendeur l'ouvrait à tort en phase 1 (règle en « ou »).
-  const isCodAllowed = isSellerPro || phaseConfig.allow_cod_for_all;
+  // Anti-Lapin : vérification de suspension temporaire COD de l'acheteur (F02)
+  const codBlockedUntil = (userProfile as any)?.cod_blocked_until;
+  const isCodBlocked = Boolean(codBlockedUntil && new Date(codBlockedUntil) > new Date());
+  const codBlockedFormattedDate = codBlockedUntil ? formatDate(codBlockedUntil) : '';
+
+  // Même règle que create_cod_order : Pro, ou phase qui l'ouvre à tous.
+  const isCodAllowed = (isSellerPro || phaseConfig.allow_cod_for_all) && !isCodBlocked;
   const isPickupAllowed = isSellerPro || phaseConfig.allow_pickup_for_all;
 
   useEffect(() => {
     if (!isPickupAllowed && deliveryMode === 'pickup') {
       setDeliveryMode('delivery');
     }
-    if (!isCodAllowed && paymentMethod === 'cod') {
-      setPaymentMethod('online');
+
+    if (onlineDisabled) {
+      if (paymentMethod === 'online') {
+        setPaymentMethod(deliveryMode === 'pickup' && isPickupAllowed ? 'cash_at_shop' : 'cod');
+      }
+    } else {
+      if ((!isCodAllowed || isCodBlocked) && paymentMethod === 'cod') {
+        setPaymentMethod('online');
+      }
+      if (!isPickupAllowed && paymentMethod === 'cash_at_shop') {
+        setPaymentMethod('online');
+      }
     }
-    if (!isPickupAllowed && paymentMethod === 'cash_at_shop') {
-      setPaymentMethod('online');
-    }
-  }, [isSellerPro, isPickupAllowed, isCodAllowed, deliveryMode, paymentMethod]);
+  }, [isSellerPro, isPickupAllowed, isCodAllowed, isCodBlocked, deliveryMode, paymentMethod, onlineDisabled]);
 
   const primaryCartItem = cartItems[0];
   const directSelectedVariant = !isCartMode
@@ -457,9 +482,27 @@ const CheckoutPage: React.FC = () => {
 
   const isPickup = deliveryMode === 'pickup';
   const pricing = calculateOrderPricing(productAmount, distanceKm, isSellerPro);
-  const sumOfSellerFees = Array.from(deliveryFeesBySeller.values()).reduce((sum, fee) => sum + fee, 0);
-  // Un frais par vendeur, comme le serveur. Tant que les distances ne sont pas
-  // encore revenues, on retombe sur la grille appliquée à la distance affichée.
+
+  // Livraison Groupée Multi-Marchands (F06)
+  const uniqueSellerIds = isCartMode 
+    ? Array.from(new Set(Array.from(cartSellers.values()).map(s => s.sellerId)))
+    : (listing?.user_id ? [listing.user_id] : []);
+  const sellerCount = Math.max(1, uniqueSellerIds.length);
+  const isGroupedDelivery = isCartMode && sellerCount > 1 && !isPickup;
+
+  const rawSumOfSellerFees = Array.from(deliveryFeesBySeller.values()).reduce((sum, fee) => sum + fee, 0);
+  const maxSingleSellerFee = deliveryFeesBySeller.size > 0 
+    ? Math.max(...Array.from(deliveryFeesBySeller.values())) 
+    : pricing.delivery;
+  const baseDeliveryCalc = isGroupedDelivery 
+    ? maxSingleSellerFee + (sellerCount - 1) * 300 
+    : (deliveryFeesBySeller.size > 0 ? rawSumOfSellerFees : pricing.delivery);
+  const groupedDeliverySavings = isGroupedDelivery ? Math.max(0, rawSumOfSellerFees - baseDeliveryCalc) : 0;
+
+  // Daloa Cash & Parrainage (F10)
+  const daloaCashBalance = Number((userProfile as any)?.daloa_cash_balance || 0);
+  const [useDaloaCash, setUseDaloaCash] = useState(false);
+
   // ── Devis serveur ──
   // À l'étape Paiement, on affiche et on facture le devis du serveur (même
   // calcul, même itinéraire, même position de boutique). Le calcul local ne
@@ -494,8 +537,6 @@ const CheckoutPage: React.FC = () => {
         .catch((err: Error & { reason?: string }) => {
           if (!active) return;
           setServerQuote(null);
-          // Refus métier (article indisponible, retrait refusé…) : bloquant.
-          // Panne technique : on laisse payer par l'ancien chemin.
           if (err.reason) {
             setQuoteStatus('error');
             toast.error(err.message || 'Impossible de calculer le prix.');
@@ -512,16 +553,21 @@ const CheckoutPage: React.FC = () => {
   }, [step, user?.id, isOutOfZone, quoteItemsKey, deliveryMode, deliveryLatitude, deliveryLongitude, deliveryAddress, quoteNonce]);
 
   const quoteReady = step === 3 && quoteStatus === 'ready' && serverQuote != null;
-  const deliveryFee = quoteReady ? serverQuote!.deliveryTotal : isPickup ? 0 : sumOfSellerFees || pricing.delivery;
+  const deliveryFee = quoteReady ? serverQuote!.deliveryTotal : isPickup ? 0 : baseDeliveryCalc;
   const buyerFee = quoteReady ? serverQuote!.buyerFeeTotal : pricing.buyerFee;
   const deliveryAndFees = deliveryFee + buyerFee;
-  const total = quoteReady ? serverQuote!.totalAmount : productAmount + deliveryAndFees;
+  const rawTotal = quoteReady ? serverQuote!.totalAmount : productAmount + deliveryAndFees;
+
+  const applicableDaloaCash = useDaloaCash && !isPickup ? Math.min(daloaCashBalance, deliveryFee) : 0;
+  const total = Math.max(0, rawTotal - applicableDaloaCash);
   const paymentActionLabel =
     paymentMethod === 'cash_at_shop'
       ? 'Réserver en boutique'
       : paymentMethod === 'cod'
         ? `Commander · ${formatPrice(total)}`
-        : `Payer ${formatPrice(total)}`;
+        : onlineDisabled
+          ? 'Paiement en ligne temporairement indisponible'
+          : `Payer ${formatPrice(total)}`;
   const isSelfCheckout = isCartMode ? isCartSelfCheckout : listing?.user_id === user?.id;
 
   const handlePay = async () => {
@@ -550,7 +596,16 @@ const CheckoutPage: React.FC = () => {
     }
 
     if (!isCodAllowed && paymentMethod === 'cod') {
-      toast.error("Le paiement à la livraison n'est pas disponible pour ce vendeur.");
+      toast.error(
+        isCodBlocked
+          ? `Le paiement à la livraison est suspendu jusqu'au ${codBlockedFormattedDate}. Veuillez régler par Mobile Money.`
+          : "Le paiement à la livraison n'est pas disponible pour ce vendeur."
+      );
+      return;
+    }
+
+    if (paymentMethod === 'online' && onlineDisabled) {
+      toast.error(paymentConfig?.notice || "Les paiements en ligne sont temporairement désactivés.");
       return;
     }
 
@@ -567,11 +622,6 @@ const CheckoutPage: React.FC = () => {
       // SCÉNARIO 4 : Retrait en boutique + Paiement au retrait (Cash at shop)
       // ─────────────────────────────────────────────────────────────
       if (paymentMethod === 'cash_at_shop' || paymentMethod === 'cod') {
-        // Les montants ne sont plus composés ici. `create_cod_order` relit les
-        // prix, résout les positions, calcule la distance et les frais, puis
-        // écrit une commande et une course PAR VENDEUR. Le découpage précédent
-        // créait une commande par ARTICLE en divisant un frais de livraison
-        // unique entre elles — un livreur pouvait se voir proposer 250 FCFA.
         const items = isCartMode
           ? cartItems.map((ci) => ({
               listing_id: ci.listing_id,
@@ -605,6 +655,8 @@ const CheckoutPage: React.FC = () => {
           p_delivery_district: undefined,
           p_road_km: isShopPickup ? {} : roadKmBySeller,
           ...(quoteId ? { p_quote_id: quoteId } : {}),
+          p_daloa_cash_applied: applicableDaloaCash,
+          p_grouped_delivery_discount: groupedDeliverySavings,
         } as never);
 
         if (rpcError) throw new Error(rpcError.message || 'Erreur de création de la commande');
@@ -617,13 +669,15 @@ const CheckoutPage: React.FC = () => {
             throw e;
           }
           throw new Error(
-            result?.reason === 'no_active_listing'
-              ? "Ces articles ne sont plus disponibles à la vente."
-              : result?.reason === 'cod_not_allowed'
-                ? 'Le paiement à la livraison n’est pas disponible pour cet article. Choisissez le paiement en ligne.'
-                : result?.reason === 'pickup_not_allowed'
-                  ? 'Le retrait en boutique n’est pas disponible pour cet article. Choisissez la livraison.'
-                  : result?.reason || 'Erreur de création de la commande'
+            result?.reason === 'cod_blocked'
+              ? 'Votre compte est temporairement suspendu du paiement à la livraison suite à des livraisons non réceptionnées. Veuillez choisir le paiement par Mobile Money.'
+              : result?.reason === 'no_active_listing'
+                ? "Ces articles ne sont plus disponibles à la vente."
+                : result?.reason === 'cod_not_allowed'
+                  ? 'Le paiement à la livraison n’est pas disponible pour cet article. Choisissez le paiement en ligne.'
+                  : result?.reason === 'pickup_not_allowed'
+                    ? 'Le retrait en boutique n’est pas disponible pour cet article. Choisissez la livraison.'
+                    : result?.reason || 'Erreur de création de la commande'
           );
         }
 
@@ -1222,7 +1276,52 @@ const CheckoutPage: React.FC = () => {
                     <span className="font-extrabold text-gray-900 tabular-nums">{formatPrice(buyerFee)}</span>
                   </div>
 
+                  {isGroupedDelivery && groupedDeliverySavings > 0 && (
+                    <div className="flex justify-between items-center text-emerald-700 bg-emerald-50/70 px-3 py-1.5 rounded-xl border border-emerald-100 font-medium text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+                        <span className="font-bold">Économie livraison groupée</span>
+                      </div>
+                      <span className="font-extrabold tabular-nums">-{formatPrice(groupedDeliverySavings)}</span>
+                    </div>
+                  )}
+
+                  {applicableDaloaCash > 0 && (
+                    <div className="flex justify-between items-center text-emerald-700 bg-emerald-50/70 px-3 py-1.5 rounded-xl border border-emerald-100 font-medium text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <Gift className="h-3.5 w-3.5 text-emerald-600" />
+                        <span className="font-bold">Cagnotte Daloa Cash déduite</span>
+                      </div>
+                      <span className="font-extrabold tabular-nums">-{formatPrice(applicableDaloaCash)}</span>
+                    </div>
+                  )}
                 </div>
+
+                {daloaCashBalance > 0 && deliveryMode === 'delivery' && (
+                  <div className="p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Gift className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-emerald-950">Cagnotte Daloa Cash</p>
+                        <p className="text-[11px] text-emerald-700 font-medium">
+                          Solde : {formatPrice(daloaCashBalance)} (max -{formatPrice(deliveryFee)} sur livraison)
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setUseDaloaCash(!useDaloaCash)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all",
+                        useDaloaCash
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                      )}
+                    >
+                      {useDaloaCash ? "Appliqué ✓" : "Déduire"}
+                    </button>
+                  </div>
+                )}
 
                 <div className="h-px bg-gray-100" />
 
@@ -1247,29 +1346,46 @@ const CheckoutPage: React.FC = () => {
                 <span>Mode de paiement</span>
               </div>
 
-              <div className={cn("grid gap-3", (isPickupAllowed || isCodAllowed) ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1")}>
-                {isCodAllowed && deliveryMode === 'delivery' && (
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('cod')}
-                    className={cn(
-                      "p-4 rounded-2xl border-2 text-left flex flex-col justify-between transition-all active:scale-[0.98]",
-                      paymentMethod === 'cod'
-                        ? "border-orange-500 bg-orange-50/40 text-orange-950 shadow-sm ring-2 ring-orange-500/10"
-                        : "border-gray-100 bg-white text-gray-700 hover:border-gray-200"
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-extrabold flex items-center gap-1.5">
-                        <Banknote className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>Paiement à la livraison</span>
-                      </span>
-                      <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors", paymentMethod === 'cod' ? "border-orange-500 bg-orange-500 text-white" : "border-gray-300")}>
-                        {paymentMethod === 'cod' && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
+              <div className={cn("grid gap-3", (isPickupAllowed || isCodAllowed || isCodBlocked) ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1")}>
+                {deliveryMode === 'delivery' && (
+                  isCodBlocked ? (
+                    <div className="p-4 rounded-2xl border-2 border-red-200 bg-red-50/70 text-left flex flex-col justify-between">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-extrabold flex items-center gap-1.5 text-red-900">
+                          <Banknote className="w-4 h-4 text-red-600 shrink-0" />
+                          <span>Paiement à la livraison</span>
+                        </span>
+                        <span className="text-[9px] uppercase px-2 py-0.5 rounded-md bg-red-200 text-red-800 font-extrabold">
+                          Suspendu
+                        </span>
                       </div>
+                      <p className="text-[11px] text-red-700 font-medium mt-2 leading-relaxed">
+                        Suspendu jusqu'au {codBlockedFormattedDate} suite à des commandes non réceptionnées. Veuillez régler par Mobile Money sécurisé.
+                      </p>
                     </div>
-                    <span className="text-[11px] text-emerald-700 font-extrabold mt-2">Recommandé • Espèces ou Mobile Money au livreur</span>
-                  </button>
+                  ) : isCodAllowed ? (
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('cod')}
+                      className={cn(
+                        "p-4 rounded-2xl border-2 text-left flex flex-col justify-between transition-all active:scale-[0.98]",
+                        paymentMethod === 'cod'
+                          ? "border-orange-500 bg-orange-50/40 text-orange-950 shadow-sm ring-2 ring-orange-500/10"
+                          : "border-gray-100 bg-white text-gray-700 hover:border-gray-200"
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-extrabold flex items-center gap-1.5">
+                          <Banknote className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>Paiement à la livraison</span>
+                        </span>
+                        <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors", paymentMethod === 'cod' ? "border-orange-500 bg-orange-500 text-white" : "border-gray-300")}>
+                          {paymentMethod === 'cod' && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
+                        </div>
+                      </div>
+                      <span className="text-[11px] text-emerald-700 font-extrabold mt-2">Recommandé • Espèces ou Mobile Money au livreur</span>
+                    </button>
+                  ) : null
                 )}
 
                 {isPickupAllowed && deliveryMode === 'pickup' && (
@@ -1298,33 +1414,47 @@ const CheckoutPage: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod('online')}
+                  disabled={onlineDisabled}
+                  onClick={() => !onlineDisabled && setPaymentMethod('online')}
                   className={cn(
-                    "p-4 rounded-2xl border-2 text-left flex flex-col justify-between transition-all active:scale-[0.98]",
-                    paymentMethod === 'online'
+                    "p-4 rounded-2xl border-2 text-left flex flex-col justify-between transition-all",
+                    onlineDisabled
+                      ? "border-gray-200 bg-gray-50/70 opacity-60 cursor-not-allowed text-gray-400"
+                      : "active:scale-[0.98]",
+                    !onlineDisabled && paymentMethod === 'online'
                       ? "border-orange-500 bg-orange-50/40 text-orange-950 shadow-sm ring-2 ring-orange-500/10"
-                      : "border-gray-100 bg-white text-gray-700 hover:border-gray-200"
+                      : !onlineDisabled && "border-gray-100 bg-white text-gray-700 hover:border-gray-200"
                   )}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-extrabold flex items-center gap-1.5">
-                      <CreditCard className="w-4 h-4 text-orange-600 shrink-0" />
+                      <CreditCard className={cn("w-4 h-4 shrink-0", onlineDisabled ? "text-gray-400" : "text-orange-600")} />
                       <span>Paiement Mobile Money Sécurisé</span>
+                      {onlineDisabled && (
+                        <span className="ml-1 text-[9px] uppercase px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 font-bold tracking-wider">
+                          Indisponible
+                        </span>
+                      )}
                     </span>
-                    <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors", paymentMethod === 'online' ? "border-orange-500 bg-orange-500 text-white" : "border-gray-300")}>
-                      {paymentMethod === 'online' && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
+                    <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors", paymentMethod === 'online' && !onlineDisabled ? "border-orange-500 bg-orange-500 text-white" : "border-gray-300")}>
+                      {paymentMethod === 'online' && !onlineDisabled && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
                     </div>
                   </div>
-                  <span className="text-[11px] text-gray-500 mt-2 font-medium">Wave, Orange Money, MTN MoMo, Moov</span>
+                  <span className="text-[11px] text-gray-500 mt-2 font-medium">
+                    {onlineDisabled && paymentConfig?.notice ? paymentConfig.notice : "Wave, Orange Money, MTN MoMo, Moov, Djamo"}
+                  </span>
                 </button>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-orange-50/60 border border-orange-100 text-xs text-orange-950 leading-relaxed font-medium">
                 {paymentMethod === 'online' && (
-                  <p className="flex items-start gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>Paiement protégé :</strong> Votre argent est sécurisé sous séquestre par MoneyFusion et vous est <strong>remboursé à 100%</strong> en cas d'annulation ou de non-livraison.</span>
-                  </p>
+                  <>
+                    <p className="flex items-start gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <span><strong>Paiement protégé :</strong> Votre argent est sécurisé sous séquestre et vous est <strong>remboursé à 100%</strong> en cas d'annulation ou de non-livraison.</span>
+                    </p>
+                    <PaymentNetworkStatus className="mt-2.5" />
+                  </>
                 )}
                 {paymentMethod === 'cod' && (
                   <p className="flex items-start gap-1.5">
@@ -1377,7 +1507,7 @@ const CheckoutPage: React.FC = () => {
                 color="primary"
                 size="md"
                 loading={paying || quoteStatus === 'loading'}
-                disabled={isSelfCheckout || quoteStatus === 'loading'}
+                disabled={isSelfCheckout || quoteStatus === 'loading' || (paymentMethod === 'online' && onlineDisabled)}
                 icon={<CreditCard className="h-4 w-4" />}
                 onClick={handlePay}
                 className="flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 font-bold text-white shadow-sm active:scale-[0.98] whitespace-nowrap"

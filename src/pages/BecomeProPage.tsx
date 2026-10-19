@@ -261,7 +261,7 @@ export default function BecomeProPage() {
               </Button>
 
               <div className="flex items-center justify-center gap-3 text-[11px] font-bold text-gray-400 pt-1">
-                <span className="flex items-center gap-1"><ShieldCheck size={13} className="text-emerald-500" /> Sécurisé par MoneyFusion</span>
+                <span className="flex items-center gap-1"><ShieldCheck size={13} className="text-emerald-500" /> Paiement Mobile Money sécurisé</span>
                 <span>•</span>
                 <span>Wave, Orange, MTN, Moov</span>
               </div>

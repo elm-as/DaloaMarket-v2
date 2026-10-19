@@ -34,7 +34,7 @@ const buildFaqItems = (phase: PhaseFacts) => [
   },
   {
     question: "Quels moyens de paiement sont acceptés ?",
-    answer: `Le paiement Mobile Money est accepté via ${PAYMENT_NETWORKS}, à travers notre agrégateur Money Fusion.\n\n${phase.codOpenToAll ? 'Le paiement en espèces à la livraison est également disponible : il est actuellement ouvert à tous les vendeurs.' : 'Le paiement en espèces à la livraison est proposé pour les articles des Vendeurs Pro.'} En espèces, le règlement se fait directement entre vous et le livreur ou le vendeur, sans passer par le paiement sécurisé.`,
+    answer: `Le paiement Mobile Money est accepté via ${PAYMENT_NETWORKS}, à travers nos agrégateurs de paiement sécurisés (SasPay, Money Fusion).\n\n${phase.codOpenToAll ? 'Le paiement en espèces à la livraison est également disponible : il est actuellement ouvert à tous les vendeurs.' : 'Le paiement en espèces à la livraison est proposé pour les articles des Vendeurs Pro.'} En espèces, le règlement se fait directement entre vous et le livreur ou le vendeur, sans passer par le paiement sécurisé.`,
   },
   {
     question: "Combien coûte la livraison ?",
