@@ -23,6 +23,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { isDisplayablePhotoUrl } from '../lib/availability';
+import { PendingOrderBanner } from '../components/payment/PendingOrderBanner';
 
 interface Order {
   id: string;
@@ -281,6 +282,10 @@ const MesCommandesPage: React.FC = () => {
       {renderHeader()}
 
       <div className="px-4 py-4 max-w-2xl lg:max-w-4xl mx-auto">
+        {activeTab === 'achats' && (
+          <PendingOrderBanner onOrderResolved={fetchOrders} className="mb-4" />
+        )}
+
         {filteredOrders.length === 0 ? (
           <div className="pt-8">
             <EmptyState

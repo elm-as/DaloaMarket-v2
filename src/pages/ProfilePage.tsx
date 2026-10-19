@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useSupabase } from '../hooks/useSupabase';
 import { supabase } from '../lib/supabase';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { cn, formatShopShareText, shareWithImage } from '../lib/utils';
+import { cn, formatPrice, formatShopShareText, shareWithImage } from '../lib/utils';
 import { Avatar } from '../components/profile/Avatar';
 import { ProBadge } from '../components/profile/ProBadge';
 import { usePhase } from '../contexts/PhaseContext';
@@ -28,6 +28,8 @@ import {
   ChevronRight,
   MessageSquare,
   Sparkles,
+  Gift,
+  ShieldCheck,
 } from 'lucide-react';
 
 import { ProfileListingsTab } from '../components/profile/ProfileListingsTab';
@@ -35,6 +37,7 @@ import { ProfileReviewsTab } from '../components/profile/ProfileReviewsTab';
 import { ProfileFavoritesTab } from '../components/profile/ProfileFavoritesTab';
 import { ProfileShopTab } from '../components/profile/ProfileShopTab';
 import { FeedbackForm } from '../components/profile/FeedbackForm';
+import { ReferralModal } from '../components/profile/ReferralModal';
 import { Modal } from '../components/ui/Modal';
 
 type TabId = 'listings' | 'reviews' | 'favorites' | 'shop';
@@ -53,12 +56,13 @@ const ProfilePage: React.FC = () => {
   usePageTitle('Mon profil');
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, userProfile, isAdmin, signOut } = useSupabase();
+  const { user, userProfile, isAdmin, signOut, refreshUserProfile } = useSupabase();
   const { showMonetisation } = usePhase();
 
   const [activeTab, setActiveTab] = useState<TabId>(() => getTabFromParam(searchParams.get('tab')));
   const [profileStats, setProfileStats] = useState({ activeCount: 0, soldCount: 0, reviewCount: 0 });
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
 
   // Synchronise l'onglet si l'URL searchParam change (ex: redirection, notif push, retour arrière)
   useEffect(() => {
@@ -166,6 +170,7 @@ const ProfilePage: React.FC = () => {
   // sous toutes les annonces, et il fallait défiler longtemps pour les atteindre.
   const shortcuts: { label: string; icon: React.ReactNode; onClick: () => void }[] = [
     { label: 'Commandes', icon: <Package className="h-5 w-5" />, onClick: () => navigate('/mes-commandes') },
+    { label: 'Parrainage', icon: <Gift className="h-5 w-5 text-emerald-400" />, onClick: () => setIsReferralModalOpen(true) },
     { label: 'Livreurs', icon: <Truck className="h-5 w-5" />, onClick: () => navigate('/mes-livreurs') },
     { label: 'Stats', icon: <BarChart3 className="h-5 w-5" />, onClick: () => navigate('/mes-statistiques') },
     ...(showMonetisation
@@ -240,6 +245,29 @@ const ProfilePage: React.FC = () => {
               {userProfile?.district && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 backdrop-blur-md">
                   <MapPin className="h-3 w-3" /> {userProfile.district}
+                </span>
+              )}
+              {/* Daloa Cash Pill */}
+              <button
+                type="button"
+                onClick={() => setIsReferralModalOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/25 border border-emerald-400/40 px-2.5 py-1 font-bold text-white backdrop-blur-md hover:bg-emerald-500/35 transition-colors active:scale-95"
+              >
+                <Gift className="h-3.5 w-3.5 text-emerald-300" />
+                <span>Daloa Cash : {formatPrice(Number((userProfile as any)?.daloa_cash_balance || 0))}</span>
+              </button>
+              {/* Anti-Lapin COD Reliability Pill */}
+              {(userProfile as any)?.cod_reliability_score != null && (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold backdrop-blur-md",
+                    (userProfile as any)?.cod_blocked_until && new Date((userProfile as any).cod_blocked_until) > new Date()
+                      ? "bg-red-500/30 text-red-100 border border-red-400/40"
+                      : "bg-white/15 text-white"
+                  )}
+                >
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
+                  <span>Fiabilité COD : {Number((userProfile as any).cod_reliability_score).toFixed(0)}%</span>
                 </span>
               )}
             </div>
@@ -389,6 +417,13 @@ const ProfilePage: React.FC = () => {
           onCancel={() => setIsFeedbackModalOpen(false)}
         />
       </Modal>
+
+      <ReferralModal
+        isOpen={isReferralModalOpen}
+        onClose={() => setIsReferralModalOpen(false)}
+        userProfile={userProfile}
+        onProfileUpdated={refreshUserProfile}
+      />
     </div>
   );
 };

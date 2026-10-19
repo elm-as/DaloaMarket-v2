@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Package as PackageIcon, CheckCircle, Truck, MapPin,
   Phone, ShoppingBag, XCircle, User as UserIcon,
-  AlertTriangle, Clock, MessageCircle, ChevronRight, ChevronDown, Eye, EyeOff, Store, Route
+  AlertTriangle, Clock, MessageCircle, ChevronRight, ChevronDown, Eye, EyeOff, Store, Route, Sparkles
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { fetchContactPhones } from '../lib/contacts';
@@ -305,6 +305,12 @@ const OrderTrackingPage: React.FC = () => {
                     <p className="text-[12px] font-extrabold text-orange-600 mt-1">
                       Taille : {order.variant_label}{order.quantity && order.quantity > 1 ? ` · Quantité : ${order.quantity}` : ''}
                     </p>
+                  )}
+                  {(order as any).grouped_run_id && (
+                    <div className="mt-2 flex items-center gap-1.5 p-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-900 font-bold">
+                      <Sparkles className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <span>Livraison Groupée Multi-Marchands</span>
+                    </div>
                   )}
                 </div>
               </div>

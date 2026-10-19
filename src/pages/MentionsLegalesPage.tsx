@@ -116,9 +116,9 @@ export default function MentionsLegalesPage() {
                       <a href="https://api.daloamarket.com" className="text-[11px] text-[var(--color-primary)] hover:underline">api.daloamarket.com</a>
                     </div>
                     <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-100">
-                      <p className="text-xs font-bold text-gray-900">Agrégateur Mobile Money</p>
-                      <p className="text-xs text-gray-600 mt-0.5">Money Fusion (Wave, Orange, MTN, Moov)</p>
-                      <a href="https://pay.moneyfusion.net" target="_blank" rel="noopener noreferrer" className="text-[11px] text-[var(--color-primary)] hover:underline">pay.moneyfusion.net</a>
+                      <p className="text-xs font-bold text-gray-900">Agrégateurs Mobile Money</p>
+                      <p className="text-xs text-gray-600 mt-0.5">SasPay & Money Fusion (Wave, Orange, MTN, Moov, Djamo)</p>
+                      <span className="text-[11px] text-gray-500">saspay.me / moneyfusion.net</span>
                     </div>
                   </div>
                 </div>

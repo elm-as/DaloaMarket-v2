@@ -242,3 +242,31 @@ export const triggerPayoutProcessing = async (options: { force?: boolean } = {})
     // Les virements restent en 'pending' et repartiront au prochain appel.
   }
 };
+
+export interface PaymentNetworkInfo {
+  code: string;
+  name: string;
+  isActive: boolean;
+}
+
+export interface PaymentNetworksResponse {
+  success: boolean;
+  networks: PaymentNetworkInfo[];
+  checkedAt?: string;
+}
+
+/**
+ * Récupère l'état d'activité des réseaux télécoms (Wave, Orange, MTN, Moov, Djamo).
+ */
+export const getPaymentNetworks = async (): Promise<PaymentNetworkInfo[]> => {
+  if (!PAYMENT_API_URL) return [];
+  try {
+    const res = await fetch(`${PAYMENT_API_URL}/payment-networks`);
+    if (!res.ok) return [];
+    const json = (await res.json()) as PaymentNetworksResponse;
+    return json.networks || [];
+  } catch {
+    return [];
+  }
+};
+

@@ -532,7 +532,7 @@ export default function AcheterPackAnnoncesPage() {
                     <div className="bg-orange-50/70 p-3.5 rounded-2xl border border-orange-100 flex items-start gap-2.5">
                       <Shield size={16} className="text-emerald-600 mt-0.5 flex-shrink-0" />
                       <span className="text-[11px] text-orange-950 font-medium leading-snug">
-                        Paiement sécurisé par MoneyFusion. Vos crédits sont activés automatiquement.
+                        Paiement Mobile Money sécurisé. Vos crédits sont activés automatiquement.
                       </span>
                     </div>
                   </div>

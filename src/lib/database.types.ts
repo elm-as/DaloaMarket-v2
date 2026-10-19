@@ -2655,6 +2655,16 @@ export type Database = {
           suspect: boolean
           suspect_at: string | null
           suspect_reason: string | null
+          cod_orders_count?: number
+          cod_delivered_count?: number
+          cod_refused_count?: number
+          cod_reliability_score?: number
+          cod_warning_count?: number
+          cod_blocked_until?: string | null
+          last_cod_refusal_at?: string | null
+          daloa_cash_balance?: number
+          referral_code?: string | null
+          referred_by_user_id?: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -2699,6 +2709,16 @@ export type Database = {
           suspect?: boolean
           suspect_at?: string | null
           suspect_reason?: string | null
+          cod_orders_count?: number
+          cod_delivered_count?: number
+          cod_refused_count?: number
+          cod_reliability_score?: number
+          cod_warning_count?: number
+          cod_blocked_until?: string | null
+          last_cod_refusal_at?: string | null
+          daloa_cash_balance?: number
+          referral_code?: string | null
+          referred_by_user_id?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -2743,6 +2763,16 @@ export type Database = {
           suspect?: boolean
           suspect_at?: string | null
           suspect_reason?: string | null
+          cod_orders_count?: number
+          cod_delivered_count?: number
+          cod_refused_count?: number
+          cod_reliability_score?: number
+          cod_warning_count?: number
+          cod_blocked_until?: string | null
+          last_cod_refusal_at?: string | null
+          daloa_cash_balance?: number
+          referral_code?: string | null
+          referred_by_user_id?: string | null
         }
         Relationships: []
       }
@@ -3083,7 +3113,18 @@ export type Database = {
           p_items: Json
           p_payment_method: string
           p_road_km?: Json
+          p_quote_id?: string
+          p_daloa_cash_applied?: number
+          p_grouped_delivery_discount?: number
         }
+        Returns: Json
+      }
+      generate_user_referral_code: {
+        Args: never
+        Returns: string
+      }
+      get_user_referrals: {
+        Args: never
         Returns: Json
       }
       create_delivery_payout: {

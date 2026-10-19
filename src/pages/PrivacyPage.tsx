@@ -81,7 +81,7 @@ export default function PrivacyPage() {
                   </ul>
 
                   <h4 className="font-semibold text-[var(--color-on-surface)] mt-3">2.3 Données de paiement</h4>
-                  <p>Pour les commandes avec paiement sécurisé, les transactions sont traitées par notre partenaire Money Fusion. <strong>DaloaMarket ne collecte ni ne stocke vos identifiants de paiement</strong> : code secret Mobile Money, code PIN, identifiants bancaires ou numéro de carte ne transitent jamais par nos serveurs. La saisie s'effectue exclusivement sur l'interface de notre prestataire de paiement.</p>
+                  <p>Pour les commandes avec paiement sécurisé, les transactions sont traitées par nos prestataires de paiement agréés (SasPay, Money Fusion). <strong>DaloaMarket ne collecte ni ne stocke vos identifiants de paiement</strong> : code secret Mobile Money, code PIN, identifiants bancaires ou numéro de carte ne transitent jamais par nos serveurs. La saisie s'effectue exclusivement sur l'interface de notre prestataire de paiement.</p>
                   <p>Nous conservons en revanche l'historique de vos transactions (montant, date, statut, type de service) pour la gestion de votre compte et la résolution d'éventuels litiges. Si vous vendez ou livrez sur la Plateforme, nous conservons également le numéro Mobile Money que vous avez renseigné pour recevoir vos versements : il nous est indispensable pour vous payer.</p>
                 </div>
               </div>
@@ -152,7 +152,7 @@ export default function PrivacyPage() {
                   <ul className="list-disc pl-5 space-y-1">
                     <li><strong className="text-[var(--color-on-surface)]">Livreurs (réseau DaloaDelivery ou livreurs affiliés à un vendeur) :</strong> lorsqu'une commande est passée, les coordonnées nécessaires à la livraison (nom, téléphone, adresse et point GPS) sont transmises au livreur désigné, pour la seule durée de la course.</li>
                     <li><strong className="text-[var(--color-on-surface)]">Supabase :</strong> hébergement de la base de données, authentification et stockage des fichiers (photos d'annonces, avatars, bannières de boutique). Les e-mails transactionnels (confirmation d'inscription, réinitialisation de mot de passe) sont également expédiés via ce service.</li>
-                    <li><strong className="text-[var(--color-on-surface)]">Money Fusion :</strong> traitement des paiements et des versements Mobile Money ({PAYMENT_NETWORKS})</li>
+                    <li><strong className="text-[var(--color-on-surface)]">SasPay & Money Fusion :</strong> traitement des paiements et des versements Mobile Money ({PAYMENT_NETWORKS})</li>
                     <li><strong className="text-[var(--color-on-surface)]">Mapbox :</strong> affichage des cartes et calcul des itinéraires de livraison</li>
                     <li><strong className="text-[var(--color-on-surface)]">Expo (Apple et Google pour l'acheminement) :</strong> envoi des notifications push vers l'application mobile, si vous les avez activées</li>
                     <li><strong className="text-[var(--color-on-surface)]">Netlify et Render :</strong> hébergement du site et du service de paiement</li>

@@ -40,6 +40,7 @@ interface Transaction {
   status: 'pending' | 'confirmed' | 'failed';
   created_at: string;
   confirmed_at: string | null;
+  metadata?: Record<string, any> | null;
 }
 
 type TabKey = 'all' | 'pending' | 'confirmed';
@@ -100,7 +101,7 @@ const MesTransactionsPage: React.FC = () => {
       } else if (res.status === 'failure') {
         toast.error('Le paiement n\'a pas abouti.');
       } else {
-        toast('Paiement non encore détecté chez MoneyFusion. Vous pouvez relancer le paiement ou contacter le support.', { icon: 'ℹ️' });
+        toast('Paiement non encore détecté. Vous pouvez relancer le paiement ou contacter le support.', { icon: 'ℹ️' });
       }
       await fetchTransactions();
     } catch (err: any) {
@@ -112,6 +113,11 @@ const MesTransactionsPage: React.FC = () => {
 
   const handleResume = (tx: Transaction, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    const checkoutUrl = tx.metadata?.checkout_url;
+    if (checkoutUrl) {
+      window.location.href = checkoutUrl;
+      return;
+    }
     if (tx.type === 'seller_badge') {
       navigate('/devenir-pro');
     } else if (tx.type.includes('pack') || tx.type === 'listing_pack_10') {

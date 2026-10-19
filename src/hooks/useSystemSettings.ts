@@ -13,6 +13,7 @@ export interface PaymentConfig {
   notice: string;
   disable_online_payments: boolean;
   force_cod_only: boolean;
+  provider?: 'saspay' | 'moneyfusion';
 }
 
 export interface CancellationConfig {
