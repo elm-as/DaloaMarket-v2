@@ -15,6 +15,7 @@ import {
   Rocket,
   CreditCard,
   Wrench,
+  Image as ImageIcon,
   type LucideIcon,
 } from 'lucide-react';
 import { useSupabase } from '../hooks/useSupabase';
@@ -34,6 +35,7 @@ import { AdminFeedbacksTab } from '../components/admin/AdminFeedbacksTab';
 import { AdminFeaturesTab } from '../components/admin/AdminFeaturesTab';
 import { AdminAmbassadorsTab } from '../components/admin/AdminAmbassadorsTab';
 import { AdminNotificationsTab } from '../components/admin/AdminNotificationsTab';
+import { AdminBannersTab } from '../components/admin/AdminBannersTab';
 import { AdminMonetisationSettings } from '../components/admin/config/AdminMonetisationSettings';
 import { AdminPaymentSettings } from '../components/admin/config/AdminPaymentSettings';
 import { AdminMaintenanceSettings } from '../components/admin/config/AdminMaintenanceSettings';
@@ -93,6 +95,7 @@ const GROUPS: { label: string; pages: AdminPage[] }[] = [
     label: 'Communication',
     pages: [
       { key: 'notifications', label: 'Notifications', icon: Bell, paths: ['/admin/notifications'], render: () => <AdminNotificationsTab /> },
+      { key: 'bannieres', label: 'Affiches & Carrousel', icon: ImageIcon, paths: ['/admin/bannieres', '/admin/banners'], adminOnly: true, render: () => <AdminBannersTab /> },
     ],
   },
   {

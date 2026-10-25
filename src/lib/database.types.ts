@@ -18,6 +18,72 @@ export type Database = {
   }
   public: {
     Tables: {
+      promo_banners: {
+        Row: {
+          id: string
+          title: string
+          subtitle: string | null
+          image_url: string
+          badge_text: string | null
+          badge_color: string | null
+          link_type: string
+          link_target: string | null
+          seller_id: string | null
+          sponsor_name: string | null
+          price_paid: number
+          starts_at: string | null
+          ends_at: string | null
+          is_active: boolean
+          priority: number
+          views_count: number
+          clicks_count: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          subtitle?: string | null
+          image_url: string
+          badge_text?: string | null
+          badge_color?: string | null
+          link_type?: string
+          link_target?: string | null
+          seller_id?: string | null
+          sponsor_name?: string | null
+          price_paid?: number
+          starts_at?: string | null
+          ends_at?: string | null
+          is_active?: boolean
+          priority?: number
+          views_count?: number
+          clicks_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          subtitle?: string | null
+          image_url?: string
+          badge_text?: string | null
+          badge_color?: string | null
+          link_type?: string
+          link_target?: string | null
+          seller_id?: string | null
+          sponsor_name?: string | null
+          price_paid?: number
+          starts_at?: string | null
+          ends_at?: string | null
+          is_active?: boolean
+          priority?: number
+          views_count?: number
+          clicks_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       _deprecated_delivery_offers: {
         Row: {
           created_at: string | null
