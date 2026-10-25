@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { useSupabase } from '../hooks/useSupabase';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useSystemSettings } from '../hooks/useSystemSettings';
 import { friendlyError } from '../lib/messages';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -30,6 +31,8 @@ export default function AcheterPackAnnoncesPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, userProfile } = useSupabase();
+  const { phaseConfig } = useSystemSettings();
+  const boostsEnabled = phaseConfig?.enable_boost ?? true;
 
   const isSuccess = searchParams.get('status') === 'success';
   const successCredits = searchParams.get('credits') || '0';
@@ -60,6 +63,10 @@ export default function AcheterPackAnnoncesPage() {
   }
 
   const onSubmit = async (data: CreditPackFormData) => {
+    if (!boostsEnabled) {
+      setErrorMsg('Les options de boost sont actuellement désactivées par l’administration.');
+      return;
+    }
     if (!validateIvorianPhone(data.phone)) {
       setErrorMsg('Numéro de téléphone ivoirien invalide (ex: 0102030405)');
       return;
@@ -249,6 +256,16 @@ export default function AcheterPackAnnoncesPage() {
                 </p>
               </div>
 
+              {!boostsEnabled && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-medium text-amber-800 flex items-center gap-3">
+                  <span className="text-base">⚠️</span>
+                  <div>
+                    <p className="font-bold">Options payantes temporairement suspendues</p>
+                    <p className="text-[11px] text-amber-700">La publication et la visibilité de vos annonces sont actuellement 100% gratuites sur DaloaMarket.</p>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {CREDIT_PACKS.map((pack) => {
                   const isSelected = selectedPack.id === pack.id;
@@ -316,10 +333,16 @@ export default function AcheterPackAnnoncesPage() {
                   onClick={() => setStep(2)}
                   color="primary"
                   size="lg"
-                  className="rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-extrabold shadow-lg shadow-orange-500/25 active:scale-[0.98] flex items-center gap-1 px-8"
+                  disabled={!boostsEnabled}
+                  className={cn(
+                    "rounded-2xl font-extrabold flex items-center gap-1 px-8 transition-all",
+                    boostsEnabled
+                      ? "bg-gradient-to-r from-orange-500 to-amber-600 shadow-lg shadow-orange-500/25 active:scale-[0.98] text-white"
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed opacity-60"
+                  )}
                 >
-                  Continuer
-                  <ChevronRight size={16} />
+                  {boostsEnabled ? 'Continuer' : 'Options suspendues'}
+                  {boostsEnabled && <ChevronRight size={16} />}
                 </Button>
               </div>
             </motion.div>
@@ -488,10 +511,12 @@ export default function AcheterPackAnnoncesPage() {
                         color="primary"
                         size="md"
                         loading={loading}
-                        disabled={loading}
+                        disabled={loading || !boostsEnabled}
                         className="flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 font-bold text-white shadow-sm active:scale-[0.98] whitespace-nowrap"
                       >
-                        Payer {selectedPack.price.toLocaleString()} FCFA
+                        {boostsEnabled
+                          ? `Payer ${selectedPack.price.toLocaleString()} FCFA`
+                          : 'Options désactivées'}
                       </Button>
                     </div>
                   </form>
