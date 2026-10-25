@@ -16,6 +16,35 @@ export interface PaymentConfig {
   provider?: 'saspay' | 'moneyfusion';
 }
 
+export interface PaymentCapabilities {
+  canShareCheckoutLink: boolean;
+  canResumeDirectSession: boolean;
+  supportsHostedMultiOperator: boolean;
+  providerName: string;
+}
+
+/**
+ * Matrice de capacités des prestataires Mobile Money.
+ * - SasPay : page hébergée multi-opérateurs réutilisable (permet le partage et le paiement tiers).
+ * - MoneyFusion : flux push USSD / session liée au numéro de téléphone acheteur (partage tiers désactivé).
+ */
+export function getPaymentCapabilities(provider?: 'saspay' | 'moneyfusion'): PaymentCapabilities {
+  if (provider === 'moneyfusion') {
+    return {
+      canShareCheckoutLink: false,
+      canResumeDirectSession: false,
+      supportsHostedMultiOperator: false,
+      providerName: 'MoneyFusion',
+    };
+  }
+  return {
+    canShareCheckoutLink: true,
+    canResumeDirectSession: true,
+    supportsHostedMultiOperator: true,
+    providerName: 'SasPay',
+  };
+}
+
 export interface CancellationConfig {
   max_consecutive_cancellations: number;
   enabled: boolean;

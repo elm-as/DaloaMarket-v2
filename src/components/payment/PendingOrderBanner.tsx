@@ -12,6 +12,7 @@ import {
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { useSupabase } from '../../hooks/useSupabase';
+import { useSystemSettings, getPaymentCapabilities } from '../../hooks/useSystemSettings';
 import { checkPaymentStatus } from '../../lib/payment';
 import { formatPrice } from '../../lib/utils';
 
@@ -36,6 +37,8 @@ export const PendingOrderBanner: React.FC<PendingOrderBannerProps> = ({
   className = '',
 }) => {
   const { user } = useSupabase();
+  const { paymentConfig } = useSystemSettings();
+  const capabilities = getPaymentCapabilities(paymentConfig.provider);
   const navigate = useNavigate();
   const [pendingEscrow, setPendingEscrow] = useState<PendingEscrow | null>(null);
   const [verifying, setVerifying] = useState(false);
@@ -81,9 +84,10 @@ export const PendingOrderBanner: React.FC<PendingOrderBannerProps> = ({
   const handleResume = () => {
     if (checkoutUrl) {
       window.location.href = checkoutUrl;
-    } else {
-      toast.error('Session de paiement expirée. Veuillez relancer votre commande.');
+      return;
     }
+    toast('Redirection vers votre panier pour finaliser votre commande...', { icon: '🛒' });
+    navigate('/cart');
   };
 
   const handleVerify = async () => {
@@ -161,7 +165,7 @@ export const PendingOrderBanner: React.FC<PendingOrderBannerProps> = ({
 
         {/* Actions */}
         <div className="flex flex-wrap items-center gap-2 pt-1 sm:pt-0">
-          {checkoutUrl && (
+          {capabilities.canShareCheckoutLink && checkoutUrl && (
             <button
               onClick={handleCopyLink}
               title="Copier le lien pour payer sur un autre téléphone"
