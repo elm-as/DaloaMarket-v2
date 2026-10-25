@@ -22,6 +22,7 @@ interface PromoBannerItem {
   link_target?: string | null;
   views_count: number;
   clicks_count: number;
+  is_active: boolean;
   ends_at?: string | null;
   starts_at?: string | null;
 }
@@ -126,17 +127,19 @@ export const ProfileCarouselTab: React.FC<{ user: any; userProfile: any }> = ({ 
         badge_color: badgeColor,
         link_type: selectedListingId ? 'listing' : 'seller',
         link_target: selectedListingId || user.id,
-        price_paid: pack.price,
-        priority: 5,
+        price_paid: 0,
+        priority: 0,
+        views_count: 0,
+        clicks_count: 0,
         starts_at: start.toISOString(),
         ends_at: end.toISOString(),
-        is_active: true,
+        is_active: false,
       };
 
       const { error } = await supabase.from('promo_banners').insert(record);
       if (error) throw error;
 
-      toast.success(`Affiche enregistrée pour ${pack.days} jours !`);
+      toast.success(`Affiche soumise ! Elle sera validée et activée par l'administrateur.`);
       setTitle('');
       setSubtitle('');
       setImageUrl('');
@@ -202,8 +205,8 @@ export const ProfileCarouselTab: React.FC<{ user: any; userProfile: any }> = ({ 
                         {b.badge_text}
                       </span>
                     )}
-                    <span className="absolute bottom-2 right-2 rounded-lg bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur">
-                      {daysLeft != null && daysLeft > 0 ? `Reste ${daysLeft}j` : 'Terminé'}
+                    <span className={`absolute bottom-2 right-2 rounded-lg px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur ${!b.is_active ? 'bg-amber-600/90' : 'bg-black/60'}`}>
+                      {!b.is_active ? 'En attente' : daysLeft != null && daysLeft > 0 ? `Reste ${daysLeft}j` : 'Terminé'}
                     </span>
                   </div>
                   <div className="p-3">

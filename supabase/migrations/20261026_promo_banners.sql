@@ -2,7 +2,7 @@
 -- Migration: 20261026_promo_banners.sql
 -- Description: Table pour les affiches promotionnelles et bannières d'accueil
 --              gérées par l'administration (institutionnelles et payantes)
---              et réservées aux Vendeurs Pro certifiés.
+--              et réservées aux Vendeurs Pro certifiés (soumission sécurisée en attente).
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS public.promo_banners (
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS public.promo_banners (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Colonnes additionnelles au cas où la table a déjà été créée sans elles
+-- Colonnes additionnelles de sponsoring au cas où la table a déjà été créée
 ALTER TABLE public.promo_banners ADD COLUMN IF NOT EXISTS sponsor_name text;
 ALTER TABLE public.promo_banners ADD COLUMN IF NOT EXISTS price_paid integer DEFAULT 0;
 
@@ -48,7 +48,7 @@ CREATE POLICY "Public read active banners" ON public.promo_banners
     AND (ends_at IS NULL OR ends_at >= now())
   );
 
--- 2. Gestion complète réservée aux administrateurs
+-- 2. Gestion complète réservée aux administrateurs (lecture, validation, activation, priorité)
 DROP POLICY IF EXISTS "Admins manage banners" ON public.promo_banners;
 CREATE POLICY "Admins manage banners" ON public.promo_banners
   FOR ALL TO authenticated
@@ -65,32 +65,46 @@ CREATE POLICY "Sellers read own banners" ON public.promo_banners
   FOR SELECT TO authenticated
   USING (seller_id = auth.uid());
 
--- 4. Soumission d'une affiche réservée aux Vendeurs Pro actifs (pro_until > now())
+-- 4. Soumission d'une affiche par un Vendeur Pro actif : STRICTEMENT en attente (is_active=false, priority=0, stats=0)
 DROP POLICY IF EXISTS "Pro sellers create banner" ON public.promo_banners;
 CREATE POLICY "Pro sellers create banner" ON public.promo_banners
   FOR INSERT TO authenticated
   WITH CHECK (
     seller_id = auth.uid()
+    AND is_active = false
+    AND priority = 0
+    AND views_count = 0
+    AND clicks_count = 0
+    AND COALESCE(price_paid, 0) = 0
     AND EXISTS (
       SELECT 1 FROM public.users
       WHERE id = auth.uid()
-        AND pro_until IS NOT NULL 
+        AND pro_until IS NOT NULL
         AND pro_until > now()
     )
   );
 
--- 5. Modification de sa propre affiche par le Vendeur Pro
+-- 5. Modification de sa propre affiche en attente par le Vendeur Pro (sans pouvoir s'auto-activer)
 DROP POLICY IF EXISTS "Pro sellers update own pending banners" ON public.promo_banners;
 CREATE POLICY "Pro sellers update own pending banners" ON public.promo_banners
   FOR UPDATE TO authenticated
   USING (
     seller_id = auth.uid()
+    AND is_active = false
     AND EXISTS (
       SELECT 1 FROM public.users
       WHERE id = auth.uid()
-        AND pro_until IS NOT NULL 
+        AND pro_until IS NOT NULL
         AND pro_until > now()
     )
+  )
+  WITH CHECK (
+    seller_id = auth.uid()
+    AND is_active = false
+    AND priority = 0
+    AND views_count = 0
+    AND clicks_count = 0
+    AND COALESCE(price_paid, 0) = 0
   );
 
 -- Données initiales d'accueil DaloaMarket
