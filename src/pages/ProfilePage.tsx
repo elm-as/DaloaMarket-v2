@@ -36,15 +36,17 @@ import { ProfileListingsTab } from '../components/profile/ProfileListingsTab';
 import { ProfileReviewsTab } from '../components/profile/ProfileReviewsTab';
 import { ProfileFavoritesTab } from '../components/profile/ProfileFavoritesTab';
 import { ProfileShopTab } from '../components/profile/ProfileShopTab';
+import { ProfileCarouselTab } from '../components/profile/ProfileCarouselTab';
 import { FeedbackForm } from '../components/profile/FeedbackForm';
 import { ReferralModal } from '../components/profile/ReferralModal';
 import { Modal } from '../components/ui/Modal';
 
-type TabId = 'listings' | 'reviews' | 'favorites' | 'shop';
+type TabId = 'listings' | 'reviews' | 'favorites' | 'shop' | 'carousel';
 
 const getTabFromParam = (param: string | null): TabId => {
   if (!param) return 'listings';
   const clean = param.toLowerCase();
+  if (clean === 'carousel' || clean === 'carrousel' || clean === 'affiches') return 'carousel';
   if (clean === 'shop' || clean === 'boutique' || clean === 'vitrine') return 'shop';
   if (clean === 'reviews' || clean === 'avis') return 'reviews';
   if (clean === 'favorites' || clean === 'favoris') return 'favorites';
@@ -144,6 +146,7 @@ const ProfilePage: React.FC = () => {
     { id: 'reviews', label: 'Avis', count: profileStats.reviewCount, icon: <Star className="w-4 h-4" /> },
     { id: 'favorites', label: 'Favoris', icon: <Heart className="w-4 h-4" /> },
     { id: 'shop', label: 'Boutique', icon: <Store className="w-4 h-4" /> },
+    ...(isPro ? [{ id: 'carousel' as TabId, label: 'Carrousel VIP', icon: <Sparkles className="w-4 h-4 text-orange-500" /> }] : []),
   ];
 
   const renderStars = (rating: number) => {
@@ -175,6 +178,9 @@ const ProfilePage: React.FC = () => {
     { label: 'Stats', icon: <BarChart3 className="h-5 w-5" />, onClick: () => navigate('/mes-statistiques') },
     ...(showMonetisation
       ? [{ label: 'Paiements', icon: <CreditCard className="h-5 w-5" />, onClick: () => navigate('/mes-paiements') }]
+      : []),
+    ...(isPro
+      ? [{ label: 'Carrousel', icon: <Sparkles className="h-5 w-5 text-amber-500" />, onClick: () => handleTabChange('carousel') }]
       : []),
     { label: 'Partager', icon: <Share2 className="h-5 w-5" />, onClick: handleShareShop },
   ];
@@ -334,7 +340,7 @@ const ProfilePage: React.FC = () => {
           Pas d'icône (c'est elles qui prenaient la largeur) ; le compteur est
           une bulle posée sur l'angle, qui ne pousse pas le texte. */}
       <div className="sticky top-14 z-20 mt-5 bg-gray-50/95 px-4 py-2.5 backdrop-blur-md lg:top-16">
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className={cn('grid gap-1.5', isPro ? 'grid-cols-5' : 'grid-cols-4')}>
           {tabs.map((tab) => {
             const isSelected = activeTab === tab.id;
             return (
@@ -383,6 +389,7 @@ const ProfilePage: React.FC = () => {
             {activeTab === 'reviews' && <ProfileReviewsTab userId={currentUserId!} />}
             {activeTab === 'favorites' && <ProfileFavoritesTab userId={currentUserId!} />}
             {activeTab === 'shop' && <ProfileShopTab userProfile={userProfile} />}
+            {activeTab === 'carousel' && <ProfileCarouselTab user={user} userProfile={userProfile} />}
           </motion.div>
         </AnimatePresence>
 

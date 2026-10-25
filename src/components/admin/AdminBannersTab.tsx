@@ -109,6 +109,26 @@ export const AdminBannersTab: React.FC = () => {
     }
   };
 
+  const handleQuickExtend = async (banner: PromoBannerRow, days: number) => {
+    try {
+      const base = banner.ends_at && new Date(banner.ends_at) > new Date()
+        ? new Date(banner.ends_at)
+        : new Date();
+      const nextEnd = new Date(base.getTime() + days * 86400000).toISOString();
+      const { error } = await supabase
+        .from('promo_banners')
+        .update({ ends_at: nextEnd, is_active: true, updated_at: new Date().toISOString() })
+        .eq('id', banner.id);
+      if (error) throw error;
+      setBanners((prev) =>
+        prev.map((b) => (b.id === banner.id ? { ...b, ends_at: nextEnd, is_active: true } : b))
+      );
+      toast.success(`Affiche prolongée de +${days}j`);
+    } catch {
+      toast.error('Erreur lors de la prolongation');
+    }
+  };
+
   const handleOpenCreate = () => {
     setEditingBanner(null);
     setIsModalOpen(true);
@@ -228,20 +248,21 @@ export const AdminBannersTab: React.FC = () => {
                         <p className="mt-0.5 text-xs text-gray-500 line-clamp-1">{banner.subtitle}</p>
                       ) : null}
 
-                      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
                         <span className="rounded-md bg-gray-100 px-2 py-0.5 font-medium text-gray-700">
-                          Action : {banner.link_type}
+                          {banner.link_type}
                         </span>
-                        {banner.sponsor_name && (
-                          <span>
-                            Annonceur : <strong className="text-gray-900">{banner.sponsor_name}</strong>
+                        {banner.ends_at ? (
+                          <span className={`rounded-md px-1.5 py-0.5 font-bold ${
+                            new Date(banner.ends_at) < new Date() ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'
+                          }`}>
+                            {new Date(banner.ends_at) < new Date() ? 'Expiré' : `Reste ${Math.ceil((new Date(banner.ends_at).getTime() - Date.now()) / 86400000)}j`}
                           </span>
+                        ) : (
+                          <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-gray-600">Permanent</span>
                         )}
-                        {banner.price_paid > 0 && (
-                          <span className="font-semibold text-emerald-700">
-                            Facturé : {formatPrice(banner.price_paid)} FCFA
-                          </span>
-                        )}
+                        {banner.sponsor_name && <span>Par : <strong className="text-gray-900">{banner.sponsor_name}</strong></span>}
+                        {banner.price_paid > 0 && <span className="font-semibold text-emerald-700">{formatPrice(banner.price_paid)} F</span>}
                       </div>
                     </div>
                   </div>
@@ -274,6 +295,15 @@ export const AdminBannersTab: React.FC = () => {
                         }`}
                       >
                         {banner.is_active ? 'Suspendre' : 'Publier'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleQuickExtend(banner, 7)}
+                        className="rounded-lg bg-orange-50 px-2.5 py-1 text-xs font-bold text-orange-700 hover:bg-orange-100"
+                        title="Prolonger de 7 jours"
+                      >
+                        +7j
                       </button>
 
                       <button

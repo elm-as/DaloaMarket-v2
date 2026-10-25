@@ -47,6 +47,21 @@ CREATE POLICY "Admins manage banners" ON public.promo_banners
     EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'moderator'))
   );
 
+-- 3. Lecture de ses propres bannières par le vendeur
+CREATE POLICY "Sellers read own banners" ON public.promo_banners
+  FOR SELECT TO authenticated
+  USING (seller_id = auth.uid());
+
+-- 4. Soumission d'une affiche par un vendeur Pro
+CREATE POLICY "Pro sellers create banner" ON public.promo_banners
+  FOR INSERT TO authenticated
+  WITH CHECK (seller_id = auth.uid());
+
+-- 5. Modification de sa propre affiche en attente
+CREATE POLICY "Pro sellers update own pending banners" ON public.promo_banners
+  FOR UPDATE TO authenticated
+  USING (seller_id = auth.uid() AND is_active = false);
+
 -- Données initiales d'accueil DaloaMarket
 INSERT INTO public.promo_banners (title, subtitle, image_url, badge_text, badge_color, link_type, link_target, priority)
 VALUES 
