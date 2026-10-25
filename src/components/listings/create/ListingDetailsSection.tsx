@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, ThumbsUp, CheckCircle, Clock4, Shirt, Monitor, Home, Car, Dumbbell, BookOpen, UtensilsCrossed } from 'lucide-react';
+import { Sparkles, ThumbsUp, CheckCircle, Clock4, Shirt, Monitor, Home, Car, Dumbbell, BookOpen, UtensilsCrossed, FileText } from 'lucide-react';
 import type { UseFormRegister, FieldErrors, UseFormSetValue } from 'react-hook-form';
 import type { ListingFormValues } from '../../../pages/ListingCreatePage';
 import { CATEGORIES, CONDITIONS, cn } from '../../../lib/utils';
@@ -21,6 +21,7 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   sports: <Dumbbell className="w-4 h-4" />,
   books: <BookOpen className="w-4 h-4" />,
   food: <UtensilsCrossed className="w-4 h-4" />,
+  digital: <FileText className="w-4 h-4" />,
 };
 
 const CONDITION_ICONS: Record<string, React.ReactNode> = {
@@ -68,6 +69,14 @@ export const ListingDetailsSection: React.FC<ListingDetailsSectionProps> = ({
             );
           })}
         </div>
+        {watchCategory === 'digital' && (
+          <div className="mt-2.5 p-3 rounded-2xl bg-sky-50 border border-sky-200 text-sky-900 text-xs font-medium flex items-center gap-2">
+            <span className="text-base">💡</span>
+            <span>
+              <strong>Produit numérique :</strong> Aucun coursier moto ne sera affecté. Vous transmettrez le document (PDF, e-book, formation) directement à l'acheteur en privé après validation.
+            </span>
+          </div>
+        )}
         {errors.category && <p className="text-xs text-red-500 mt-1.5 ml-1 font-semibold">{errors.category.message}</p>}
       </div>
 

@@ -100,6 +100,13 @@ const CheckoutPage: React.FC = () => {
     cash_on_delivery_enabled: false,
   });
   const [deliveryMode, setDeliveryMode] = useState<'delivery' | 'pickup'>('delivery');
+  const isDigital = !isCartMode && (listing as any)?.category === 'digital';
+
+  useEffect(() => {
+    if (isDigital && deliveryMode !== 'pickup') {
+      setDeliveryMode('pickup');
+    }
+  }, [isDigital, deliveryMode]);
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod' | 'cash_at_shop'>('online');
   const [step, setStep] = useState<1 | 2 | 3>(1);
   // Devis serveur de l'étape Paiement : c'est lui qui est affiché et facturé.
@@ -650,7 +657,11 @@ const CheckoutPage: React.FC = () => {
       const { createOrder } = await import("../lib/payment");
       const isPickupMode = deliveryMode === 'pickup';
       const resolvedDeliveryMode: 'delivery' | 'pickup_point' = isPickupMode ? 'pickup_point' : 'delivery';
-      const resolvedAddress = isPickupMode ? 'Retrait en boutique' : (deliveryAddress || 'Daloa');
+      const resolvedAddress = isDigital
+        ? 'Envoi numérique direct en privé (Messagerie / WhatsApp)'
+        : isPickupMode
+          ? 'Retrait en boutique'
+          : (deliveryAddress || 'Daloa');
 
       const processItem = async (targetListingId: string, targetVariantId?: string, targetQty: number = 1, targetAmount: number = total) => {
         const result = await createOrder({
@@ -976,7 +987,15 @@ const CheckoutPage: React.FC = () => {
                 <span>Mode de réception</span>
               </div>
 
-              {isPickupAllowed ? (
+              {isDigital ? (
+                <div className="p-4 rounded-2xl border-2 border-sky-500 bg-sky-50/60 shadow-sm flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-extrabold text-sky-950 block">Envoi numérique direct en privé</span>
+                    <span className="text-[11px] text-sky-700 mt-0.5 block font-medium">Document / PDF transmis directement par le vendeur en privé dès confirmation</span>
+                  </div>
+                  <span className="text-xs font-black text-sky-700 bg-sky-100 px-2.5 py-1 rounded-xl">GRATUIT (0 F)</span>
+                </div>
+              ) : isPickupAllowed ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Option 1: Livraison */}
                   <button

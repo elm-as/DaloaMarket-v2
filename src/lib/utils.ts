@@ -371,6 +371,7 @@ export const CATEGORIES = [
   { id: 'sports', label: 'Sports & Loisirs' },
   { id: 'books', label: 'Livres & Culture' },
   { id: 'food', label: 'Alimentaire' },
+  { id: 'digital', label: 'Produits numériques & Formations' },
 ];
 
 export const CONDITIONS = [
