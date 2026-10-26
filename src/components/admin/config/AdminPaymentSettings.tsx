@@ -35,6 +35,7 @@ export const AdminPaymentSettings: React.FC = () => {
   const { paymentConfig, cancellationSettings, loading, refreshSettings } = useSystemSettings();
 
   const [status, setStatus] = useState<PaymentConfig['status']>('normal');
+  const [provider, setProvider] = useState<'moneyfusion' | 'saspay'>('moneyfusion');
   const [notice, setNotice] = useState('');
   const [codOnly, setCodOnly] = useState(false);
   const [savingPay, setSavingPay] = useState(false);
@@ -46,6 +47,7 @@ export const AdminPaymentSettings: React.FC = () => {
 
   useEffect(() => {
     setStatus(paymentConfig.status || 'normal');
+    setProvider(paymentConfig.provider || 'moneyfusion');
     setNotice(paymentConfig.notice || '');
     setCodOnly(Boolean(paymentConfig.disable_online_payments));
   }, [paymentConfig]);
@@ -58,6 +60,7 @@ export const AdminPaymentSettings: React.FC = () => {
 
   const payDirty =
     status !== (paymentConfig.status || 'normal') ||
+    provider !== (paymentConfig.provider || 'moneyfusion') ||
     notice !== (paymentConfig.notice || '') ||
     codOnly !== Boolean(paymentConfig.disable_online_payments);
 
@@ -71,6 +74,7 @@ export const AdminPaymentSettings: React.FC = () => {
     try {
       await saveSystemSetting('payment_settings', {
         status,
+        provider,
         notice: notice.trim(),
         disable_online_payments: codOnly,
         force_cod_only: codOnly,
@@ -112,8 +116,8 @@ export const AdminPaymentSettings: React.FC = () => {
 
       <AdminSection
         icon={CreditCard}
-        title="Paiement en ligne (MoneyFusion)"
-        description="Wave, Orange Money, MTN et Moov."
+        title="Paiement en ligne"
+        description="Configuration de la passerelle Mobile Money (Wave, Orange, MTN, Moov)."
         aside={STATUS_BADGE[paymentConfig.status || 'normal']}
         footer={
           <AdminButton variant="primary" loading={savingPay} disabled={!payDirty} onClick={savePayment}>
@@ -121,6 +125,17 @@ export const AdminPaymentSettings: React.FC = () => {
           </AdminButton>
         }
       >
+        <AdminField label="Passerelle de paiement (Fournisseur)" htmlFor="pay-provider" hint="Prestataire exécutant les encaissements mobiles.">
+          <select
+            id="pay-provider"
+            value={provider}
+            onChange={(e) => setProvider(e.target.value as 'moneyfusion' | 'saspay')}
+            className={adminInputClass}
+          >
+            <option value="moneyfusion">MoneyFusion (Wave, Orange, MTN, Moov - Principal)</option>
+            <option value="saspay">SasPay (Passerelle unifiée)</option>
+          </select>
+        </AdminField>
         <AdminField label="État de la passerelle" htmlFor="pay-status">
           <select
             id="pay-status"
