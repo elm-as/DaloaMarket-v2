@@ -141,23 +141,32 @@ self.addEventListener('push', (event) => {
   // Libellé du bouton selon le type de notification (tag posé par le serveur).
   const tag = data.tag || 'daloamarket-notification';
   const openLabel = tag.startsWith('chat-')
-    ? 'Répondre'
+    ? 'Ouvrir le chat'
     : tag.startsWith('order-')
       ? 'Voir la commande'
       : 'Ouvrir';
+
+  // Support du badge PWA (compteur numérique sur l'icône, notamment iOS PWA)
+  if (data.badgeCount !== undefined && 'setAppBadge' in navigator) {
+    if (Number(data.badgeCount) > 0) {
+      navigator.setAppBadge(Number(data.badgeCount)).catch(() => {});
+    } else {
+      navigator.clearAppBadge().catch(() => {});
+    }
+  }
 
   const options = {
     body: data.body || '',
     icon: data.icon || '/android-chrome-192x192.png',
     // Badge de la barre d'état : Android n'en garde que la silhouette, il doit
     // être blanc sur fond transparent (l'icône pleine donnait un carré blanc).
-    badge: '/notification-badge.png',
+    badge: data.badge || '/notification-badge.png',
     image: data.image || undefined,
-    data: { url: data.url || '/' },
+    data: data.data || { url: data.url || '/' },
     vibrate: [200, 100, 200],
     tag,
     renotify: true,
-    actions: [
+    actions: data.actions || [
       { action: 'open', title: openLabel },
       { action: 'dismiss', title: 'Fermer' },
     ],
@@ -178,15 +187,11 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Si un onglet existant est ouvert, le focus et naviguer
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.focus();
-          client.navigate(urlToOpen);
-          return;
+          return client.focus().then(() => client.navigate(urlToOpen));
         }
       }
-      // Sinon, ouvrir un nouvel onglet
       return self.clients.openWindow(urlToOpen);
     })
   );

@@ -40,7 +40,7 @@ const ChatPage: React.FC = () => {
   const isSupport = !listingId || listingId === 'support' || listingId === 'null';
   const navigate = useNavigate();
   const { user, userProfile } = useSupabase();
-  const isAdmin = userProfile?.role === 'admin';
+  const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'superadmin';
   const isReadOnly = isSupport && !isAdmin;
 
   const [messages, setMessages] = useState<Message[]>([]);
