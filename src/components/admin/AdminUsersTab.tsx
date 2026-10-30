@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import {
   Search,
   Users,
@@ -24,6 +25,7 @@ import {
   Flag,
   Trash2,
   Repeat,
+  Phone,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
@@ -601,6 +603,8 @@ export const AdminUsersTab: React.FC = () => {
                   const hasAppeal = u.ban_appeal_status === 'pending';
                   const consecutive = u.consecutive_cancellations || 0;
                   const deliveryData = u.delivery_person;
+                  const rawPhone = u.phone || deliveryData?.phone;
+                  const cleanPhone = rawPhone ? String(rawPhone).replace(/\D/g, '').replace(/^225/, '') : null;
 
                   return (
                     <tr
@@ -836,7 +840,28 @@ export const AdminUsersTab: React.FC = () => {
 
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right">
-                        <div className="flex justify-end gap-1.5">
+                        <div className="flex justify-end items-center gap-1.5">
+                          <Link
+                            to={`/messages/support/${u.id}`}
+                            title="Ouvrir la messagerie pour lui écrire directement"
+                            className="rounded-xl text-xs font-semibold px-2.5 py-1.5 shadow-2xs border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:border-orange-300 active:scale-[0.97] transition-all flex items-center justify-center gap-1"
+                          >
+                            <MessageSquare size={13} className="text-orange-600" />
+                            <span>Écrire</span>
+                          </Link>
+
+                          {cleanPhone && (
+                            <a
+                              href={`https://wa.me/225${cleanPhone}?text=${encodeURIComponent(`Bonjour ${u.displayName || ''}, nous vous contactons depuis l'équipe DaloaMarket.`)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={`Contacter sur WhatsApp (+225 ${cleanPhone})`}
+                              className="rounded-xl p-1.5 shadow-2xs border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 active:scale-[0.97] transition-all flex items-center justify-center"
+                            >
+                              <Phone size={13} className="text-emerald-600" />
+                            </a>
+                          )}
+
                           <Button
                             size="sm"
                             variant="outlined"
@@ -903,6 +928,8 @@ export const AdminUsersTab: React.FC = () => {
               const consecutive = u.consecutive_cancellations || 0;
               const totalCancels = u.cancellation_count || 0;
               const deliveryData = u.delivery_person;
+              const rawPhone = u.phone || deliveryData?.phone;
+              const cleanPhone = rawPhone ? String(rawPhone).replace(/\D/g, '').replace(/^225/, '') : null;
 
               return (
                 <div key={u.id} className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-xs space-y-3">
@@ -1028,7 +1055,27 @@ export const AdminUsersTab: React.FC = () => {
                       </select>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-end gap-1.5">
+                      <Link
+                        to={`/messages/support/${u.id}`}
+                        className="rounded-xl font-bold text-xs px-2.5 py-1.5 border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 flex items-center justify-center gap-1 shadow-2xs active:scale-95 transition-all"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 text-orange-600" />
+                        <span>Écrire</span>
+                      </Link>
+
+                      {cleanPhone && (
+                        <a
+                          href={`https://wa.me/225${cleanPhone}?text=${encodeURIComponent(`Bonjour ${u.displayName || ''}, nous vous contactons depuis l'équipe DaloaMarket.`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-xl font-bold text-xs px-2.5 py-1.5 border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 flex items-center justify-center gap-1 shadow-2xs active:scale-95 transition-all"
+                        >
+                          <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>WhatsApp</span>
+                        </a>
+                      )}
+
                       <Button
                         size="sm"
                         variant="outlined"
@@ -1051,7 +1098,7 @@ export const AdminUsersTab: React.FC = () => {
                         color={u.banned ? 'success' : 'error'}
                         disabled={isLocked || isSelf}
                         onClick={() => (u.banned ? handleUnban(u.id) : handleOpenBanModal(u))}
-                        className="rounded-xl font-bold text-xs px-4"
+                        className="rounded-xl font-bold text-xs px-3"
                       >
                         {u.banned ? 'Débannir' : 'Bannir'}
                       </Button>
