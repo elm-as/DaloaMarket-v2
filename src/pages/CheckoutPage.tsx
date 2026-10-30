@@ -56,6 +56,7 @@ interface ListingData {
   price: number;
   photos: string[];
   user_id: string;
+  category?: string | null;
   latitude: number | null;
   longitude: number | null;
   original_price: number | null;
@@ -301,7 +302,7 @@ const CheckoutPage: React.FC = () => {
 
       const { data, error } = await supabase
         .from("listings")
-        .select("id, title, price, photos, user_id, original_price, stock, status, variants, seller:users!listings_user_id_fkey(shop_latitude, shop_longitude, district, pro_until)")
+        .select("id, title, price, photos, user_id, category, original_price, stock, status, variants, seller:users!listings_user_id_fkey(shop_latitude, shop_longitude, district, pro_until)")
         .eq("id", listingId)
         .single();
 
@@ -337,6 +338,7 @@ const CheckoutPage: React.FC = () => {
         price: listingData.price,
         photos: listingData.photos,
         user_id: listingData.user_id,
+        category: listingData.category ?? null,
         latitude: listingData.seller?.shop_latitude ?? null,
         longitude: listingData.seller?.shop_longitude ?? null,
         original_price: listingData.original_price,
@@ -729,6 +731,7 @@ const CheckoutPage: React.FC = () => {
           delivery_lng: isPickupMode ? undefined : deliveryLongitude,
           amount: targetAmount,
           quoteId,
+          daloaCashDiscount: applicableDaloaCash,
         });
         if (result.payment_url) {
           if (isCartMode) clearCart();
@@ -755,6 +758,7 @@ const CheckoutPage: React.FC = () => {
           ...first,
           amount: total,
           quoteId,
+          daloaCashDiscount: applicableDaloaCash,
         }, allInputs);
         if (result.payment_url) {
           clearCart();

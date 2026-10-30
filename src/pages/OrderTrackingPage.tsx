@@ -21,6 +21,7 @@ import { OrderTrackingHeader } from '../components/delivery/OrderTrackingHeader'
 import { OrderStatusHero } from '../components/delivery/OrderStatusHero';
 import { SellerSection } from '../components/delivery/SellerSection';
 import { BuyerSection } from '../components/delivery/BuyerSection';
+import { WebDeliveryRadarCard } from '../components/delivery/WebDeliveryRadarCard';
 import { friendlyError } from '../lib/messages';
 import type { Order } from '../types/order';
 
@@ -236,6 +237,17 @@ const OrderTrackingPage: React.FC = () => {
       <div className={cn('px-4 lg:px-0 space-y-3.5 pt-3.5 lg:grid lg:grid-cols-[1fr_380px] lg:gap-6 lg:space-y-0 lg:items-start max-w-2xl lg:max-w-5xl mx-auto')}>
         <div className="space-y-3.5">
           <OrderStatusHero order={order} role={userRole} userId={user?.id} />
+
+          {!isCancelledOrDisputed && !isDone && !isPickup && deliveryAssignment?.id && deliveryAssignment?.delivery_person_id && (
+            <WebDeliveryRadarCard
+              assignmentId={deliveryAssignment.id}
+              driverName={order.delivery_person?.name || 'Coursier DaloaDelivery'}
+              driverPhone={order.delivery_person?.phone || null}
+              deliveryAddress={order.delivery_address}
+              destLat={(order as any).delivery_lat ?? null}
+              destLng={(order as any).delivery_lng ?? null}
+            />
+          )}
 
           {!isCancelledOrDisputed && (
             <>

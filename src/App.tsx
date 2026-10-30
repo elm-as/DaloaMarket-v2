@@ -72,6 +72,7 @@ const MesRevenusPage = React.lazy(() => import('./pages/MesRevenusPage'));
 const PanierPage = React.lazy(() => import('./pages/PanierPage'));
 const MapTestPage = React.lazy(() => import('./pages/MapTestPage'));
 const ShopSettingsPage = React.lazy(() => import('./pages/ShopSettingsPage'));
+const ExpressDeliveryPage = React.lazy(() => import('./pages/ExpressDeliveryPage'));
 const MaintenancePage = React.lazy(() => import('./pages/MaintenancePage'));
 const MentionsLegalesPage = React.lazy(() => import('./pages/MentionsLegalesPage'));
 import { useSystemSettings } from './hooks/useSystemSettings';
@@ -339,6 +340,12 @@ function AppContent() {
               <AppLayout><AffiliatedDeliverersPage /></AppLayout>
             </PrivateRoute>
           } />
+          <Route path="/express" element={
+            <PrivateRoute requireProfile={true}>
+              <AppLayout><ExpressDeliveryPage /></AppLayout>
+            </PrivateRoute>
+          } />
+          <Route path="/coursier-express" element={<Navigate to="/express" replace />} />
           <Route path="/livreurs-affilies" element={<Navigate to="/mes-livreurs" replace />} />
           <Route path="/devenir-pro" element={
             showMonetisation ? (

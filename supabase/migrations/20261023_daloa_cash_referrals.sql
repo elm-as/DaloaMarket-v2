@@ -105,6 +105,7 @@ CREATE TRIGGER trg_set_user_referral_code
 DO $$
 DECLARE r record;
 BEGIN
+  PERFORM set_config('app.bypass_user_protection', 'on', true);
   FOR r IN SELECT id, full_name FROM public.users WHERE referral_code IS NULL LOOP
     UPDATE public.users SET referral_code = public.fn_generate_user_referral_code(r.full_name) WHERE id = r.id;
   END LOOP;
@@ -145,6 +146,8 @@ BEGIN
     RETURN json_build_object('success', false, 'message', 'Le parrainage de bienvenue est réservé aux nouveaux acheteurs.');
   END IF;
 
+  PERFORM set_config('app.bypass_user_protection', 'on', true);
+
   INSERT INTO public.daloa_cash_referrals (referrer_id, referee_id, referral_code, status, referee_reward_amount, referrer_reward_amount)
   VALUES (v_referrer.id, v_buyer_id, v_referrer.referral_code, 'pending', v_bonus, v_bonus) RETURNING id INTO v_ref_id;
 
@@ -165,11 +168,17 @@ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public', '
 DECLARE
   v_ref record; v_other_count int; v_bonus int;
 BEGIN
+  -- Ignorer les auto-commandes et les courses express hors-catalogue
+  IF NEW.buyer_id IS NULL OR NEW.buyer_id = NEW.seller_id OR COALESCE(NEW.order_type, 'marketplace') = 'express' THEN
+    RETURN NEW;
+  END IF;
+
   IF NEW.status IN ('delivered', 'completed') AND (OLD.status IS NULL OR OLD.status NOT IN ('delivered', 'completed')) THEN
     SELECT * INTO v_ref FROM public.daloa_cash_referrals WHERE referee_id = NEW.buyer_id AND status = 'pending' LIMIT 1;
     IF v_ref.id IS NOT NULL THEN
-      SELECT COUNT(*) INTO v_other_count FROM public.orders WHERE buyer_id = NEW.buyer_id AND status IN ('delivered', 'completed') AND id <> NEW.id;
+      SELECT COUNT(*) INTO v_other_count FROM public.orders WHERE buyer_id = NEW.buyer_id AND seller_id <> NEW.buyer_id AND COALESCE(order_type, 'marketplace') <> 'express' AND status IN ('delivered', 'completed') AND id <> NEW.id;
       IF v_other_count = 0 THEN
+        PERFORM set_config('app.bypass_user_protection', 'on', true);
         v_bonus := COALESCE(v_ref.referrer_reward_amount, 500);
         UPDATE public.daloa_cash_referrals SET status = 'completed', first_order_id = NEW.id, rewarded_at = now() WHERE id = v_ref.id;
         UPDATE public.users SET daloa_cash_balance = daloa_cash_balance + v_bonus WHERE id = v_ref.referrer_id;
@@ -191,6 +200,7 @@ CREATE OR REPLACE FUNCTION public.fn_refund_daloa_cash_on_order_cancel()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public', 'pg_temp' AS $$
 BEGIN
   IF NEW.status = 'cancelled' AND (OLD.status IS NULL OR OLD.status <> 'cancelled') AND COALESCE(OLD.daloa_cash_discount, 0) > 0 THEN
+    PERFORM set_config('app.bypass_user_protection', 'on', true);
     UPDATE public.users SET daloa_cash_balance = daloa_cash_balance + OLD.daloa_cash_discount WHERE id = OLD.buyer_id;
     INSERT INTO public.daloa_cash_transactions (user_id, amount, type, order_id, notes)
     VALUES (OLD.buyer_id, OLD.daloa_cash_discount, 'checkout_refund', OLD.id, 'Remboursement Daloa Cash suite à l''annulation de votre commande');
@@ -203,7 +213,7 @@ DROP TRIGGER IF EXISTS trg_refund_daloa_cash_on_cancel ON public.orders;
 CREATE TRIGGER trg_refund_daloa_cash_on_cancel
   AFTER UPDATE OF status ON public.orders FOR EACH ROW EXECUTE FUNCTION public.fn_refund_daloa_cash_on_order_cancel();
 
--- 8. RPC atomique apply_daloa_cash_to_order (Déduction Daloa Cash au checkout)
+-- 8. RPC atomique apply_daloa_cash_to_order (Déduction Daloa Cash au checkout, idempotente)
 CREATE OR REPLACE FUNCTION public.apply_daloa_cash_to_order(p_order_id uuid, p_discount integer)
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public', 'pg_temp' AS $$
 DECLARE
@@ -213,18 +223,28 @@ BEGIN
   IF v_buyer_id IS NULL THEN
     RETURN json_build_object('success', false, 'message', 'Non authentifié.');
   END IF;
-  SELECT * INTO v_order FROM public.orders WHERE id = p_order_id AND buyer_id = v_buyer_id;
+  SELECT * INTO v_order FROM public.orders WHERE id = p_order_id AND buyer_id = v_buyer_id FOR UPDATE;
   IF v_order.id IS NULL THEN
     RETURN json_build_object('success', false, 'message', 'Commande introuvable.');
+  END IF;
+  IF v_order.status <> 'pending' THEN
+    RETURN json_build_object('success', false, 'message', 'La réduction ne peut être appliquée que sur une commande en attente.');
+  END IF;
+  IF COALESCE(v_order.daloa_cash_discount, 0) > 0 THEN
+    RETURN json_build_object('success', true, 'discount_applied', v_order.daloa_cash_discount, 'already_applied', true);
   END IF;
   SELECT daloa_cash_balance INTO v_user_balance FROM public.users WHERE id = v_buyer_id FOR UPDATE;
   IF COALESCE(v_user_balance, 0) <= 0 THEN
     RETURN json_build_object('success', false, 'message', 'Solde Daloa Cash insuffisant.');
   END IF;
-  v_actual_discount := LEAST(v_user_balance, v_order.delivery_fee, p_discount);
+  v_actual_discount := LEAST(v_user_balance, COALESCE(v_order.delivery_fee, 0), COALESCE(p_discount, 0));
   IF v_actual_discount <= 0 THEN
     RETURN json_build_object('success', false, 'message', 'Aucune réduction applicable.');
   END IF;
+
+  PERFORM set_config('app.bypass_user_protection', 'on', true);
+  PERFORM set_config('app.OrderUpdateAuthorized', 'true', true);
+
   UPDATE public.users SET daloa_cash_balance = daloa_cash_balance - v_actual_discount WHERE id = v_buyer_id;
   UPDATE public.orders SET daloa_cash_discount = v_actual_discount, total_amount = GREATEST(0, total_amount - v_actual_discount) WHERE id = p_order_id;
   INSERT INTO public.daloa_cash_transactions (user_id, amount, type, order_id, notes)

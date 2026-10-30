@@ -148,11 +148,11 @@ export const AdminPaymentSettings: React.FC = () => {
             <button
               type="button"
               onClick={() => setProvider('saspay')}
-              className={p-3.5 rounded-xl border text-left transition-all ${
+              className={`p-3.5 rounded-xl border text-left transition-all ${
                 provider === 'saspay'
                   ? 'border-orange-500 bg-orange-50/50 ring-1 ring-orange-500'
                   : 'border-gray-200 bg-white hover:bg-gray-50'
-              }}
+              }`}
             >
               <div className="flex items-center justify-between">
                 <span className="font-bold text-gray-900 text-sm">SasPay</span>
@@ -164,11 +164,11 @@ export const AdminPaymentSettings: React.FC = () => {
             <button
               type="button"
               onClick={() => setProvider('moneyfusion')}
-              className={p-3.5 rounded-xl border text-left transition-all ${
+              className={`p-3.5 rounded-xl border text-left transition-all ${
                 provider === 'moneyfusion'
                   ? 'border-orange-500 bg-orange-50/50 ring-1 ring-orange-500'
                   : 'border-gray-200 bg-white hover:bg-gray-50'
-              }}
+              }`}
             >
               <div className="flex items-center justify-between">
                 <span className="font-bold text-gray-900 text-sm">MoneyFusion</span>

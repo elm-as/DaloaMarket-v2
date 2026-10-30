@@ -88,7 +88,6 @@ DECLARE
   v_is_cod boolean;
   v_buyer_id uuid;
 BEGIN
-  -- Détecte si la commande passe à delivered ou completed
   IF NEW.status IN ('delivered', 'completed')
      AND (OLD.status IS NULL OR OLD.status NOT IN ('delivered', 'completed')) THEN
 
@@ -96,6 +95,7 @@ BEGIN
     v_buyer_id := NEW.buyer_id;
 
     IF v_is_cod AND v_buyer_id IS NOT NULL THEN
+      PERFORM set_config('app.bypass_user_protection', 'on', true);
       UPDATE public.users
       SET
         cod_delivered_count = cod_delivered_count + 1,
@@ -104,7 +104,6 @@ BEGIN
           ((cod_delivered_count + 1)::numeric / GREATEST(1, cod_delivered_count + 1 + cod_refused_count)) * 100.0,
           1
         ),
-        -- Si l'acheteur avait une suspension expirée ou 1 seul refus, une livraison réussie réhabilite
         cod_blocked_until = CASE
           WHEN cod_blocked_until IS NOT NULL AND cod_blocked_until <= now() THEN NULL
           ELSE cod_blocked_until
@@ -151,32 +150,27 @@ BEGIN
     RETURN json_build_object('success', false, 'reason', 'not_authenticated');
   END IF;
 
-  -- Récupérer la commande
   SELECT * INTO v_order FROM public.orders WHERE id = p_order_id;
   IF NOT FOUND THEN
     RETURN json_build_object('success', false, 'reason', 'order_not_found');
   END IF;
 
-  -- Vérifier que la commande est en COD / Espèces
   IF COALESCE(v_order.payment_method, '') NOT IN ('cod', 'cash', 'cash_at_shop') THEN
     RETURN json_build_object('success', false, 'reason', 'not_a_cod_order',
       'message', 'Cette action ne s''applique qu''aux commandes payées à la livraison.');
   END IF;
 
-  -- Vérifier le statut de la commande
   IF v_order.status IN ('delivered', 'completed', 'cancelled') THEN
     RETURN json_build_object('success', false, 'reason', 'invalid_status',
       'message', 'Cette commande est déjà clôturée ou livrée.');
   END IF;
 
-  -- Course associée
   SELECT * INTO v_assignment FROM public.delivery_assignments WHERE order_id = p_order_id LIMIT 1;
   IF FOUND AND v_assignment.delivery_person_id IS NOT NULL THEN
     SELECT id INTO v_dp_id FROM public.delivery_persons
      WHERE id = v_assignment.delivery_person_id AND user_id = v_caller_id;
   END IF;
 
-  -- Vérifier l'autorisation : vendeur, livreur assigné ou admin
   IF v_order.seller_id = v_caller_id THEN
     v_is_authorized := true;
   ELSIF v_dp_id IS NOT NULL THEN
@@ -192,7 +186,6 @@ BEGIN
       'message', 'Seul le livreur assigné ou le vendeur peut signaler un refus de livraison.');
   END IF;
 
-  -- Enregistrer l'incident
   INSERT INTO public.cod_delivery_incidents (
     order_id,
     buyer_id,
@@ -213,14 +206,15 @@ BEGIN
     p_proof_photo_url
   );
 
-  -- Mettre à jour la commande
+  PERFORM set_config('app.OrderUpdateAuthorized', 'true', true);
+  PERFORM set_config('app.bypass_user_protection', 'on', true);
+
   UPDATE public.orders
      SET status = 'cancelled',
          cancel_reason = 'cod_refusal:' || p_reason,
          updated_at = now()
    WHERE id = p_order_id;
 
-  -- Mettre à jour la course de livraison si existante
   IF v_assignment.id IS NOT NULL THEN
     UPDATE public.delivery_assignments
        SET status = 'cancelled',
@@ -229,7 +223,6 @@ BEGIN
      WHERE id = v_assignment.id;
   END IF;
 
-  -- Calculer les nouvelles métriques de l'acheteur
   SELECT cod_delivered_count, cod_refused_count
     INTO v_new_delivered_count, v_new_refused_count
     FROM public.users
@@ -241,8 +234,8 @@ BEGIN
 
   -- Règle Anti-Lapin :
   -- 1er refus : Avertissement formel
-  -- 2e refus et plus (ou score < 70%) : Suspension du mode COD pendant 14 jours
-  IF v_new_refused_count >= 2 OR (v_new_score < 70.0 AND v_new_refused_count >= 1) THEN
+  -- 2e refus et plus : Suspension du mode COD pendant 14 jours
+  IF v_new_refused_count >= 2 THEN
     v_blocked_until := now() + interval '14 days';
     v_is_blocked := true;
   END IF;
@@ -272,14 +265,13 @@ $$;
 GRANT EXECUTE ON FUNCTION public.report_cod_delivery_refusal(uuid, text, text, text) TO authenticated;
 
 -- 5. Mise à jour de create_cod_order pour bloquer les acheteurs sous sanction
--- (Remplacement chirurgical de la vérification de l'acheteur)
 DO $$
 DECLARE
   v_def text;
   v_new text;
+BEGIN
   v_def := pg_get_functiondef('public.create_cod_order(jsonb,text,text,text,double precision,double precision,text,jsonb,uuid)'::regprocedure);
 
-  -- Ajout du contrôle Anti-Lapin juste après la vérification v_buyer IS NULL
   IF v_def NOT LIKE '%cod_blocked_until%' THEN
     v_new := replace(
       v_def,
@@ -329,6 +321,8 @@ BEGIN
   ) THEN
     RETURN json_build_object('success', false, 'reason', 'unauthorized', 'message', 'Action réservée à la modération.');
   END IF;
+
+  PERFORM set_config('app.bypass_user_protection', 'on', true);
 
   UPDATE public.users
      SET cod_blocked_until = NULL,

@@ -53,10 +53,10 @@ DROP POLICY IF EXISTS "Admins manage banners" ON public.promo_banners;
 CREATE POLICY "Admins manage banners" ON public.promo_banners
   FOR ALL TO authenticated
   USING (
-    EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'moderator'))
+    EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND LOWER(role) IN ('admin', 'superadmin', 'moderator'))
   )
   WITH CHECK (
-    EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'moderator'))
+    EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND LOWER(role) IN ('admin', 'superadmin', 'moderator'))
   );
 
 -- 3. Lecture de ses propres bannières par le vendeur
@@ -106,6 +106,24 @@ CREATE POLICY "Pro sellers update own pending banners" ON public.promo_banners
     AND clicks_count = 0
     AND COALESCE(price_paid, 0) = 0
   );
+
+-- 6. RPC atomique d'incrémentation des clics sur une bannière active
+CREATE OR REPLACE FUNCTION public.increment_banner_click(p_banner_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'pg_temp'
+AS $$
+BEGIN
+  UPDATE public.promo_banners
+     SET clicks_count = COALESCE(clicks_count, 0) + 1,
+         updated_at = now()
+   WHERE id = p_banner_id
+     AND is_active = true;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.increment_banner_click(uuid) TO anon, authenticated;
 
 -- Données initiales d'accueil DaloaMarket
 INSERT INTO public.promo_banners (title, subtitle, image_url, badge_text, badge_color, link_type, link_target, priority)

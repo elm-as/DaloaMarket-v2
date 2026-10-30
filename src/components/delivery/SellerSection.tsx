@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { cn, formatPrice } from '../../lib/utils';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { OtpPinDisplay } from '../ui/OtpPinDisplay';
+import { CodRefusalSellerBox } from './CodRefusalSellerBox';
 import type { Order, RpcResult } from '../../types/order';
 import toast from 'react-hot-toast';
 import { friendlyError } from '../../lib/messages';
@@ -432,6 +433,12 @@ export const SellerSection: React.FC<{ order: Order; onChanged: () => void }> = 
                 </div>
               </div>
             )}
+
+            <CodRefusalSellerBox
+              orderId={order.id}
+              buyerId={order.buyer_id}
+              onRefusalReported={onChanged}
+            />
           </div>
         )}
 

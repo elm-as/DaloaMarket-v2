@@ -111,6 +111,8 @@ export interface CreateOrderInput {
   amount?: number;
   /** Devis serveur (POST /quote) : le paiement facture exactement ce devis. */
   quoteId?: string;
+  /** Réduction Daloa Cash demandée (plafonnée aux frais de livraison côté serveur). */
+  daloaCashDiscount?: number;
 }
 
 export interface CreateOrderResponse {
@@ -138,6 +140,7 @@ export const createOrder = async (
     orderInput: input,
     orderInputs: orderInputs && orderInputs.length > 0 ? orderInputs : [input],
     quoteId: input.quoteId,
+    daloaCashDiscount: input.daloaCashDiscount || 0,
   });
 
   if (res) {

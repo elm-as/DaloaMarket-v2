@@ -43,7 +43,7 @@ export function getPaymentCapabilities(provider?: 'saspay' | 'moneyfusion'): Pay
     supportsHostedMultiOperator: true,
     providerName: 'SasPay',
   };
-
+}
 
 export interface CancellationConfig {
   max_consecutive_cancellations: number;

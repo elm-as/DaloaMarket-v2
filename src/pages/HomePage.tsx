@@ -41,6 +41,7 @@ import ListingCardSkeleton from '../components/listings/ListingCardSkeleton';
 import { userBehaviorService } from '../services/userBehaviorService';
 import { getTrendingRecommendations } from '../lib/feedCuration';
 import { HomeForYouSection } from '../components/home/HomeForYouSection';
+import { PromoBannersCarousel } from '../components/home/PromoBannersCarousel';
 
 const CATEGORY_STYLE: Record<string, { icon: React.ReactNode; bg: string; border: string; emoji: string }> = {
   fashion: { icon: <Shirt className="h-4 w-4" />, bg: 'bg-pink-50 text-pink-600', border: 'border-pink-200', emoji: '👗' },
@@ -480,24 +481,44 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* DALOADELIVERY LINK BANNER */}
-      <section className="px-4 pt-3 pb-1">
-        <a
-          href="https://delivery.daloamarket.com/annuaire"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-between gap-2.5 max-w-2xl lg:max-w-5xl mx-auto px-3.5 py-2 bg-white rounded-2xl shadow-xs border border-orange-100/80 no-underline active:scale-[0.99] hover:bg-orange-50/50 transition-all group"
-        >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-xl bg-orange-50 text-primary flex items-center justify-center flex-shrink-0">
-              <Bike className="w-4 h-4" />
+      {/* CARROUSEL PUBLICITAIRE & AFFICHES V2 */}
+      <PromoBannersCarousel />
+
+      {/* DALOADELIVERY LINK BANNER & COURSIER EXPRESS */}
+      <section className="px-4 pt-2 pb-1">
+        <div className="max-w-2xl lg:max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <Link
+            to="/express"
+            className="flex items-center justify-between gap-2.5 px-3.5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-2xl shadow-xs no-underline active:scale-[0.99] hover:opacity-95 transition-all group"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-7 h-7 rounded-xl bg-white/20 text-white flex items-center justify-center flex-shrink-0">
+                <Zap className="w-4 h-4" />
+              </div>
+              <p className="text-xs font-extrabold text-white truncate">
+                Coursier Express · <span className="text-amber-100 font-semibold">Colis & Plis dès 500 F</span>
+              </p>
             </div>
-            <p className="text-xs font-medium text-gray-700 truncate">
-              Besoin d'un coursier ? <span className="text-primary font-black">DaloaDelivery</span>
-            </p>
-          </div>
-          <ChevronRight className="h-4 w-4 text-primary flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
-        </a>
+            <ChevronRight className="h-4 w-4 text-white flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+
+          <a
+            href="https://delivery.daloamarket.com/annuaire"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between gap-2.5 px-3.5 py-2.5 bg-white rounded-2xl shadow-xs border border-orange-100/80 no-underline active:scale-[0.99] hover:bg-orange-50/50 transition-all group"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-7 h-7 rounded-xl bg-orange-50 text-primary flex items-center justify-center flex-shrink-0">
+                <Bike className="w-4 h-4" />
+              </div>
+              <p className="text-xs font-medium text-gray-700 truncate">
+                Annuaire des coursiers · <span className="text-primary font-black">DaloaDelivery</span>
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-primary flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+          </a>
+        </div>
       </section>
 
       {/* CATEGORY SELECTOR STRIP — PILLS COMPACTES ET FLUIDES */}
