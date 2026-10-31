@@ -322,3 +322,4 @@ $fn$;
 
 REVOKE ALL ON FUNCTION public.create_cod_order(jsonb, text, text, text, double precision, double precision, text, jsonb, uuid, integer, numeric) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.create_cod_order(jsonb, text, text, text, double precision, double precision, text, jsonb, uuid, integer, numeric) TO authenticated;
+

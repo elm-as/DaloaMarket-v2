@@ -42,6 +42,7 @@ import { userBehaviorService } from '../services/userBehaviorService';
 import { getTrendingRecommendations } from '../lib/feedCuration';
 import { HomeForYouSection } from '../components/home/HomeForYouSection';
 import { PromoBannersCarousel } from '../components/home/PromoBannersCarousel';
+import { WebFlashDealsSection } from '../components/home/WebFlashDealsSection';
 
 const CATEGORY_STYLE: Record<string, { icon: React.ReactNode; bg: string; border: string; emoji: string }> = {
   fashion: { icon: <Shirt className="h-4 w-4" />, bg: 'bg-pink-50 text-pink-600', border: 'border-pink-200', emoji: '👗' },
@@ -483,6 +484,9 @@ const HomePage: React.FC = () => {
 
       {/* CARROUSEL PUBLICITAIRE & AFFICHES V2 */}
       <PromoBannersCarousel />
+
+      {/* VENTES FLASH & PROMOS FAÇON JUMIA */}
+      <WebFlashDealsSection />
 
       {/* DALOADELIVERY LINK BANNER & COURSIER EXPRESS */}
       <section className="px-4 pt-2 pb-1">

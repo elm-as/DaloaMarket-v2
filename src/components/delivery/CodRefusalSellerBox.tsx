@@ -198,3 +198,4 @@ export const CodRefusalSellerBox: React.FC<CodRefusalSellerBoxProps> = ({
     </div>
   );
 };
+

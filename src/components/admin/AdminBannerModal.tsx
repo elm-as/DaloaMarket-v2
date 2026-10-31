@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Loader2, Image as ImageIcon, Calendar, Clock, Sparkles } from 'lucide-react';
+import { X, Upload, Loader2, Image as ImageIcon, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { AdminButton, AdminField, adminInputClass } from './ui/AdminUI';
+import { AdminBannerPreviewAndPicker } from './AdminBannerPreviewAndPicker';
 
 export interface BannerFormData {
   id?: string;
@@ -23,8 +24,11 @@ export interface BannerFormData {
 }
 
 const COLOR_PRESETS = [
-  { label: 'Orange', value: '#FF9800' }, { label: 'Vert', value: '#16A34A' },
-  { label: 'Rouge', value: '#DC2626' }, { label: 'Bleu', value: '#2563EB' }, { label: 'Violet', value: '#7C3AED' },
+  { label: 'Orange', value: '#EA580C' },
+  { label: 'Rouge Flash', value: '#DC2626' },
+  { label: 'Vert', value: '#16A34A' },
+  { label: 'Bleu', value: '#2563EB' },
+  { label: 'Violet Pro', value: '#7C3AED' },
 ];
 
 const LINK_TYPES: { value: BannerFormData['link_type']; label: string; placeholder: string }[] = [
@@ -41,9 +45,19 @@ export const AdminBannerModal: React.FC<{
   onSaved: () => void;
 }> = ({ banner, onClose, onSaved }) => {
   const [formData, setFormData] = useState<BannerFormData>({
-    title: '', subtitle: '', image_url: '', badge_text: 'SPONSORISÉ', badge_color: '#FF9800',
-    link_type: 'listing', link_target: '', sponsor_name: '', price_paid: 0, priority: 5,
-    starts_at: new Date().toISOString(), ends_at: null, is_active: true,
+    title: '',
+    subtitle: '',
+    image_url: '',
+    badge_text: '🔥 VENTE FLASH',
+    badge_color: '#DC2626',
+    link_type: 'listing',
+    link_target: '',
+    sponsor_name: '',
+    price_paid: 0,
+    priority: 5,
+    starts_at: new Date().toISOString(),
+    ends_at: null,
+    is_active: true,
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -54,7 +68,7 @@ export const AdminBannerModal: React.FC<{
         ...banner,
         subtitle: banner.subtitle || '',
         badge_text: banner.badge_text || '',
-        badge_color: banner.badge_color || '#FF9800',
+        badge_color: banner.badge_color || '#EA580C',
         link_target: banner.link_target || '',
         sponsor_name: banner.sponsor_name || '',
         starts_at: banner.starts_at || new Date().toISOString(),
@@ -63,16 +77,19 @@ export const AdminBannerModal: React.FC<{
     }
   }, [banner]);
 
+  const patchForm = (changes: Partial<BannerFormData>) => {
+    setFormData((prev) => ({ ...prev, ...changes }));
+  };
+
   const applyDurationPack = (days: number, price: number) => {
     const base = formData.starts_at ? new Date(formData.starts_at) : new Date();
     const end = new Date(base.getTime() + days * 86400000);
-    setFormData((prev) => ({
-      ...prev,
+    patchForm({
       starts_at: base.toISOString(),
       ends_at: end.toISOString(),
       price_paid: price,
-      badge_text: prev.badge_text || 'VEDETTE PRO',
-    }));
+      badge_text: formData.badge_text || '👑 BOUTIQUE PRO',
+    });
     toast.success(`Pack ${days} jours appliqué (+${price} FCFA)`);
   };
 
@@ -86,7 +103,7 @@ export const AdminBannerModal: React.FC<{
       const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true });
       if (error) throw error;
       const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-      setFormData((prev) => ({ ...prev, image_url: data.publicUrl }));
+      patchForm({ image_url: data.publicUrl });
       toast.success('Affiche téléversée');
     } catch {
       toast.error('Échec du téléversement');
@@ -108,7 +125,7 @@ export const AdminBannerModal: React.FC<{
         subtitle: formData.subtitle?.trim() || null,
         image_url: formData.image_url.trim(),
         badge_text: formData.badge_text?.trim() || null,
-        badge_color: formData.badge_color || '#FF9800',
+        badge_color: formData.badge_color || '#EA580C',
         link_type: formData.link_type,
         link_target: formData.link_target?.trim() || null,
         sponsor_name: formData.sponsor_name?.trim() || null,
@@ -159,10 +176,10 @@ export const AdminBannerModal: React.FC<{
             <div className="flex items-center gap-1.5 mb-2">
               <Sparkles size={14} className="text-orange-600" />
               <p className="text-xs font-bold text-orange-950 uppercase tracking-wide">
-                Setup rapide durée & boost VIP
+                Forfaits durée & sponsoring carrousel
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2 tabular-nums">
               {[
                 { days: 7, price: 3000, label: 'Pack 7J' },
                 { days: 14, price: 5000, label: 'Pack 14J' },
@@ -181,46 +198,47 @@ export const AdminBannerModal: React.FC<{
             </div>
           </div>
 
-          <AdminField label="Titre principal *" hint="Max 60 caractères">
-            <input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="Ex: Soldes High-Tech..." className={adminInputClass} maxLength={70} required />
+          {/* Sélecteur d'annonce + Tags Jumia + Aperçu temps réel */}
+          <AdminBannerPreviewAndPicker formData={formData} onPatch={patchForm} />
+
+          <AdminField label="Titre principal *" hint="Max 70 caractères">
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => patchForm({ title: e.target.value })}
+              placeholder="Ex: Vente Flash iPhone & Samsung..."
+              className={adminInputClass}
+              maxLength={70}
+              required
+            />
           </AdminField>
-          <AdminField label="Sous-titre descriptif">
-            <input type="text" value={formData.subtitle || ''} onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })} placeholder="Ex: Jusqu'à -30%..." className={adminInputClass} maxLength={120} />
+          <AdminField label="Sous-titre descriptif (prix, remise, quartier)">
+            <input
+              type="text"
+              value={formData.subtitle || ''}
+              onChange={(e) => patchForm({ subtitle: e.target.value })}
+              placeholder="Ex: Jusqu'à -35% aujourd'hui · Livraison Express Daloa"
+              className={adminInputClass}
+              maxLength={120}
+            />
           </AdminField>
 
-          {/* Image & Téléversement */}
-          <div className="space-y-2">
-            <AdminField label="Visuel de l'affiche (format 16:9 recommandé) *">
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  placeholder="https://..."
-                  className={adminInputClass}
-                />
-                <label className="flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100">
-                  {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-                  <span>Upload</span>
-                  <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-                </label>
-              </div>
-            </AdminField>
-
-            {formData.image_url ? (
-              <div className="relative h-28 w-full overflow-hidden rounded-2xl border border-gray-200 bg-gray-100">
-                <img src={formData.image_url} alt="Aperçu" className="h-full w-full object-cover" />
-                {formData.badge_text ? (
-                  <span
-                    style={{ backgroundColor: formData.badge_color || '#FF9800' }}
-                    className="absolute left-3 top-3 rounded-full px-2 py-0.5 text-[9px] font-extrabold text-white uppercase shadow"
-                  >
-                    {formData.badge_text}
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
+          <AdminField label="Visuel de l'affiche (format 16:9 recommandé) *">
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={formData.image_url}
+                onChange={(e) => patchForm({ image_url: e.target.value })}
+                placeholder="https://..."
+                className={adminInputClass}
+              />
+              <label className="flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100">
+                {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                <span>Upload</span>
+                <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+              </label>
+            </div>
+          </AdminField>
 
           {/* Badge & Couleur */}
           <div className="grid grid-cols-2 gap-3">
@@ -228,8 +246,8 @@ export const AdminBannerModal: React.FC<{
               <input
                 type="text"
                 value={formData.badge_text || ''}
-                onChange={(e) => setFormData({ ...formData, badge_text: e.target.value.toUpperCase() })}
-                placeholder="SPONSORISÉ"
+                onChange={(e) => patchForm({ badge_text: e.target.value.toUpperCase() })}
+                placeholder="🔥 VENTE FLASH"
                 className={adminInputClass}
               />
             </AdminField>
@@ -240,7 +258,7 @@ export const AdminBannerModal: React.FC<{
                   <button
                     key={c.value}
                     type="button"
-                    onClick={() => setFormData({ ...formData, badge_color: c.value })}
+                    onClick={() => patchForm({ badge_color: c.value })}
                     style={{ backgroundColor: c.value }}
                     className={`h-7 w-7 rounded-full transition-transform ${
                       formData.badge_color === c.value ? 'scale-125 ring-2 ring-gray-900 ring-offset-2' : 'opacity-60'
@@ -257,7 +275,7 @@ export const AdminBannerModal: React.FC<{
               <input
                 type="date"
                 value={toLocalDateInput(formData.starts_at)}
-                onChange={(e) => setFormData({ ...formData, starts_at: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                onChange={(e) => patchForm({ starts_at: e.target.value ? new Date(e.target.value).toISOString() : null })}
                 className={adminInputClass}
               />
             </AdminField>
@@ -265,7 +283,7 @@ export const AdminBannerModal: React.FC<{
               <input
                 type="date"
                 value={toLocalDateInput(formData.ends_at)}
-                onChange={(e) => setFormData({ ...formData, ends_at: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                onChange={(e) => patchForm({ ends_at: e.target.value ? new Date(e.target.value).toISOString() : null })}
                 className={adminInputClass}
               />
             </AdminField>
@@ -276,7 +294,7 @@ export const AdminBannerModal: React.FC<{
             <AdminField label="Action au clic">
               <select
                 value={formData.link_type}
-                onChange={(e) => setFormData({ ...formData, link_type: e.target.value })}
+                onChange={(e) => patchForm({ link_type: e.target.value })}
                 className={adminInputClass}
               >
                 {LINK_TYPES.map((lt) => (
@@ -289,7 +307,7 @@ export const AdminBannerModal: React.FC<{
                 <input
                   type="text"
                   value={formData.link_target || ''}
-                  onChange={(e) => setFormData({ ...formData, link_target: e.target.value })}
+                  onChange={(e) => patchForm({ link_target: e.target.value })}
                   placeholder={LINK_TYPES.find((t) => t.value === formData.link_type)?.placeholder || 'ID ou URL'}
                   className={adminInputClass}
                 />
@@ -298,27 +316,43 @@ export const AdminBannerModal: React.FC<{
           </div>
 
           {/* Facturation & Sponsoring */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <AdminField label="Commerçant">
-              <input type="text" value={formData.sponsor_name || ''} onChange={(e) => setFormData({ ...formData, sponsor_name: e.target.value })} placeholder="Boutique..." className={adminInputClass} />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 tabular-nums">
+            <AdminField label="Commerçant / Boutique">
+              <input
+                type="text"
+                value={formData.sponsor_name || ''}
+                onChange={(e) => patchForm({ sponsor_name: e.target.value })}
+                placeholder="Boutique..."
+                className={adminInputClass}
+              />
             </AdminField>
             <AdminField label="Facturé (FCFA)">
-              <input type="number" value={formData.price_paid || ''} onChange={(e) => setFormData({ ...formData, price_paid: Number(e.target.value) })} className={adminInputClass} />
+              <input
+                type="number"
+                value={formData.price_paid || ''}
+                onChange={(e) => patchForm({ price_paid: Number(e.target.value) })}
+                className={adminInputClass}
+              />
             </AdminField>
             <AdminField label="Priorité">
-              <input type="number" value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: Number(e.target.value) })} className={adminInputClass} />
+              <input
+                type="number"
+                value={formData.priority}
+                onChange={(e) => patchForm({ priority: Number(e.target.value) })}
+                className={adminInputClass}
+              />
             </AdminField>
           </div>
 
           <div className="flex items-center justify-between rounded-xl border border-gray-200 p-3">
             <div>
               <p className="text-sm font-semibold text-gray-900">Activer l'affichage</p>
-              <p className="text-xs text-gray-500">Visible sur le carrousel mobile</p>
+              <p className="text-xs text-gray-500">Visible immédiatement sur le carrousel Mobile & Web</p>
             </div>
             <input
               type="checkbox"
               checked={formData.is_active}
-              onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+              onChange={(e) => patchForm({ is_active: e.target.checked })}
               className="h-5 w-5 rounded text-orange-600 focus:ring-orange-500"
             />
           </div>
