@@ -13,6 +13,7 @@ import { initiatePayment } from '../../lib/payment';
 import toast from 'react-hot-toast';
 import { BOOST_CREDIT_COSTS, PRO_FREE_BOOST_DURATION_DAYS } from '../../lib/featureFlags';
 import { cn } from '../../lib/utils';
+import { usePhase } from '../../contexts/PhaseContext';
 
 interface ProfileListingsTabProps {
   userId: string;
@@ -24,6 +25,7 @@ interface ProfileListingsTabProps {
 export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({ userId, activeCount }) => {
   const navigate = useNavigate();
   const { user, userProfile, refreshUserProfile } = useSupabase();
+  const { enableBoost } = usePhase();
   const [myListings, setMyListings] = useState<any[]>([]);
   const [listingsLoading, setListingsLoading] = useState(true);
   const [listingsError, setListingsError] = useState<string | null>(null);
@@ -175,6 +177,28 @@ export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({ userId, 
 
   return (
     <>
+      {enableBoost && (
+        <div className="mb-3 flex items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white px-3.5 py-2.5 shadow-2xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+              <Zap className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-extrabold text-gray-900">
+                Crédits de Boost : <span className="text-orange-600 tabular-nums">{(userProfile as any)?.boost_credits ?? 0}</span>
+              </p>
+              <p className="truncate text-[11px] text-gray-500">Propulsez vos annonces en tête des résultats</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/acheter-pack')}
+            className="shrink-0 rounded-xl bg-orange-50 px-3 py-1.5 text-xs font-extrabold text-orange-600 transition-colors hover:bg-orange-100"
+          >
+            Acheter un pack
+          </button>
+        </div>
+      )}
       {!listingsLoading && !listingsError && myListings.length > 0 && (
         <p className="text-sm font-bold text-gray-500 mb-3">
           Vous avez {activeCount} annonce{activeCount > 1 ? 's' : ''} active{activeCount > 1 ? 's' : ''}
@@ -206,7 +230,7 @@ export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({ userId, 
               listing={listing}
               onMarkSold={handleMarkSold}
               onDelete={handleDeleteClick}
-              onBoost={openBoostModal}
+              onBoost={enableBoost ? openBoostModal : undefined}
               loadingBoost={boostingListingId === listing.id}
             />
           ))}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, Share2, Truck, Sparkles, Settings } from 'lucide-react';
+import { Store, Share2, Sparkles, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatShopShareText, shareWithImage, getSellerPath } from '../../lib/utils';
 import { supabase } from '../../lib/supabase';
@@ -9,11 +9,10 @@ import { usePhase } from '../../contexts/PhaseContext';
 
 export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) => {
   const navigate = useNavigate();
-  const { isPhase0 } = usePhase();
+  const { isPhase0, enableSellerBadge } = usePhase();
   const isPro = userProfile?.pro_until ? new Date(userProfile.pro_until) > new Date() : false;
   const [listingCount, setListingCount] = useState(0);
 
-  // Compter les annonces actives pour le texte de partage
   useEffect(() => {
     if (!userProfile?.id) return;
     supabase
@@ -47,18 +46,20 @@ export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) 
     ? `daloamarket.com${getSellerPath(userProfile.id, userProfile.shop_slug || null)}`
     : '';
 
+  const showProUpsell = !isPro && (!isPhase0 || enableSellerBadge);
+
   return (
     <div className="space-y-4">
-      {!isPro && !isPhase0 ? (
+      {showProUpsell && (
         <Card elevation={2} padding="md" className="rounded-3xl text-center border border-gray-100 shadow-lg shadow-gray-200/50 p-6">
           <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center mx-auto mb-3">
             <Store className="w-7 h-7" />
           </div>
           <h3 className="text-base font-extrabold text-gray-900 mb-1">
-            Passez Pro pour personnaliser votre boutique
+            Passez Pro pour personnaliser et propulser votre boutique
           </h3>
           <p className="text-xs text-gray-500 mb-4 max-w-sm mx-auto">
-            Créez votre vitrine personnalisée, avec bannière, logo et lien dédié pour booster vos ventes.
+            Obtenez le badge vérifié, un boost gratuit de 48h et une vitrine prioritaire sur DaloaMarket.
           </p>
           <button
             type="button"
@@ -69,9 +70,10 @@ export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) 
             <span>Devenir Vendeur Pro</span>
           </button>
         </Card>
-      ) : (
+      )}
+
+      {(isPro || isPhase0) && (
         <>
-          {/* Shop preview card */}
           <div className="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/50 overflow-hidden">
             <div className="relative aspect-[3/1] bg-gray-100">
               {userProfile?.shop_banner_url ? (
@@ -120,7 +122,6 @@ export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) 
                 ) : (
                   <p className="text-xs text-gray-400 mt-0.5 italic">Aucune description configurée</p>
                 )}
-                {/* Afficher l'URL de la boutique */}
                 {shopUrl && (
                   <p className="text-[10px] font-bold text-orange-500 mt-1 truncate">
                     🔗 {shopUrl}
@@ -130,7 +131,6 @@ export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) 
             </div>
           </div>
 
-          {/* Action Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <button
               type="button"
@@ -155,4 +155,3 @@ export const ProfileShopTab: React.FC<{ userProfile: any }> = ({ userProfile }) 
     </div>
   );
 };
-

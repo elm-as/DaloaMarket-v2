@@ -19,7 +19,6 @@ import {
   LogOut,
   BarChart3,
   CreditCard,
-  CheckCircle,
   AlertTriangle,
   Share2,
   Edit3,
@@ -28,6 +27,7 @@ import {
   ChevronRight,
   MessageSquare,
   Sparkles,
+  Zap,
 } from 'lucide-react';
 
 import { ProfileListingsTab } from '../components/profile/ProfileListingsTab';
@@ -45,7 +45,6 @@ const getTabFromParam = (param: string | null): TabId => {
   if (clean === 'shop' || clean === 'boutique' || clean === 'vitrine') return 'shop';
   if (clean === 'reviews' || clean === 'avis') return 'reviews';
   if (clean === 'favorites' || clean === 'favoris') return 'favorites';
-  if (clean === 'listings' || clean === 'annonces' || clean === 'articles') return 'listings';
   return 'listings';
 };
 
@@ -54,13 +53,12 @@ const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, userProfile, isAdmin, signOut } = useSupabase();
-  const { showMonetisation } = usePhase();
+  const { showMonetisation, enableBoost, enableSellerBadge } = usePhase();
 
   const [activeTab, setActiveTab] = useState<TabId>(() => getTabFromParam(searchParams.get('tab')));
   const [profileStats, setProfileStats] = useState({ activeCount: 0, soldCount: 0, reviewCount: 0 });
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
-  // Synchronise l'onglet si l'URL searchParam change (ex: redirection, notif push, retour arrière)
   useEffect(() => {
     const tabParam = searchParams.get('tab');
     if (tabParam) {
@@ -128,7 +126,7 @@ const ProfilePage: React.FC = () => {
     if (res.copied) {
       toast.success('Lien copié !', { duration: 4000 });
     }
-                };
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -142,32 +140,26 @@ const ProfilePage: React.FC = () => {
     { id: 'shop', label: 'Boutique', icon: <Store className="w-4 h-4" /> },
   ];
 
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }).map((_, i) => (
+  const renderStars = (rating: number) =>
+    Array.from({ length: 5 }).map((_, i) => (
       <Star
         key={i}
-        className={cn(
-          'w-3.5 h-3.5',
-          i < Math.round(rating)
-            ? 'text-amber-400 fill-amber-400'
-            : 'text-gray-200'
-        )}
+        className={cn('w-3.5 h-3.5', i < Math.round(rating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200')}
       />
     ));
-  };
 
   const hasShopLocation = (userProfile as any)?.shop_latitude != null && (userProfile as any)?.shop_longitude != null;
   const showShopLocationWarning = profileStats.activeCount > 0 && !hasShopLocation;
-
   const hasPayoutSetup = (userProfile as any)?.payout_network != null && (userProfile as any)?.payout_number != null;
   const showPayoutWarning = profileStats.activeCount > 0 && !hasPayoutSetup;
 
-  // Raccourcis toujours visibles sous le bandeau : ils étaient en bas de page,
-  // sous toutes les annonces, et il fallait défiler longtemps pour les atteindre.
   const shortcuts: { label: string; icon: React.ReactNode; onClick: () => void }[] = [
     { label: 'Commandes', icon: <Package className="h-5 w-5" />, onClick: () => navigate('/mes-commandes') },
     { label: 'Livreurs', icon: <Truck className="h-5 w-5" />, onClick: () => navigate('/mes-livreurs') },
     { label: 'Stats', icon: <BarChart3 className="h-5 w-5" />, onClick: () => navigate('/mes-statistiques') },
+    ...(enableBoost
+      ? [{ label: 'Boosts', icon: <Zap className="h-5 w-5" />, onClick: () => navigate('/acheter-pack') }]
+      : []),
     ...(showMonetisation
       ? [{ label: 'Paiements', icon: <CreditCard className="h-5 w-5" />, onClick: () => navigate('/mes-paiements') }]
       : []),
@@ -182,7 +174,6 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl lg:max-w-5xl mx-auto pb-28 lg:px-6 lg:pb-12 bg-gray-50/70 min-h-screen">
-      {/* ── Bandeau d'identité, aux couleurs DaloaMarket ── */}
       <div className="relative overflow-hidden rounded-b-[32px] bg-gradient-to-br from-orange-500 via-[var(--color-primary)] to-amber-600 px-4 pt-5 pb-16 lg:mt-4 lg:rounded-3xl">
         <div className="pointer-events-none absolute -top-16 -right-10 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
         <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-black/10 blur-2xl" />
@@ -262,8 +253,6 @@ const ProfilePage: React.FC = () => {
       </div>
 
       <div className="relative z-10 -mt-10 px-4">
-        {/* ── Raccourcis : toujours à portée de pouce ── */}
-        {/* Colonnes égales : tout est visible, sans défilement horizontal */}
         <div
           className="grid gap-1 rounded-3xl bg-white p-2 shadow-lg shadow-orange-900/5 ring-1 ring-gray-100"
           style={{ gridTemplateColumns: `repeat(${shortcuts.length}, minmax(0, 1fr))` }}
@@ -283,8 +272,6 @@ const ProfilePage: React.FC = () => {
           ))}
         </div>
 
-        {/* Une seule alerte à la fois, la plus urgente : sans compte de retrait,
-            le vendeur ne peut pas être payé. */}
         {(showPayoutWarning || showShopLocationWarning) && (
           <button
             type="button"
@@ -300,11 +287,27 @@ const ProfilePage: React.FC = () => {
             <ChevronRight className="h-4 w-4 shrink-0 text-amber-700" />
           </button>
         )}
+
+        {enableSellerBadge && !isPro && (
+          <button
+            type="button"
+            onClick={() => navigate('/devenir-pro')}
+            className="mt-3 flex w-full items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 px-4 py-3 text-left text-white shadow-md shadow-orange-500/20 transition-transform active:scale-[0.99]"
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20">
+                <Sparkles className="h-4 w-4 text-white" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-extrabold leading-tight">Passer Vendeur Pro</p>
+                <p className="truncate text-[11px] text-orange-100">Badge vérifié, boost offert et vitrine mise en avant</p>
+              </div>
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-white" />
+          </button>
+        )}
       </div>
 
-      {/* ── Onglets : 4 colonnes égales, tout visible sans défiler ──
-          Pas d'icône (c'est elles qui prenaient la largeur) ; le compteur est
-          une bulle posée sur l'angle, qui ne pousse pas le texte. */}
       <div className="sticky top-14 z-20 mt-5 bg-gray-50/95 px-4 py-2.5 backdrop-blur-md lg:top-16">
         <div className="grid grid-cols-4 gap-1.5">
           {tabs.map((tab) => {
@@ -326,7 +329,7 @@ const ProfilePage: React.FC = () => {
                 {tab.count !== undefined && tab.count > 0 && (
                   <span
                     className={cn(
-                      'absolute -top-1.5 -right-1 min-w-[18px] rounded-full px-1 text-center text-[10px] font-bold leading-[18px] ring-2 ring-gray-50',
+                      'absolute -top-1.5 -right-1 min-w-[18px] rounded-full px-1 text-center text-[10px] font-bold leading-[18px] ring-2 ring-gray-50 tabular-nums',
                       isSelected ? 'bg-gray-900 text-white' : 'bg-[var(--color-primary)] text-white'
                     )}
                   >
@@ -358,7 +361,6 @@ const ProfilePage: React.FC = () => {
           </motion.div>
         </AnimatePresence>
 
-        {/* Actions rares : elles peuvent rester en bas de page */}
         <div className="mt-8 grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -394,4 +396,3 @@ const ProfilePage: React.FC = () => {
 };
 
 export default ProfilePage;
-
