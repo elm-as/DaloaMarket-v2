@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Package, Coins, Zap, Sparkles, AlertCircle, Check } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -9,24 +9,41 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import MiniListingCard from '../listings/MiniListingCard';
 import { useSupabase } from '../../hooks/useSupabase';
-import { initiatePayment } from '../../lib/payment';
 import toast from 'react-hot-toast';
-import { BOOST_CREDIT_COSTS, PRO_FREE_BOOST_DURATION_DAYS } from '../../lib/featureFlags';
+import { BOOST_CREDIT_COSTS } from '../../lib/featureFlags';
 import { cn } from '../../lib/utils';
 import { usePhase } from '../../contexts/PhaseContext';
 
 interface ProfileListingsTabProps {
   userId: string;
   activeCount: number;
+  initialFilter?: 'active' | 'sold';
 }
 
+function buildOrphanListing(id: string, embedded: any, price: number, createdAt: string) {
+  if (embedded) return { ...embedded, status: embedded.status || 'deleted' };
+  return {
+    id,
+    title: 'Article vendu (annonce supprimée)',
+    price,
+    photos: [],
+    status: 'deleted',
+    created_at: createdAt,
+    isSyntheticOrphan: true,
+  };
+}
 
-
-export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({ userId, activeCount }) => {
+export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({
+  userId,
+  initialFilter = 'active',
+}) => {
   const navigate = useNavigate();
   const { user, userProfile, refreshUserProfile } = useSupabase();
   const { enableBoost } = usePhase();
+  const [filter, setFilter] = useState<'active' | 'sold'>(initialFilter);
   const [myListings, setMyListings] = useState<any[]>([]);
+  const [salesByListing, setSalesByListing] = useState<Record<string, number>>({});
+  const [orphanSoldListings, setOrphanSoldListings] = useState<any[]>([]);
   const [listingsLoading, setListingsLoading] = useState(true);
   const [listingsError, setListingsError] = useState<string | null>(null);
 
@@ -38,13 +55,13 @@ export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({ userId, 
   const [selectedBoostOption, setSelectedBoostOption] = useState<'free_pro' | 1 | 2 | 7>('free_pro');
   const [isConfirmingBoost, setIsConfirmingBoost] = useState(false);
 
-  // Check if user is eligible for free PRO boost slot
+  useEffect(() => {
+    setFilter(initialFilter);
+  }, [initialFilter]);
+
   const isPro = userProfile?.pro_until ? new Date(userProfile.pro_until) > new Date() : false;
-  
-  // Le boost pro est utilisable une seule fois. On vérifie si la colonne est false.
   const canUseFreeProBoost = isPro && (userProfile?.pro_free_boost_used === false || userProfile?.pro_free_boost_used === null);
 
-  // Set default selection based on eligibility
   const openBoostModal = (listingId: string) => {
     setBoostingListingId(listingId);
     setSelectedBoostOption(canUseFreeProBoost ? 'free_pro' : 1);
@@ -54,53 +71,33 @@ export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({ userId, 
   const handleBoostExecute = async () => {
     if (!boostingListingId || !user) return;
     setIsConfirmingBoost(true);
-
     try {
       if (selectedBoostOption === 'free_pro') {
-        // Call the free boost RPC (duration = 2 days for PRO)
-        const { data, error } = await supabase.rpc('free_boost_listing' as any, {
-          p_listing_id: boostingListingId,
-        });
-
+        const { data, error } = await supabase.rpc('free_boost_listing' as any, { p_listing_id: boostingListingId });
         if (error) throw error;
         const res = data as any;
         if (res?.success) {
           toast.success('Votre annonce a été boostée gratuitement !');
-          setMyListings(prev =>
-            prev.map(l => (l.id === boostingListingId ? { ...l, boosted_until: res.boosted_until } : l))
-          );
+          setMyListings((prev) => prev.map((l) => (l.id === boostingListingId ? { ...l, boosted_until: res.boosted_until } : l)));
           setBoostModalOpen(false);
         } else {
-          toast.error(
-            res?.reason === 'already_boosted'
-              ? 'Vous utilisez déjà votre boost gratuit.'
-              : 'Erreur lors du boost gratuit.'
-          );
+          toast.error(res?.reason === 'already_boosted' ? 'Vous utilisez déjà votre boost gratuit.' : 'Erreur lors du boost gratuit.');
         }
       } else {
-        // Call the credit boost RPC
         const durationDays = selectedBoostOption;
         const { data, error } = await supabase.rpc('buy_boost_with_credits' as any, {
           p_listing_id: boostingListingId,
           p_duration_days: durationDays,
         });
-
         if (error) throw error;
         const res = data as any;
         if (res?.success) {
           toast.success(`Annonce boostée pour ${durationDays} jour(s) !`);
-          setMyListings(prev =>
-            prev.map(l => (l.id === boostingListingId ? { ...l, boosted_until: res.boosted_until } : l))
-          );
-          // Refresh user profile so the header updates with the new credit count
+          setMyListings((prev) => prev.map((l) => (l.id === boostingListingId ? { ...l, boosted_until: res.boosted_until } : l)));
           await refreshUserProfile();
           setBoostModalOpen(false);
         } else {
-          if (res?.reason === 'insufficient_credits') {
-            toast.error('Nombre de crédits insuffisant.');
-          } else {
-            toast.error('Erreur lors de l\'achat du boost.');
-          }
+          toast.error(res?.reason === 'insufficient_credits' ? 'Nombre de crédits insuffisant.' : "Erreur lors de l'achat du boost.");
         }
       }
     } catch (err: any) {
@@ -111,21 +108,52 @@ export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({ userId, 
     }
   };
 
-
   const fetchMyListings = useCallback(async () => {
     if (!userId) return;
     setListingsLoading(true);
     setListingsError(null);
     try {
-      const { data, error } = await supabase
-        .from('listings')
-        .select('*')
-        .eq('user_id', userId)
-        .neq('status', 'deleted')
-        .order('created_at', { ascending: false });
+      const [listingsRes, ordersRes] = await Promise.all([
+        supabase.from('listings').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+        supabase
+          .from('orders')
+          .select('id, listing_id, quantity, product_amount, total_amount, created_at, listings:listing_id(*), order_items(listing_id, quantity, unit_price, product_amount, listings:listing_id(*))')
+          .eq('seller_id', userId)
+          .in('status', ['delivered', 'completed'])
+          .order('created_at', { ascending: false }),
+      ]);
 
-      if (error) throw error;
-      setMyListings(data || []);
+      if (listingsRes.error) throw listingsRes.error;
+      const fetched = listingsRes.data || [];
+      setMyListings(fetched);
+
+      const knownIds = new Set(fetched.map((l: any) => l.id));
+      const map: Record<string, number> = {};
+      const orphansById = new Map<string, any>();
+
+      for (const o of (ordersRes.data || []) as any[]) {
+        const items = Array.isArray(o.order_items) && o.order_items.length > 0 ? o.order_items : null;
+        if (items) {
+          for (const it of items) {
+            const lid = it.listing_id || `order_${o.id}`;
+            map[lid] = (map[lid] || 0) + (it.quantity || 1);
+            if (!knownIds.has(lid) && !orphansById.has(lid)) {
+              const price = it.unit_price || it.product_amount || o.product_amount || o.total_amount || 0;
+              orphansById.set(lid, buildOrphanListing(lid, it.listings, price, o.created_at));
+            }
+          }
+        } else {
+          const lid = o.listing_id || `order_${o.id}`;
+          map[lid] = (map[lid] || 0) + (o.quantity || 1);
+          if (!knownIds.has(lid) && !orphansById.has(lid)) {
+            const price = o.product_amount || o.total_amount || 0;
+            orphansById.set(lid, buildOrphanListing(lid, o.listings, price, o.created_at));
+          }
+        }
+      }
+
+      setSalesByListing(map);
+      setOrphanSoldListings(Array.from(orphansById.values()));
     } catch (err) {
       console.error('Error fetching listings:', err);
       setListingsError('Impossible de charger vos annonces.');
@@ -138,15 +166,24 @@ export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({ userId, 
     fetchMyListings();
   }, [fetchMyListings]);
 
+  const activeListings = useMemo(() => myListings.filter((l) => l.status === 'active'), [myListings]);
+  const soldListings = useMemo(() => {
+    const fromListings = myListings.filter((l) => l.status === 'sold' || (salesByListing[l.id] || 0) > 0);
+    return [...fromListings, ...orphanSoldListings];
+  }, [myListings, salesByListing, orphanSoldListings]);
+
+  const totalSalesUnits = useMemo(
+    () => Object.values(salesByListing).reduce((sum, count) => sum + count, 0),
+    [salesByListing]
+  );
+  const soldTabCount = Math.max(soldListings.length, totalSalesUnits);
+  const displayedListings = filter === 'active' ? activeListings : soldListings;
+
   const handleMarkSold = async (listingId: string) => {
     try {
-      const { error } = await supabase.rpc('mark_listing_as_sold', {
-        p_listing_id: listingId,
-      });
+      const { error } = await supabase.rpc('mark_listing_as_sold', { p_listing_id: listingId });
       if (error) throw error;
-      setMyListings((prev) =>
-        prev.map((l) => (l.id === listingId ? { ...l, status: 'sold' } : l))
-      );
+      setMyListings((prev) => prev.map((l) => (l.id === listingId ? { ...l, status: 'sold' } : l)));
     } catch (err) {
       console.error('Error marking as sold:', err);
     }
@@ -161,11 +198,9 @@ export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({ userId, 
     if (!deletingListingId) return;
     setDeleting(true);
     try {
-      const { error } = await supabase.rpc('delete_listing_secure', {
-        p_listing_id: deletingListingId,
-      });
+      const { error } = await supabase.rpc('delete_listing_secure', { p_listing_id: deletingListingId });
       if (error) throw error;
-      setMyListings((prev) => prev.filter((l) => l.id !== deletingListingId));
+      setMyListings((prev) => prev.map((l) => (l.id === deletingListingId ? { ...l, status: 'deleted' } : l)));
       setDeleteModalOpen(false);
       setDeletingListingId(null);
     } catch (err) {
@@ -174,6 +209,8 @@ export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({ userId, 
       setDeleting(false);
     }
   };
+
+  const creditsBalance = (userProfile as any)?.boost_credits ?? userProfile?.listing_credits ?? 0;
 
   return (
     <>
@@ -185,7 +222,7 @@ export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({ userId, 
             </span>
             <div className="min-w-0">
               <p className="text-xs font-extrabold text-gray-900">
-                Crédits de Boost : <span className="text-orange-600 tabular-nums">{(userProfile as any)?.boost_credits ?? 0}</span>
+                Crédits de Boost : <span className="text-orange-600 tabular-nums">{creditsBalance}</span>
               </p>
               <p className="truncate text-[11px] text-gray-500">Propulsez vos annonces en tête des résultats</p>
             </div>
@@ -199,11 +236,29 @@ export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({ userId, 
           </button>
         </div>
       )}
-      {!listingsLoading && !listingsError && myListings.length > 0 && (
-        <p className="text-sm font-bold text-gray-500 mb-3">
-          Vous avez {activeCount} annonce{activeCount > 1 ? 's' : ''} active{activeCount > 1 ? 's' : ''}
-        </p>
-      )}
+
+      <div className="mb-3 flex rounded-2xl bg-white p-1 ring-1 ring-gray-200">
+        {([
+          { id: 'active', label: `En vente · ${activeListings.length}` },
+          { id: 'sold', label: `Vendues · ${soldTabCount}` },
+        ] as const).map((tab) => {
+          const selected = filter === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setFilter(tab.id)}
+              className={cn(
+                'flex-1 rounded-xl py-2 text-xs font-bold transition-colors tabular-nums',
+                selected ? 'bg-[var(--color-primary)] text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
+              )}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
       {listingsLoading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -212,22 +267,24 @@ export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({ userId, 
         </div>
       ) : listingsError ? (
         <ErrorState message={listingsError} onRetry={fetchMyListings} />
-      ) : myListings.length === 0 ? (
+      ) : displayedListings.length === 0 ? (
         <EmptyState
           icon={<Package className="w-16 h-16 opacity-40" />}
-          title="Vos placards débordent ?"
-          description="Publiez une annonce dès maintenant et vendez près de chez vous."
-          action={{
-            label: 'Publier une annonce',
-            onClick: () => navigate('/create-listing'),
-          }}
+          title={filter === 'active' ? 'Aucune annonce en vente' : 'Aucune annonce vendue'}
+          description={
+            filter === 'active'
+              ? 'Publiez une annonce dès maintenant et vendez près de chez vous.'
+              : 'Vos articles marqués comme vendus ou ayant fait l’objet d’une vente apparaîtront ici.'
+          }
+          action={filter === 'active' ? { label: 'Publier une annonce', onClick: () => navigate('/create-listing') } : undefined}
         />
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {myListings.map((listing) => (
+          {displayedListings.map((listing) => (
             <MiniListingCard
               key={listing.id}
               listing={listing}
+              salesCount={salesByListing[listing.id] || 0}
               onMarkSold={handleMarkSold}
               onDelete={handleDeleteClick}
               onBoost={enableBoost ? openBoostModal : undefined}
@@ -237,156 +294,56 @@ export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({ userId, 
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={deleteModalOpen}
-        onClose={() => {
-          setDeleteModalOpen(false);
-          setDeletingListingId(null);
-        }}
-        title="Supprimer l'annonce"
-      >
-        <p className="text-sm text-gray-600 mb-4">
-          Êtes-vous sûr de vouloir supprimer cette annonce? Cette action est irréversible.
-        </p>
+      <Modal isOpen={deleteModalOpen} onClose={() => { setDeleteModalOpen(false); setDeletingListingId(null); }} title="Supprimer l'annonce">
+        <p className="text-sm text-gray-600 mb-4">Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.</p>
         <div className="flex gap-3">
-          <Button
-            variant="outlined"
-            color="secondary"
-            fullWidth
-            onClick={() => {
-              setDeleteModalOpen(false);
-              setDeletingListingId(null);
-            }}
-          >
-            Annuler
-          </Button>
-          <Button
-            variant="filled"
-            color="error"
-            fullWidth
-            loading={deleting}
-            onClick={handleDeleteConfirm}
-          >
-            Supprimer
-          </Button>
+          <Button variant="outlined" color="secondary" fullWidth onClick={() => { setDeleteModalOpen(false); setDeletingListingId(null); }}>Annuler</Button>
+          <Button variant="filled" color="error" fullWidth loading={deleting} onClick={handleDeleteConfirm}>Supprimer</Button>
         </div>
       </Modal>
 
-      {/* Boost Options Modal */}
-      <Modal
-        isOpen={boostModalOpen}
-        onClose={() => {
-          if (!isConfirmingBoost) {
-            setBoostModalOpen(false);
-            setBoostingListingId(null);
-          }
-        }}
-        title="Sponsoriser l'annonce (Boost)"
-      >
+      <Modal isOpen={boostModalOpen} onClose={() => { if (!isConfirmingBoost) { setBoostModalOpen(false); setBoostingListingId(null); } }} title="Sponsoriser l'annonce (Boost)">
         <div className="space-y-4">
           <div className="flex items-center justify-between bg-[var(--color-surface-variant)]/40 border border-[var(--color-outline)]/40 p-4 rounded-2xl">
             <div className="flex items-center gap-2.5 text-[var(--color-on-surface)]">
               <Coins size={18} className="text-yellow-600 dark:text-yellow-500 fill-yellow-500/10" />
               <div className="text-left">
                 <span className="text-xs text-[var(--color-on-surface-variant)] block">Votre solde</span>
-                <span className="text-sm font-black">
-                  {userProfile?.listing_credits ?? 0} crédit{(userProfile?.listing_credits ?? 0) > 1 ? 's' : ''}
-                </span>
+                <span className="text-sm font-black">{creditsBalance} crédit{creditsBalance > 1 ? 's' : ''}</span>
               </div>
             </div>
-            
-            {(userProfile?.listing_credits ?? 0) === 0 && (
-              <button
-                onClick={() => {
-                  setBoostModalOpen(false);
-                  navigate('/acheter-pack');
-                }}
-                className="text-xs font-bold text-[var(--color-primary)] hover:underline active:scale-95 transition-transform"
-              >
-                Recharger
-              </button>
+            {creditsBalance === 0 && (
+              <button onClick={() => { setBoostModalOpen(false); navigate('/acheter-pack'); }} className="text-xs font-bold text-[var(--color-primary)] hover:underline">Recharger</button>
             )}
           </div>
 
-          <p className="text-xs text-[var(--color-on-surface-variant)]">
-            Sélectionnez une formule pour propulser votre annonce en tête des résultats de recherche.
-          </p>
-
           <div className="space-y-2.5">
-            {/* Option 1: Free PRO boost slot if available */}
             {canUseFreeProBoost && (
-              <div
-                onClick={() => setSelectedBoostOption('free_pro')}
-                className={cn(
-                  "flex items-center justify-between p-3.5 rounded-xl border-2 cursor-pointer transition-all",
-                  selectedBoostOption === 'free_pro' 
-                    ? 'border-[var(--color-primary)] bg-[var(--color-surface)] shadow-sm' 
-                    : 'border-[var(--color-outline)] bg-[var(--color-surface)] hover:border-[var(--color-on-surface-variant)]/40'
-                )}
-              >
+              <div onClick={() => setSelectedBoostOption('free_pro')} className={cn('flex items-center justify-between p-3.5 rounded-xl border-2 cursor-pointer transition-all', selectedBoostOption === 'free_pro' ? 'border-[var(--color-primary)] bg-[var(--color-surface)] shadow-sm' : 'border-[var(--color-outline)] bg-[var(--color-surface)]')}>
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-yellow-50 dark:bg-yellow-950/30 flex items-center justify-center text-yellow-600 dark:text-yellow-400">
-                    <Sparkles size={18} className="fill-yellow-500/10" />
-                  </div>
+                  <div className="w-9 h-9 rounded-lg bg-yellow-50 flex items-center justify-center text-yellow-600"><Sparkles size={18} /></div>
                   <div className="text-left">
-                    <span className="text-xs font-bold text-[var(--color-on-surface)] block">
-                      Boost Gratuit Vendeur PRO
-                    </span>
-                    <span className="text-[10px] font-medium text-[var(--color-on-surface-variant)] block">
-                      Utilisable 1 fois par abonnement
-                    </span>
+                    <span className="text-xs font-bold block">Boost Gratuit Vendeur PRO</span>
+                    <span className="text-[10px] text-gray-500 block">Utilisable 1 fois par abonnement</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-green-600 dark:text-green-400">Gratuit</span>
-                  <div className={cn(
-                    "w-4 h-4 rounded-full border flex items-center justify-center transition-all",
-                    selectedBoostOption === 'free_pro' ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white" : "border-[var(--color-outline)]"
-                  )}>
-                    {selectedBoostOption === 'free_pro' && <Check size={10} strokeWidth={3} />}
-                  </div>
-                </div>
+                <span className="text-xs font-bold text-green-600">Gratuit</span>
               </div>
             )}
-
-            {/* Credit-based boost options */}
             {BOOST_CREDIT_COSTS.map((opt) => {
               const isSelected = selectedBoostOption === opt.days;
-              const hasCredits = (userProfile?.listing_credits ?? 0) >= opt.credits;
               return (
-                <div 
-                  key={opt.days}
-                  onClick={() => setSelectedBoostOption(opt.days)}
-                  className={cn(
-                    "flex items-center justify-between p-3.5 rounded-xl border-2 cursor-pointer transition-all",
-                    isSelected 
-                      ? 'border-[var(--color-primary)] bg-[var(--color-surface)] shadow-sm' 
-                      : 'border-[var(--color-outline)] bg-[var(--color-surface)] hover:border-[var(--color-on-surface-variant)]/40',
-                    !hasCredits && selectedBoostOption !== 'free_pro' ? 'opacity-80' : ''
-                  )}
-                >
+                <div key={opt.days} onClick={() => setSelectedBoostOption(opt.days)} className={cn('flex items-center justify-between p-3.5 rounded-xl border-2 cursor-pointer transition-all', isSelected ? 'border-[var(--color-primary)] bg-[var(--color-surface)] shadow-sm' : 'border-[var(--color-outline)] bg-[var(--color-surface)]')}>
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center text-[var(--color-primary)]">
-                      <Zap size={18} className="fill-[var(--color-primary)]/10" />
-                    </div>
+                    <div className="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center text-[var(--color-primary)]"><Zap size={18} /></div>
                     <div className="text-left">
-                      <span className="text-xs font-bold text-[var(--color-on-surface)] block">
-                        Boost {opt.label}
-                      </span>
-                      <span className="text-[10px] text-[var(--color-on-surface-variant)] block mt-0.5">
-                        {opt.days === 7 ? 'Visibilité maximale pendant 1 semaine' : `Remontez l'annonce pendant ${opt.days} jour(s)`}
-                      </span>
+                      <span className="text-xs font-bold block">Boost {opt.label}</span>
+                      <span className="text-[10px] text-gray-500 block mt-0.5">{opt.days === 7 ? 'Visibilité maximale pendant 1 semaine' : `Remontez l'annonce pendant ${opt.days} jour(s)`}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-[var(--color-on-surface)]">
-                      {opt.credits} crédit{opt.credits > 1 ? 's' : ''}
-                    </span>
-                    <div className={cn(
-                      "w-4 h-4 rounded-full border flex items-center justify-center transition-all",
-                      isSelected ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white" : "border-[var(--color-outline)]"
-                    )}>
+                    <span className="text-xs font-bold">{opt.credits} crédit{opt.credits > 1 ? 's' : ''}</span>
+                    <div className={cn('w-4 h-4 rounded-full border flex items-center justify-center', isSelected ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white' : 'border-[var(--color-outline)]')}>
                       {isSelected && <Check size={10} strokeWidth={3} />}
                     </div>
                   </div>
@@ -395,94 +352,28 @@ export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({ userId, 
             })}
           </div>
 
-          {/* Insufficient credits warning */}
-          {(() => {
-            if (selectedBoostOption === 'free_pro') return null;
-            const selectedCost = BOOST_CREDIT_COSTS.find(o => o.days === selectedBoostOption)?.credits ?? 0;
-            const hasCredits = (userProfile?.listing_credits ?? 0) >= selectedCost;
-            
-            if (!hasCredits) {
-              return (
-                <div className="flex items-start gap-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 p-3 rounded-xl text-red-600 dark:text-red-400 mt-2">
-                  <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
-                  <div className="text-[11px] leading-normal">
-                    <span className="font-semibold block">Crédits insuffisants</span>
-                    Il vous manque {selectedCost - (userProfile?.listing_credits ?? 0)} crédit(s) pour acheter ce boost.
-                  </div>
-                </div>
-              );
-            }
-            return null;
-          })()}
+          {selectedBoostOption !== 'free_pro' && creditsBalance < (BOOST_CREDIT_COSTS.find((o) => o.days === selectedBoostOption)?.credits ?? 0) && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 p-3 rounded-xl text-red-600 mt-2">
+              <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+              <div className="text-[11px] leading-normal">
+                <span className="font-semibold block">Crédits insuffisants</span>
+                Rechargez vos crédits pour activer ce boost.
+              </div>
+            </div>
+          )}
 
-          {/* Action buttons */}
           <div className="flex gap-3 pt-3">
-            <Button
-              variant="outlined"
-              color="secondary"
-              fullWidth
-              disabled={isConfirmingBoost}
-              onClick={() => {
-                setBoostModalOpen(false);
-                setBoostingListingId(null);
-              }}
-              className="py-3 rounded-xl border-[var(--color-outline)] text-[var(--color-on-surface-variant)]"
-            >
-              Annuler
-            </Button>
-
-            {(() => {
-              if (selectedBoostOption === 'free_pro') {
-                return (
-                  <Button
-                    variant="filled"
-                    color="primary"
-                    fullWidth
-                    loading={isConfirmingBoost}
-                    onClick={handleBoostExecute}
-                    className="py-3 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-variant)] text-white font-semibold"
-                  >
-                    Activer (Gratuit)
-                  </Button>
-                );
-              }
-              const selectedCost = BOOST_CREDIT_COSTS.find(o => o.days === selectedBoostOption)?.credits ?? 0;
-              const hasCredits = (userProfile?.listing_credits ?? 0) >= selectedCost;
-
-              if (hasCredits) {
-                return (
-                  <Button
-                    variant="filled"
-                    color="primary"
-                    fullWidth
-                    loading={isConfirmingBoost}
-                    onClick={handleBoostExecute}
-                    className="py-3 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-variant)] text-white font-semibold"
-                  >
-                    Confirmer ({selectedCost} cr.)
-                  </Button>
-                );
-              } else {
-                return (
-                  <Button
-                    variant="filled"
-                    color="primary"
-                    fullWidth
-                    onClick={() => {
-                      setBoostModalOpen(false);
-                      navigate('/acheter-pack');
-                    }}
-                    className="py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-white font-semibold shadow-sm border-0"
-                  >
-                    Acheter des crédits
-                  </Button>
-                );
-              }
-            })()}
+            <Button variant="outlined" color="secondary" fullWidth disabled={isConfirmingBoost} onClick={() => { setBoostModalOpen(false); setBoostingListingId(null); }}>Annuler</Button>
+            {selectedBoostOption === 'free_pro' || creditsBalance >= (BOOST_CREDIT_COSTS.find((o) => o.days === selectedBoostOption)?.credits ?? 0) ? (
+              <Button variant="filled" color="primary" fullWidth loading={isConfirmingBoost} onClick={handleBoostExecute}>
+                {selectedBoostOption === 'free_pro' ? 'Activer (Gratuit)' : `Confirmer (${BOOST_CREDIT_COSTS.find((o) => o.days === selectedBoostOption)?.credits ?? 0} cr.)`}
+              </Button>
+            ) : (
+              <Button variant="filled" color="primary" fullWidth onClick={() => { setBoostModalOpen(false); navigate('/acheter-pack'); }}>Acheter des crédits</Button>
+            )}
           </div>
         </div>
       </Modal>
     </>
   );
 };
-

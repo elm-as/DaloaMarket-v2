@@ -56,19 +56,23 @@ const ProfilePage: React.FC = () => {
   const { showMonetisation, enableBoost, enableSellerBadge } = usePhase();
 
   const [activeTab, setActiveTab] = useState<TabId>(() => getTabFromParam(searchParams.get('tab')));
+  const [listingsFilter, setListingsFilter] = useState<'active' | 'sold'>(
+    searchParams.get('filter') === 'sold' ? 'sold' : 'active'
+  );
   const [profileStats, setProfileStats] = useState({ activeCount: 0, soldCount: 0, reviewCount: 0 });
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam) {
-      setActiveTab(getTabFromParam(tabParam));
-    }
+    if (tabParam) setActiveTab(getTabFromParam(tabParam));
+    const filterParam = searchParams.get('filter');
+    if (filterParam === 'sold' || filterParam === 'active') setListingsFilter(filterParam);
   }, [searchParams]);
 
-  const handleTabChange = (tabId: TabId) => {
+  const handleTabChange = (tabId: TabId, filter?: 'active' | 'sold') => {
     setActiveTab(tabId);
-    setSearchParams({ tab: tabId }, { replace: true });
+    if (filter) setListingsFilter(filter);
+    setSearchParams(filter ? { tab: tabId, filter } : { tab: tabId }, { replace: true });
   };
 
   const currentUserId = user?.id;
@@ -77,7 +81,7 @@ const ProfilePage: React.FC = () => {
   const fetchStats = useCallback(async () => {
     if (!currentUserId) return;
     try {
-      const [activeRes, soldRes, reviewRes] = await Promise.all([
+      const [activeRes, soldListingsRes, soldOrdersRes, reviewRes] = await Promise.all([
         supabase
           .from('listings')
           .select('*', { count: 'exact', head: true })
@@ -90,13 +94,18 @@ const ProfilePage: React.FC = () => {
           .eq('user_id', currentUserId)
           .eq('status', 'sold'),
         supabase
+          .from('orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('seller_id', currentUserId)
+          .in('status', ['delivered', 'completed']),
+        supabase
           .from('reviews')
           .select('*', { count: 'exact', head: true })
           .eq('reviewed_id', currentUserId),
       ]);
       setProfileStats({
         activeCount: activeRes.count || 0,
-        soldCount: soldRes.count || 0,
+        soldCount: Math.max(soldListingsRes.count || 0, soldOrdersRes.count || 0),
         reviewCount: reviewRes.count || 0,
       });
     } catch (err) {
@@ -123,9 +132,7 @@ const ProfilePage: React.FC = () => {
       userProfile?.avatar_url ||
       null;
     const res = await shareWithImage(title, text, imageUrl);
-    if (res.copied) {
-      toast.success('Lien copié !', { duration: 4000 });
-    }
+    if (res.copied) toast.success('Lien copié !', { duration: 4000 });
   };
 
   const handleSignOut = async () => {
@@ -142,10 +149,7 @@ const ProfilePage: React.FC = () => {
 
   const renderStars = (rating: number) =>
     Array.from({ length: 5 }).map((_, i) => (
-      <Star
-        key={i}
-        className={cn('w-3.5 h-3.5', i < Math.round(rating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200')}
-      />
+      <Star key={i} className={cn('w-3.5 h-3.5', i < Math.round(rating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200')} />
     ));
 
   const hasShopLocation = (userProfile as any)?.shop_latitude != null && (userProfile as any)?.shop_longitude != null;
@@ -157,18 +161,14 @@ const ProfilePage: React.FC = () => {
     { label: 'Commandes', icon: <Package className="h-5 w-5" />, onClick: () => navigate('/mes-commandes') },
     { label: 'Livreurs', icon: <Truck className="h-5 w-5" />, onClick: () => navigate('/mes-livreurs') },
     { label: 'Stats', icon: <BarChart3 className="h-5 w-5" />, onClick: () => navigate('/mes-statistiques') },
-    ...(enableBoost
-      ? [{ label: 'Boosts', icon: <Zap className="h-5 w-5" />, onClick: () => navigate('/acheter-pack') }]
-      : []),
-    ...(showMonetisation
-      ? [{ label: 'Paiements', icon: <CreditCard className="h-5 w-5" />, onClick: () => navigate('/mes-paiements') }]
-      : []),
+    ...(enableBoost ? [{ label: 'Boosts', icon: <Zap className="h-5 w-5" />, onClick: () => navigate('/acheter-pack') }] : []),
+    ...(showMonetisation ? [{ label: 'Paiements', icon: <CreditCard className="h-5 w-5" />, onClick: () => navigate('/mes-paiements') }] : []),
     { label: 'Partager', icon: <Share2 className="h-5 w-5" />, onClick: handleShareShop },
   ];
 
-  const stats: { label: string; value: number; tab: TabId }[] = [
-    { label: 'Actives', value: profileStats.activeCount, tab: 'listings' },
-    { label: 'Vendues', value: profileStats.soldCount, tab: 'listings' },
+  const stats: { label: string; value: number; tab: TabId; filter?: 'active' | 'sold' }[] = [
+    { label: 'Actives', value: profileStats.activeCount, tab: 'listings', filter: 'active' },
+    { label: 'Vendues', value: profileStats.soldCount, tab: 'listings', filter: 'sold' },
     { label: 'Avis', value: profileStats.reviewCount, tab: 'reviews' },
   ];
 
@@ -182,19 +182,11 @@ const ProfilePage: React.FC = () => {
           <h1 className="text-lg font-bold text-white">Mon profil</h1>
           <div className="flex items-center gap-2">
             {isAdmin && (
-              <button
-                type="button"
-                onClick={() => navigate('/admin')}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-white/15 px-3 text-xs font-semibold text-white backdrop-blur-md hover:bg-white/25"
-              >
+              <button type="button" onClick={() => navigate('/admin')} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-white/15 px-3 text-xs font-semibold text-white backdrop-blur-md hover:bg-white/25">
                 <Shield className="h-3.5 w-3.5" /> Admin
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => navigate('/settings')}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-white/15 px-3 text-xs font-semibold text-white backdrop-blur-md hover:bg-white/25"
-            >
+            <button type="button" onClick={() => navigate('/settings')} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-white/15 px-3 text-xs font-semibold text-white backdrop-blur-md hover:bg-white/25">
               <Edit3 className="h-3.5 w-3.5" /> Paramètres
             </button>
           </div>
@@ -202,12 +194,7 @@ const ProfilePage: React.FC = () => {
 
         <div className="relative mt-5 flex items-center gap-4">
           <div className="relative shrink-0">
-            <Avatar
-              src={userProfile?.avatar_url}
-              name={userProfile?.full_name}
-              size="xl"
-              className="ring-4 ring-white/30"
-            />
+            <Avatar src={userProfile?.avatar_url} name={userProfile?.full_name} size="xl" className="ring-4 ring-white/30" />
             {isPro && (
               <div className="absolute -bottom-1 -right-1">
                 <ProBadge iconOnly size="sm" ring />
@@ -242,7 +229,7 @@ const ProfilePage: React.FC = () => {
             <button
               key={st.label}
               type="button"
-              onClick={() => handleTabChange(st.tab)}
+              onClick={() => handleTabChange(st.tab, st.filter)}
               className="rounded-2xl bg-white/15 px-2 py-2.5 text-center backdrop-blur-md transition-colors hover:bg-white/25"
             >
               <p className="text-lg font-bold leading-none text-white tabular-nums">{st.value}</p>
@@ -258,15 +245,8 @@ const ProfilePage: React.FC = () => {
           style={{ gridTemplateColumns: `repeat(${shortcuts.length}, minmax(0, 1fr))` }}
         >
           {shortcuts.map((sc) => (
-            <button
-              key={sc.label}
-              type="button"
-              onClick={sc.onClick}
-              className="flex min-w-0 flex-col items-center gap-1.5 rounded-2xl px-1 py-2.5 text-gray-700 transition-colors hover:bg-orange-50 active:scale-95"
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-[var(--color-primary)]">
-                {sc.icon}
-              </span>
+            <button key={sc.label} type="button" onClick={sc.onClick} className="flex min-w-0 flex-col items-center gap-1.5 rounded-2xl px-1 py-2.5 text-gray-700 transition-colors hover:bg-orange-50 active:scale-95">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-[var(--color-primary)]">{sc.icon}</span>
               <span className="w-full truncate text-center text-[11px] font-semibold">{sc.label}</span>
             </button>
           ))}
@@ -280,9 +260,7 @@ const ProfilePage: React.FC = () => {
           >
             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
             <span className="min-w-0 flex-1 text-sm text-amber-900">
-              {showPayoutWarning
-                ? 'Ajoutez votre compte Mobile Money pour recevoir vos ventes.'
-                : 'Placez votre boutique sur la carte pour calculer les frais de livraison.'}
+              {showPayoutWarning ? 'Ajoutez votre compte Mobile Money pour recevoir vos ventes.' : 'Placez votre boutique sur la carte pour calculer les frais de livraison.'}
             </span>
             <ChevronRight className="h-4 w-4 shrink-0 text-amber-700" />
           </button>
@@ -295,9 +273,7 @@ const ProfilePage: React.FC = () => {
             className="mt-3 flex w-full items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 px-4 py-3 text-left text-white shadow-md shadow-orange-500/20 transition-transform active:scale-[0.99]"
           >
             <div className="flex min-w-0 items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20">
-                <Sparkles className="h-4 w-4 text-white" />
-              </span>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20"><Sparkles className="h-4 w-4 text-white" /></span>
               <div className="min-w-0">
                 <p className="text-xs font-extrabold leading-tight">Passer Vendeur Pro</p>
                 <p className="truncate text-[11px] text-orange-100">Badge vérifié, boost offert et vitrine mise en avant</p>
@@ -320,19 +296,12 @@ const ProfilePage: React.FC = () => {
                 aria-pressed={isSelected}
                 className={cn(
                   'relative flex h-10 items-center justify-center rounded-xl text-[13px] font-semibold transition-colors',
-                  isSelected
-                    ? 'bg-[var(--color-primary)] text-white shadow-md shadow-orange-500/20'
-                    : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:text-gray-900'
+                  isSelected ? 'bg-[var(--color-primary)] text-white shadow-md shadow-orange-500/20' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:text-gray-900'
                 )}
               >
                 {tab.label}
                 {tab.count !== undefined && tab.count > 0 && (
-                  <span
-                    className={cn(
-                      'absolute -top-1.5 -right-1 min-w-[18px] rounded-full px-1 text-center text-[10px] font-bold leading-[18px] ring-2 ring-gray-50 tabular-nums',
-                      isSelected ? 'bg-gray-900 text-white' : 'bg-[var(--color-primary)] text-white'
-                    )}
-                  >
+                  <span className={cn('absolute -top-1.5 -right-1 min-w-[18px] rounded-full px-1 text-center text-[10px] font-bold leading-[18px] ring-2 ring-gray-50 tabular-nums', isSelected ? 'bg-gray-900 text-white' : 'bg-[var(--color-primary)] text-white')}>
                     {tab.count}
                   </span>
                 )}
@@ -344,16 +313,9 @@ const ProfilePage: React.FC = () => {
 
       <div className="px-4">
         <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="mt-2"
-          >
+          <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }} className="mt-2">
             {activeTab === 'listings' && (
-              <ProfileListingsTab userId={currentUserId!} activeCount={profileStats.activeCount} />
+              <ProfileListingsTab userId={currentUserId!} activeCount={profileStats.activeCount} initialFilter={listingsFilter} />
             )}
             {activeTab === 'reviews' && <ProfileReviewsTab userId={currentUserId!} />}
             {activeTab === 'favorites' && <ProfileFavoritesTab userId={currentUserId!} />}
@@ -362,34 +324,17 @@ const ProfilePage: React.FC = () => {
         </AnimatePresence>
 
         <div className="mt-8 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setIsFeedbackModalOpen(true)}
-            className="flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-3 text-sm font-medium text-gray-700 ring-1 ring-gray-100 hover:bg-gray-50"
-          >
+          <button type="button" onClick={() => setIsFeedbackModalOpen(true)} className="flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-3 text-sm font-medium text-gray-700 ring-1 ring-gray-100 hover:bg-gray-50">
             <MessageSquare className="h-4 w-4 text-[var(--color-primary)]" /> Donner mon avis
           </button>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-3 text-sm font-medium text-red-600 ring-1 ring-gray-100 hover:bg-red-50"
-          >
+          <button type="button" onClick={handleSignOut} className="flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-3 text-sm font-medium text-red-600 ring-1 ring-gray-100 hover:bg-red-50">
             <LogOut className="h-4 w-4" /> Se déconnecter
           </button>
         </div>
       </div>
 
-      <Modal
-        isOpen={isFeedbackModalOpen}
-        onClose={() => setIsFeedbackModalOpen(false)}
-        title="Votre avis compte !"
-        size="lg"
-      >
-        <FeedbackForm
-          userId={currentUserId!}
-          onSuccess={() => setIsFeedbackModalOpen(false)}
-          onCancel={() => setIsFeedbackModalOpen(false)}
-        />
+      <Modal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} title="Votre avis compte !" size="lg">
+        <FeedbackForm userId={currentUserId!} onSuccess={() => setIsFeedbackModalOpen(false)} onCancel={() => setIsFeedbackModalOpen(false)} />
       </Modal>
     </div>
   );
