@@ -67,17 +67,17 @@ export const WebDeliveryRadarCard: React.FC<WebDeliveryRadarCardProps> = ({
 
     const loadInitial = async () => {
       try {
-        const { data } = await (supabase.from('driver_live_locations' as any) as any)
-          .select('lat, lng, updated_at')
-          .eq('assignment_id', assignmentId)
+        const { data } = await (supabase.from('delivery_assignments') as any)
+          .select('current_driver_lat, current_driver_lng, location_updated_at')
+          .eq('id', assignmentId)
           .maybeSingle();
 
         if (!active || !data) return;
-        const lat = Number(data.lat);
-        const lng = Number(data.lng);
-        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        const lat = Number(data.current_driver_lat);
+        const lng = Number(data.current_driver_lng);
+        if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
           setDriverCoords({ lat, lng });
-          setLastUpdateMs(data.updated_at ? new Date(data.updated_at).getTime() : Date.now());
+          setLastUpdateMs(data.location_updated_at ? new Date(data.location_updated_at).getTime() : Date.now());
         }
       } catch {
         // Ignorer si pas encore de point GPS
@@ -87,31 +87,37 @@ export const WebDeliveryRadarCard: React.FC<WebDeliveryRadarCardProps> = ({
     loadInitial();
 
     const channel = supabase
-      .channel(`run-tracking:${assignmentId}`)
-      .on('broadcast', { event: 'location' }, (msg) => {
+      .channel(`run_tracking:${assignmentId}`)
+      .on('broadcast', { event: 'location_update' }, (msg) => {
         const payload = msg?.payload as Record<string, unknown> | undefined;
         const lat = Number(payload?.lat);
         const lng = Number(payload?.lng);
         if (Number.isFinite(lat) && Number.isFinite(lng)) {
           setDriverCoords({ lat, lng });
-          setLastUpdateMs(Number(payload?.timestamp) || Date.now());
+          setLastUpdateMs(
+            payload?.updated_at
+              ? new Date(String(payload.updated_at)).getTime()
+              : Number(payload?.timestamp) || Date.now()
+          );
         }
       })
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE',
           schema: 'public',
-          table: 'driver_live_locations',
-          filter: `assignment_id=eq.${assignmentId}`,
+          table: 'delivery_assignments',
+          filter: `id=eq.${assignmentId}`,
         },
         (payload) => {
           const row = payload.new as Record<string, unknown> | undefined;
-          const lat = Number(row?.lat);
-          const lng = Number(row?.lng);
-          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          const lat = Number(row?.current_driver_lat);
+          const lng = Number(row?.current_driver_lng);
+          if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
             setDriverCoords({ lat, lng });
-            setLastUpdateMs(row?.updated_at ? new Date(String(row.updated_at)).getTime() : Date.now());
+            setLastUpdateMs(
+              row?.location_updated_at ? new Date(String(row.location_updated_at)).getTime() : Date.now()
+            );
           }
         }
       )
