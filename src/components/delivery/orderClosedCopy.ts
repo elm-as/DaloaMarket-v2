@@ -10,10 +10,10 @@ export interface ClosedCopy {
 }
 
 /**
- * Texte d'une commande annulée ou en litige, selon le mode de paiement et
- * selon que l'on regarde en acheteur ou en vendeur. Renvoie null si la
- * commande suit son cours.
- */
+  * Texte d'une commande annulée ou en litige, selon le mode de paiement et
+  * selon que l'on regarde en acheteur ou en vendeur. Renvoie null si la
+  * commande suit son cours.
+  */
 export function getClosedCopy(order: Order, userId?: string | null): ClosedCopy | null {
   const delivery = Array.isArray(order.delivery_assignment)
     ? order.delivery_assignment[0]
@@ -27,15 +27,13 @@ export function getClosedCopy(order: Order, userId?: string | null): ClosedCopy 
   const isPickup = order.delivery_mode === 'pickup' || order.delivery_mode === 'pickup_point';
   const isCashAtShop = order.payment_method === 'cash_at_shop';
   const isCod = order.payment_method === 'cod';
-  const cancelReason = (order as any).cancel_reason as string | undefined;
-  const isSellerUnavailable = cancelReason === 'unavailable' || cancelReason === 'seller_unavailable';
-
-  // Litige arbitré par l'équipe : la commande est annulée avec un motif
-  // `admin_refund_*` posé par resolve_delivery_dispute.
   const cancelReasonRaw = (order as any).cancel_reason as string | undefined;
+  const isSellerUnavailable = cancelReasonRaw === 'unavailable' || cancelReasonRaw === 'seller_unavailable';
+  const isCodRefusal = cancelReasonRaw?.startsWith('cod_refused_');
+
   if (isCancelled && cancelReasonRaw?.startsWith('admin_refund')) {
     const partial = cancelReasonRaw === 'admin_refund_partial';
-    if (userId === order.seller_id) {
+    if (isSeller) {
       return {
         kind: 'resolved',
         title: 'Litige réglé',
@@ -64,6 +62,40 @@ export function getClosedCopy(order: Order, userId?: string | null): ClosedCopy 
         : 'Un problème a été signalé sur votre livraison. L’équipe DaloaMarket examine le dossier et revient vers vous.',
       money: isCod || isCashAtShop ? 'Aucun paiement en ligne' : 'Argent bloqué en séquestre jusqu’à la décision',
     };
+  }
+
+  if (isSellerUnavailable) {
+    return isSeller
+      ? {
+          kind: 'cancelled',
+          title: 'Commande annulée (article indisponible)',
+          message: 'Vous avez annulé cette commande car l’article n’est plus disponible.',
+          money: isCod || isCashAtShop ? 'Aucun paiement' : 'Acheteur remboursé',
+        }
+      : {
+          kind: 'cancelled',
+          title: 'Article indisponible chez le vendeur',
+          message: 'Le vendeur ne peut pas honorer la commande.',
+          money: isCod || isCashAtShop
+            ? 'Rien n’a été débité'
+            : `Remboursement de ${formatPrice(order.total_amount)} en cours vers votre Mobile Money`,
+        };
+  }
+
+  if (isCodRefusal) {
+    return isSeller
+      ? {
+          kind: 'cancelled',
+          title: 'Refus à la livraison enregistré',
+          message: 'L’article a été remis en stock et le refus a été comptabilisé sur le profil de l’acheteur.',
+          money: 'Aucun paiement',
+        }
+      : {
+          kind: 'cancelled',
+          title: 'Livraison non honorée',
+          message: 'Le vendeur a signalé une impossibilité de remise à l’arrivée du colis.',
+          money: 'Aucun prélèvement',
+        };
   }
 
   if (isCashAtShop) {
@@ -98,23 +130,18 @@ export function getClosedCopy(order: Order, userId?: string | null): ClosedCopy 
         };
   }
 
-  // Payé en ligne : l'acheteur est remboursé.
   if (isSeller) {
     return {
       kind: 'cancelled',
-      title: isSellerUnavailable ? 'Commande annulée (article indisponible)' : 'Commande annulée par l’acheteur',
-      message: isSellerUnavailable
-        ? 'Vous avez annulé cette commande car l’article n’est plus disponible.'
-        : 'L’acheteur a annulé sa commande avant l’expédition. L’article a été remis en stock.',
+      title: 'Commande annulée par l’acheteur',
+      message: 'L’acheteur a annulé sa commande avant l’expédition. L’article a été remis en stock.',
       money: 'Acheteur remboursé',
     };
   }
   return {
     kind: 'cancelled',
-    title: isSellerUnavailable ? 'Article indisponible chez le vendeur' : isPickup ? 'Réservation annulée' : 'Commande annulée',
-    message: isSellerUnavailable
-      ? 'Le vendeur ne peut pas honorer la commande.'
-      : 'Votre commande a été annulée.',
+    title: isPickup ? 'Réservation annulée' : 'Commande annulée',
+    message: 'Votre commande a été annulée.',
     money: `Remboursement de ${formatPrice(order.total_amount)} en cours vers votre Mobile Money`,
   };
 }
