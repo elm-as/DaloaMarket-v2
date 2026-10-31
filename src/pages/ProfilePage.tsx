@@ -10,26 +10,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  Star,
-  Heart,
-  Package,
-  MapPin,
-  Phone,
-  Store,
-  LogOut,
-  BarChart3,
-  CreditCard,
-  CheckCircle,
-  AlertTriangle,
-  Share2,
-  Edit3,
-  Shield,
-  Truck,
-  ChevronRight,
-  MessageSquare,
-  Sparkles,
-  Gift,
-  ShieldCheck,
+  Star, Heart, Package, MapPin, Phone, Store, LogOut, BarChart3,
+  CreditCard, AlertTriangle, Share2, Edit3, Shield, Truck,
+  ChevronRight, MessageSquare, Sparkles, Gift, ShieldCheck, Zap,
 } from 'lucide-react';
 
 import { ProfileListingsTab } from '../components/profile/ProfileListingsTab';
@@ -50,7 +33,6 @@ const getTabFromParam = (param: string | null): TabId => {
   if (clean === 'shop' || clean === 'boutique' || clean === 'vitrine') return 'shop';
   if (clean === 'reviews' || clean === 'avis') return 'reviews';
   if (clean === 'favorites' || clean === 'favoris') return 'favorites';
-  if (clean === 'listings' || clean === 'annonces' || clean === 'articles') return 'listings';
   return 'listings';
 };
 
@@ -59,24 +41,27 @@ const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, userProfile, isAdmin, signOut, refreshUserProfile } = useSupabase();
-  const { showMonetisation } = usePhase();
+  const { showMonetisation, enableBoost, enableSellerBadge } = usePhase();
 
   const [activeTab, setActiveTab] = useState<TabId>(() => getTabFromParam(searchParams.get('tab')));
+  const [listingsFilter, setListingsFilter] = useState<'active' | 'sold'>(
+    searchParams.get('filter') === 'sold' ? 'sold' : 'active'
+  );
   const [profileStats, setProfileStats] = useState({ activeCount: 0, soldCount: 0, reviewCount: 0 });
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
 
-  // Synchronise l'onglet si l'URL searchParam change (ex: redirection, notif push, retour arrière)
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam) {
-      setActiveTab(getTabFromParam(tabParam));
-    }
+    if (tabParam) setActiveTab(getTabFromParam(tabParam));
+    const filterParam = searchParams.get('filter');
+    if (filterParam === 'sold' || filterParam === 'active') setListingsFilter(filterParam);
   }, [searchParams]);
 
-  const handleTabChange = (tabId: TabId) => {
+  const handleTabChange = (tabId: TabId, filter?: 'active' | 'sold') => {
     setActiveTab(tabId);
-    setSearchParams({ tab: tabId }, { replace: true });
+    if (filter) setListingsFilter(filter);
+    setSearchParams(filter ? { tab: tabId, filter } : { tab: tabId }, { replace: true });
   };
 
   const currentUserId = user?.id;
@@ -85,26 +70,15 @@ const ProfilePage: React.FC = () => {
   const fetchStats = useCallback(async () => {
     if (!currentUserId) return;
     try {
-      const [activeRes, soldRes, reviewRes] = await Promise.all([
-        supabase
-          .from('listings')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', currentUserId)
-          .neq('status', 'deleted')
-          .neq('status', 'sold'),
-        supabase
-          .from('listings')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', currentUserId)
-          .eq('status', 'sold'),
-        supabase
-          .from('reviews')
-          .select('*', { count: 'exact', head: true })
-          .eq('reviewed_id', currentUserId),
+      const [activeRes, soldListingsRes, soldOrdersRes, reviewRes] = await Promise.all([
+        supabase.from('listings').select('*', { count: 'exact', head: true }).eq('user_id', currentUserId).neq('status', 'deleted').neq('status', 'sold'),
+        supabase.from('listings').select('*', { count: 'exact', head: true }).eq('user_id', currentUserId).eq('status', 'sold'),
+        supabase.from('orders').select('*', { count: 'exact', head: true }).eq('seller_id', currentUserId).in('status', ['delivered', 'completed']),
+        supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('reviewed_id', currentUserId),
       ]);
       setProfileStats({
         activeCount: activeRes.count || 0,
-        soldCount: soldRes.count || 0,
+        soldCount: Math.max(soldListingsRes.count || 0, soldOrdersRes.count || 0),
         reviewCount: reviewRes.count || 0,
       });
     } catch (err) {
@@ -125,16 +99,10 @@ const ProfilePage: React.FC = () => {
       shop_slug: (userProfile as any)?.shop_slug || null,
       district: (userProfile as any)?.district || null,
     });
-    const imageUrl =
-      (userProfile as any)?.shop_logo_url ||
-      (userProfile as any)?.shop_banner_url ||
-      userProfile?.avatar_url ||
-      null;
+    const imageUrl = (userProfile as any)?.shop_logo_url || (userProfile as any)?.shop_banner_url || userProfile?.avatar_url || null;
     const res = await shareWithImage(title, text, imageUrl);
-    if (res.copied) {
-      toast.success('Lien copié !', { duration: 4000 });
-    }
-                };
+    if (res.copied) toast.success('Lien copié !', { duration: 4000 });
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -149,51 +117,35 @@ const ProfilePage: React.FC = () => {
     ...(isPro ? [{ id: 'carousel' as TabId, label: 'Carrousel VIP', icon: <Sparkles className="w-4 h-4 text-orange-500" /> }] : []),
   ];
 
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }).map((_, i) => (
-      <Star
-        key={i}
-        className={cn(
-          'w-3.5 h-3.5',
-          i < Math.round(rating)
-            ? 'text-amber-400 fill-amber-400'
-            : 'text-gray-200'
-        )}
-      />
+  const renderStars = (rating: number) =>
+    Array.from({ length: 5 }).map((_, i) => (
+      <Star key={i} className={cn('w-3.5 h-3.5', i < Math.round(rating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200')} />
     ));
-  };
 
   const hasShopLocation = (userProfile as any)?.shop_latitude != null && (userProfile as any)?.shop_longitude != null;
   const showShopLocationWarning = profileStats.activeCount > 0 && !hasShopLocation;
-
   const hasPayoutSetup = (userProfile as any)?.payout_network != null && (userProfile as any)?.payout_number != null;
   const showPayoutWarning = profileStats.activeCount > 0 && !hasPayoutSetup;
 
-  // Raccourcis toujours visibles sous le bandeau : ils étaient en bas de page,
-  // sous toutes les annonces, et il fallait défiler longtemps pour les atteindre.
   const shortcuts: { label: string; icon: React.ReactNode; onClick: () => void }[] = [
     { label: 'Commandes', icon: <Package className="h-5 w-5" />, onClick: () => navigate('/mes-commandes') },
     { label: 'Parrainage', icon: <Gift className="h-5 w-5 text-emerald-400" />, onClick: () => setIsReferralModalOpen(true) },
     { label: 'Livreurs', icon: <Truck className="h-5 w-5" />, onClick: () => navigate('/mes-livreurs') },
     { label: 'Stats', icon: <BarChart3 className="h-5 w-5" />, onClick: () => navigate('/mes-statistiques') },
-    ...(showMonetisation
-      ? [{ label: 'Paiements', icon: <CreditCard className="h-5 w-5" />, onClick: () => navigate('/mes-paiements') }]
-      : []),
-    ...(isPro
-      ? [{ label: 'Carrousel', icon: <Sparkles className="h-5 w-5 text-amber-500" />, onClick: () => handleTabChange('carousel') }]
-      : []),
+    ...(enableBoost ? [{ label: 'Boosts', icon: <Zap className="h-5 w-5" />, onClick: () => navigate('/acheter-pack') }] : []),
+    ...(showMonetisation ? [{ label: 'Paiements', icon: <CreditCard className="h-5 w-5" />, onClick: () => navigate('/mes-paiements') }] : []),
+    ...(isPro ? [{ label: 'Carrousel', icon: <Sparkles className="h-5 w-5 text-amber-500" />, onClick: () => handleTabChange('carousel') }] : []),
     { label: 'Partager', icon: <Share2 className="h-5 w-5" />, onClick: handleShareShop },
   ];
 
-  const stats: { label: string; value: number; tab: TabId }[] = [
-    { label: 'Actives', value: profileStats.activeCount, tab: 'listings' },
-    { label: 'Vendues', value: profileStats.soldCount, tab: 'listings' },
+  const stats: { label: string; value: number; tab: TabId; filter?: 'active' | 'sold' }[] = [
+    { label: 'Actives', value: profileStats.activeCount, tab: 'listings', filter: 'active' },
+    { label: 'Vendues', value: profileStats.soldCount, tab: 'listings', filter: 'sold' },
     { label: 'Avis', value: profileStats.reviewCount, tab: 'reviews' },
   ];
 
   return (
     <div className="w-full max-w-2xl lg:max-w-5xl mx-auto pb-28 lg:px-6 lg:pb-12 bg-gray-50/70 min-h-screen">
-      {/* ── Bandeau d'identité, aux couleurs DaloaMarket ── */}
       <div className="relative overflow-hidden rounded-b-[32px] bg-gradient-to-br from-orange-500 via-[var(--color-primary)] to-amber-600 px-4 pt-5 pb-16 lg:mt-4 lg:rounded-3xl">
         <div className="pointer-events-none absolute -top-16 -right-10 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
         <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-black/10 blur-2xl" />
@@ -202,19 +154,11 @@ const ProfilePage: React.FC = () => {
           <h1 className="text-lg font-bold text-white">Mon profil</h1>
           <div className="flex items-center gap-2">
             {isAdmin && (
-              <button
-                type="button"
-                onClick={() => navigate('/admin')}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-white/15 px-3 text-xs font-semibold text-white backdrop-blur-md hover:bg-white/25"
-              >
+              <button type="button" onClick={() => navigate('/admin')} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-white/15 px-3 text-xs font-semibold text-white backdrop-blur-md hover:bg-white/25">
                 <Shield className="h-3.5 w-3.5" /> Admin
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => navigate('/settings')}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-white/15 px-3 text-xs font-semibold text-white backdrop-blur-md hover:bg-white/25"
-            >
+            <button type="button" onClick={() => navigate('/settings')} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-white/15 px-3 text-xs font-semibold text-white backdrop-blur-md hover:bg-white/25">
               <Edit3 className="h-3.5 w-3.5" /> Paramètres
             </button>
           </div>
@@ -222,12 +166,7 @@ const ProfilePage: React.FC = () => {
 
         <div className="relative mt-5 flex items-center gap-4">
           <div className="relative shrink-0">
-            <Avatar
-              src={userProfile?.avatar_url}
-              name={userProfile?.full_name}
-              size="xl"
-              className="ring-4 ring-white/30"
-            />
+            <Avatar src={userProfile?.avatar_url} name={userProfile?.full_name} size="xl" className="ring-4 ring-white/30" />
             {isPro && (
               <div className="absolute -bottom-1 -right-1">
                 <ProBadge iconOnly size="sm" ring />
@@ -253,7 +192,6 @@ const ProfilePage: React.FC = () => {
                   <MapPin className="h-3 w-3" /> {userProfile.district}
                 </span>
               )}
-              {/* Daloa Cash Pill */}
               <button
                 type="button"
                 onClick={() => setIsReferralModalOpen(true)}
@@ -262,14 +200,13 @@ const ProfilePage: React.FC = () => {
                 <Gift className="h-3.5 w-3.5 text-emerald-300" />
                 <span>Daloa Cash : {formatPrice(Number((userProfile as any)?.daloa_cash_balance || 0))}</span>
               </button>
-              {/* Anti-Lapin COD Reliability Pill */}
               {(userProfile as any)?.cod_reliability_score != null && (
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold backdrop-blur-md",
+                    'inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold backdrop-blur-md',
                     (userProfile as any)?.cod_blocked_until && new Date((userProfile as any).cod_blocked_until) > new Date()
-                      ? "bg-red-500/30 text-red-100 border border-red-400/40"
-                      : "bg-white/15 text-white"
+                      ? 'bg-red-500/30 text-red-100 border border-red-400/40'
+                      : 'bg-white/15 text-white'
                   )}
                 >
                   <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
@@ -285,7 +222,7 @@ const ProfilePage: React.FC = () => {
             <button
               key={st.label}
               type="button"
-              onClick={() => handleTabChange(st.tab)}
+              onClick={() => handleTabChange(st.tab, st.filter)}
               className="rounded-2xl bg-white/15 px-2 py-2.5 text-center backdrop-blur-md transition-colors hover:bg-white/25"
             >
               <p className="text-lg font-bold leading-none text-white tabular-nums">{st.value}</p>
@@ -296,29 +233,18 @@ const ProfilePage: React.FC = () => {
       </div>
 
       <div className="relative z-10 -mt-10 px-4">
-        {/* ── Raccourcis : toujours à portée de pouce ── */}
-        {/* Colonnes égales : tout est visible, sans défilement horizontal */}
         <div
           className="grid gap-1 rounded-3xl bg-white p-2 shadow-lg shadow-orange-900/5 ring-1 ring-gray-100"
           style={{ gridTemplateColumns: `repeat(${shortcuts.length}, minmax(0, 1fr))` }}
         >
           {shortcuts.map((sc) => (
-            <button
-              key={sc.label}
-              type="button"
-              onClick={sc.onClick}
-              className="flex min-w-0 flex-col items-center gap-1.5 rounded-2xl px-1 py-2.5 text-gray-700 transition-colors hover:bg-orange-50 active:scale-95"
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-[var(--color-primary)]">
-                {sc.icon}
-              </span>
+            <button key={sc.label} type="button" onClick={sc.onClick} className="flex min-w-0 flex-col items-center gap-1.5 rounded-2xl px-1 py-2.5 text-gray-700 transition-colors hover:bg-orange-50 active:scale-95">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-[var(--color-primary)]">{sc.icon}</span>
               <span className="w-full truncate text-center text-[11px] font-semibold">{sc.label}</span>
             </button>
           ))}
         </div>
 
-        {/* Une seule alerte à la fois, la plus urgente : sans compte de retrait,
-            le vendeur ne peut pas être payé. */}
         {(showPayoutWarning || showShopLocationWarning) && (
           <button
             type="button"
@@ -327,18 +253,30 @@ const ProfilePage: React.FC = () => {
           >
             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
             <span className="min-w-0 flex-1 text-sm text-amber-900">
-              {showPayoutWarning
-                ? 'Ajoutez votre compte Mobile Money pour recevoir vos ventes.'
-                : 'Placez votre boutique sur la carte pour calculer les frais de livraison.'}
+              {showPayoutWarning ? 'Ajoutez votre compte Mobile Money pour recevoir vos ventes.' : 'Placez votre boutique sur la carte pour calculer les frais de livraison.'}
             </span>
             <ChevronRight className="h-4 w-4 shrink-0 text-amber-700" />
           </button>
         )}
+
+        {enableSellerBadge && !isPro && (
+          <button
+            type="button"
+            onClick={() => navigate('/devenir-pro')}
+            className="mt-3 flex w-full items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 px-4 py-3 text-left text-white shadow-md shadow-orange-500/20 transition-transform active:scale-[0.99]"
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20"><Sparkles className="h-4 w-4 text-white" /></span>
+              <div className="min-w-0">
+                <p className="text-xs font-extrabold leading-tight">Passer Vendeur Pro</p>
+                <p className="truncate text-[11px] text-orange-100">Badge vérifié, boost offert et vitrine mise en avant</p>
+              </div>
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-white" />
+          </button>
+        )}
       </div>
 
-      {/* ── Onglets : 4 colonnes égales, tout visible sans défiler ──
-          Pas d'icône (c'est elles qui prenaient la largeur) ; le compteur est
-          une bulle posée sur l'angle, qui ne pousse pas le texte. */}
       <div className="sticky top-14 z-20 mt-5 bg-gray-50/95 px-4 py-2.5 backdrop-blur-md lg:top-16">
         <div className={cn('grid gap-1.5', isPro ? 'grid-cols-5' : 'grid-cols-4')}>
           {tabs.map((tab) => {
@@ -351,19 +289,12 @@ const ProfilePage: React.FC = () => {
                 aria-pressed={isSelected}
                 className={cn(
                   'relative flex h-10 items-center justify-center rounded-xl text-[13px] font-semibold transition-colors',
-                  isSelected
-                    ? 'bg-[var(--color-primary)] text-white shadow-md shadow-orange-500/20'
-                    : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:text-gray-900'
+                  isSelected ? 'bg-[var(--color-primary)] text-white shadow-md shadow-orange-500/20' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:text-gray-900'
                 )}
               >
                 {tab.label}
                 {tab.count !== undefined && tab.count > 0 && (
-                  <span
-                    className={cn(
-                      'absolute -top-1.5 -right-1 min-w-[18px] rounded-full px-1 text-center text-[10px] font-bold leading-[18px] ring-2 ring-gray-50',
-                      isSelected ? 'bg-gray-900 text-white' : 'bg-[var(--color-primary)] text-white'
-                    )}
-                  >
+                  <span className={cn('absolute -top-1.5 -right-1 min-w-[18px] rounded-full px-1 text-center text-[10px] font-bold leading-[18px] ring-2 ring-gray-50 tabular-nums', isSelected ? 'bg-gray-900 text-white' : 'bg-[var(--color-primary)] text-white')}>
                     {tab.count}
                   </span>
                 )}
@@ -375,16 +306,9 @@ const ProfilePage: React.FC = () => {
 
       <div className="px-4">
         <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="mt-2"
-          >
+          <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }} className="mt-2">
             {activeTab === 'listings' && (
-              <ProfileListingsTab userId={currentUserId!} activeCount={profileStats.activeCount} />
+              <ProfileListingsTab userId={currentUserId!} activeCount={profileStats.activeCount} initialFilter={listingsFilter} />
             )}
             {activeTab === 'reviews' && <ProfileReviewsTab userId={currentUserId!} />}
             {activeTab === 'favorites' && <ProfileFavoritesTab userId={currentUserId!} />}
@@ -393,36 +317,18 @@ const ProfilePage: React.FC = () => {
           </motion.div>
         </AnimatePresence>
 
-        {/* Actions rares : elles peuvent rester en bas de page */}
         <div className="mt-8 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setIsFeedbackModalOpen(true)}
-            className="flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-3 text-sm font-medium text-gray-700 ring-1 ring-gray-100 hover:bg-gray-50"
-          >
+          <button type="button" onClick={() => setIsFeedbackModalOpen(true)} className="flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-3 text-sm font-medium text-gray-700 ring-1 ring-gray-100 hover:bg-gray-50">
             <MessageSquare className="h-4 w-4 text-[var(--color-primary)]" /> Donner mon avis
           </button>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-3 text-sm font-medium text-red-600 ring-1 ring-gray-100 hover:bg-red-50"
-          >
+          <button type="button" onClick={handleSignOut} className="flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-3 text-sm font-medium text-red-600 ring-1 ring-gray-100 hover:bg-red-50">
             <LogOut className="h-4 w-4" /> Se déconnecter
           </button>
         </div>
       </div>
 
-      <Modal
-        isOpen={isFeedbackModalOpen}
-        onClose={() => setIsFeedbackModalOpen(false)}
-        title="Votre avis compte !"
-        size="lg"
-      >
-        <FeedbackForm
-          userId={currentUserId!}
-          onSuccess={() => setIsFeedbackModalOpen(false)}
-          onCancel={() => setIsFeedbackModalOpen(false)}
-        />
+      <Modal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} title="Votre avis compte !" size="lg">
+        <FeedbackForm userId={currentUserId!} onSuccess={() => setIsFeedbackModalOpen(false)} onCancel={() => setIsFeedbackModalOpen(false)} />
       </Modal>
 
       <ReferralModal
@@ -436,4 +342,3 @@ const ProfilePage: React.FC = () => {
 };
 
 export default ProfilePage;
-

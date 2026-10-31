@@ -13,7 +13,9 @@ interface MiniListingCardProps {
     photos: string[];
     status: string;
     boosted_until?: string | null;
+    isSyntheticOrphan?: boolean;
   };
+  salesCount?: number;
   onMarkSold: (id: string) => void;
   onDelete: (id: string) => void;
   onBoost?: (id: string) => void;
@@ -24,6 +26,7 @@ interface MiniListingCardProps {
 
 const MiniListingCard: React.FC<MiniListingCardProps> = ({
   listing,
+  salesCount = 0,
   onMarkSold,
   onDelete,
   onBoost,
@@ -33,6 +36,15 @@ const MiniListingCard: React.FC<MiniListingCardProps> = ({
   const isBoosted = listing.boosted_until && new Date(listing.boosted_until) > new Date();
   const isActive = listing.status === 'active';
   const isSold = listing.status === 'sold';
+  const isDeleted = listing.status === 'deleted';
+
+  const handleOpen = () => {
+    if (listing.isSyntheticOrphan) {
+      navigate('/mes-commandes');
+      return;
+    }
+    navigate(getListingPath(listing.id, listing.title));
+  };
 
   return (
     <motion.div
@@ -41,9 +53,8 @@ const MiniListingCard: React.FC<MiniListingCardProps> = ({
       className="bg-white rounded-3xl border border-gray-100/90 shadow-md shadow-gray-100 hover:shadow-lg overflow-hidden transition-all flex flex-col justify-between"
     >
       <div>
-        {/* Clickable Image Area */}
         <div
-          onClick={() => navigate(getListingPath(listing.id, listing.title))}
+          onClick={handleOpen}
           className="cursor-pointer group relative aspect-[4/3] bg-gray-100 overflow-hidden"
         >
           {isDisplayablePhotoUrl(listing.photos?.[0]) ? (
@@ -59,58 +70,58 @@ const MiniListingCard: React.FC<MiniListingCardProps> = ({
             </div>
           )}
 
-          {/* Boost Badge */}
-          {isBoosted && (
+          {isBoosted && isActive && (
             <div className="absolute top-2 left-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
               <Zap className="w-2.5 h-2.5 fill-current" />
               <span>Boost</span>
             </div>
           )}
 
-          {/* Status Badge */}
-          <div className="absolute top-2 right-2">
+          <div className="absolute top-2 right-2 flex items-center gap-1">
+            {salesCount > 0 && (
+              <span className="px-2 py-0.5 text-[10px] font-black rounded-full shadow-2xs bg-emerald-600 text-white tabular-nums">
+                {salesCount} vente{salesCount > 1 ? 's' : ''}
+              </span>
+            )}
             <span
               className={`px-2 py-0.5 text-[10px] font-black rounded-full shadow-2xs ${
                 isActive
                   ? 'bg-emerald-500 text-white'
                   : isSold
                   ? 'bg-gray-800 text-white'
+                  : isDeleted
+                  ? 'bg-red-500 text-white'
                   : 'bg-amber-500 text-white'
               }`}
             >
-              {isActive ? 'Actif' : isSold ? 'Vendu' : listing.status}
+              {isActive ? 'Actif' : isSold ? 'Vendu' : isDeleted ? 'Supprimée' : listing.status}
             </span>
           </div>
         </div>
 
-        {/* Title & Price */}
-        <div
-          onClick={() => navigate(getListingPath(listing.id, listing.title))}
-          className="p-3 pb-1 cursor-pointer group"
-        >
+        <div onClick={handleOpen} className="p-3 pb-1 cursor-pointer group">
           <p className="text-xs font-bold text-gray-900 line-clamp-1 group-hover:text-orange-600 transition-colors">
             {listing.title}
           </p>
-          <p className="text-sm font-black text-orange-600 mt-0.5">
+          <p className="text-sm font-black text-orange-600 mt-0.5 tabular-nums">
             {formatPrice(listing.price)}
           </p>
         </div>
       </div>
 
-      {/* Action Buttons */}
       <div className="p-3 pt-1 space-y-2">
         <div className="flex items-center gap-1.5 pt-1">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/create-listing?id=${listing.id}`);
+              navigate(listing.isSyntheticOrphan ? '/create-listing' : `/create-listing?id=${listing.id}`);
             }}
             className="flex-1 h-7 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-black flex items-center justify-center gap-1 active:scale-95 transition-all"
             title="Modifier l'annonce"
           >
             <Edit3 className="w-3 h-3" />
-            <span>Modifier</span>
+            <span>{listing.isSyntheticOrphan ? 'Republier' : 'Modifier'}</span>
           </button>
 
           {isActive && (
@@ -128,20 +139,21 @@ const MiniListingCard: React.FC<MiniListingCardProps> = ({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(listing.id);
-            }}
-            className="w-7 h-7 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center active:scale-95 transition-all"
-            title="Supprimer l'annonce"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          {!isDeleted && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(listing.id);
+              }}
+              className="w-7 h-7 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center active:scale-95 transition-all"
+              title="Supprimer l'annonce"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* Boost CTA */}
         {isActive && onBoost && (
           <div>
             {isBoosted ? (
@@ -160,7 +172,7 @@ const MiniListingCard: React.FC<MiniListingCardProps> = ({
                 className="w-full h-7 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-[10px] font-black shadow-xs flex items-center justify-center gap-1 active:scale-95 transition-all disabled:opacity-50"
               >
                 <Zap className="w-3 h-3 fill-white" />
-                <span>{loadingBoost ? 'Boost en cours...' : 'Booster l\'annonce'}</span>
+                <span>{loadingBoost ? 'Boost en cours...' : "Booster l'annonce"}</span>
               </button>
             )}
           </div>

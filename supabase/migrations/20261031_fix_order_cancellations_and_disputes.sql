@@ -242,3 +242,50 @@ $function$;
 REVOKE EXECUTE ON FUNCTION public.cancel_order_unavailable(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.cancel_order_unavailable(uuid) TO authenticated;
 
+
+-- =============================================================================
+-- 3. RLS LISTINGS : Autoriser le vendeur à lire ses propres annonces (y compris
+--    celles au statut 'deleted') pour que l'onglet « Vendues » affiche bien les
+--    articles ayant fait l'objet de ventes même après suppression de l'annonce.
+-- =============================================================================
+CREATE OR REPLACE FUNCTION public.can_view_listing_via_order(p_listing_id uuid, p_user_id uuid)
+RETURNS boolean AS $$
+BEGIN
+  IF p_user_id IS NULL THEN
+    RETURN false;
+  END IF;
+
+  -- 1. Acheteur ou Vendeur d'une commande contenant cette annonce
+  IF EXISTS (
+    SELECT 1 FROM public.orders o
+    WHERE (o.listing_id = p_listing_id OR EXISTS (
+      SELECT 1 FROM public.order_items oi WHERE oi.order_id = o.id AND oi.listing_id = p_listing_id
+    ))
+    AND (o.buyer_id = p_user_id OR o.seller_id = p_user_id)
+  ) THEN
+    RETURN true;
+  END IF;
+
+  -- 2. Livreur assigné à une commande contenant cette annonce
+  IF EXISTS (
+    SELECT 1 FROM public.orders o
+    JOIN public.delivery_assignments da ON da.order_id = o.id
+    JOIN public.delivery_persons dp ON dp.id = da.delivery_person_id
+    WHERE (o.listing_id = p_listing_id OR EXISTS (
+      SELECT 1 FROM public.order_items oi WHERE oi.order_id = o.id AND oi.listing_id = p_listing_id
+    ))
+    AND dp.user_id = p_user_id
+  ) THEN
+    RETURN true;
+  END IF;
+
+  RETURN false;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+DROP POLICY IF EXISTS "Authors can view own listings" ON public.listings;
+CREATE POLICY "Authors can view own listings"
+ON public.listings
+FOR SELECT
+TO authenticated
+USING (user_id = auth.uid());
