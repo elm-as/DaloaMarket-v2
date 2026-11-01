@@ -49,6 +49,7 @@ import { calculateDeliveryFee } from "../lib/delivery";
 import { affiliatedDeliverersService } from "../services/affiliatedDeliverersService";
 import type { ListingVariant } from "../types/listing";
 import { getOrderQuote, QUOTE_RETRY_REASONS, type ServerQuote } from '../lib/payment';
+import { PromoCodeInputBox, type AppliedPromoCode } from '../components/checkout/PromoCodeInputBox';
 
 interface ListingData {
   id: string;
@@ -508,9 +509,8 @@ const CheckoutPage: React.FC = () => {
     : (deliveryFeesBySeller.size > 0 ? rawSumOfSellerFees : pricing.delivery);
   const groupedDeliverySavings = isGroupedDelivery ? Math.max(0, rawSumOfSellerFees - baseDeliveryCalc) : 0;
 
-  // Daloa Cash & Parrainage (F10)
-  const daloaCashBalance = Number((userProfile as any)?.daloa_cash_balance || 0);
-  const [useDaloaCash, setUseDaloaCash] = useState(false);
+  // Code Promo au checkout final (V2)
+  const [appliedPromo, setAppliedPromo] = useState<AppliedPromoCode | null>(null);
 
   // ── Devis serveur ──
   // À l'étape Paiement, on affiche et on facture le devis du serveur (même
@@ -570,7 +570,7 @@ const CheckoutPage: React.FC = () => {
     ? productAmount + deliveryFee
     : (quoteReady ? serverQuote!.totalAmount : productAmount + deliveryAndFees);
 
-  const applicableDaloaCash = useDaloaCash && !isPickup ? Math.min(daloaCashBalance, deliveryFee) : 0;
+  const applicableDaloaCash = appliedPromo ? Math.min(appliedPromo.discountAmount, rawTotal) : 0;
   const total = Math.max(0, rawTotal - applicableDaloaCash);
   const paymentActionLabel =
     paymentMethod === 'cash_at_shop'
@@ -1334,42 +1334,23 @@ const CheckoutPage: React.FC = () => {
                     </div>
                   )}
 
-                  {applicableDaloaCash > 0 && (
+                  {applicableDaloaCash > 0 && appliedPromo && (
                     <div className="flex justify-between items-center text-emerald-700 bg-emerald-50/70 px-3 py-1.5 rounded-xl border border-emerald-100 font-medium text-xs">
                       <div className="flex items-center gap-1.5">
                         <Gift className="h-3.5 w-3.5 text-emerald-600" />
-                        <span className="font-bold">Cagnotte Daloa Cash déduite</span>
+                        <span className="font-bold">Code promo ({appliedPromo.code})</span>
                       </div>
                       <span className="font-extrabold tabular-nums">-{formatPrice(applicableDaloaCash)}</span>
                     </div>
                   )}
                 </div>
 
-                {daloaCashBalance > 0 && deliveryMode === 'delivery' && (
-                  <div className="p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Gift className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <div>
-                        <p className="text-xs font-bold text-emerald-950">Cagnotte Daloa Cash</p>
-                        <p className="text-[11px] text-emerald-700 font-medium">
-                          Solde : {formatPrice(daloaCashBalance)} (max -{formatPrice(deliveryFee)} sur livraison)
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setUseDaloaCash(!useDaloaCash)}
-                      className={cn(
-                        "px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all",
-                        useDaloaCash
-                          ? "bg-emerald-600 text-white shadow-xs"
-                          : "bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-50"
-                      )}
-                    >
-                      {useDaloaCash ? "Appliqué ✓" : "Déduire"}
-                    </button>
-                  </div>
-                )}
+                <PromoCodeInputBox
+                  orderSubtotal={productAmount}
+                  paymentMethod={paymentMethod}
+                  appliedPromo={appliedPromo}
+                  onApplyPromo={setAppliedPromo}
+                />
 
                 <div className="h-px bg-gray-100" />
 

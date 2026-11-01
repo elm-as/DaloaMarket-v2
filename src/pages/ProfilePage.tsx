@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useSupabase } from '../hooks/useSupabase';
 import { supabase } from '../lib/supabase';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { cn, formatPrice, formatShopShareText, shareWithImage } from '../lib/utils';
+import { cn, formatShopShareText, shareWithImage } from '../lib/utils';
 import { Avatar } from '../components/profile/Avatar';
 import { ProBadge } from '../components/profile/ProBadge';
 import { usePhase } from '../contexts/PhaseContext';
@@ -12,7 +12,7 @@ import toast from 'react-hot-toast';
 import {
   Star, Heart, Package, MapPin, Phone, Store, LogOut, BarChart3,
   CreditCard, AlertTriangle, Share2, Edit3, Shield, Truck,
-  ChevronRight, MessageSquare, Sparkles, Gift, ShieldCheck, Zap,
+  ChevronRight, MessageSquare, Sparkles, ShieldCheck, Zap,
 } from 'lucide-react';
 
 import { ProfileListingsTab } from '../components/profile/ProfileListingsTab';
@@ -21,7 +21,6 @@ import { ProfileFavoritesTab } from '../components/profile/ProfileFavoritesTab';
 import { ProfileShopTab } from '../components/profile/ProfileShopTab';
 import { ProfileCarouselTab } from '../components/profile/ProfileCarouselTab';
 import { FeedbackForm } from '../components/profile/FeedbackForm';
-import { ReferralModal } from '../components/profile/ReferralModal';
 import { Modal } from '../components/ui/Modal';
 
 type TabId = 'listings' | 'reviews' | 'favorites' | 'shop' | 'carousel';
@@ -40,7 +39,7 @@ const ProfilePage: React.FC = () => {
   usePageTitle('Mon profil');
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, userProfile, isAdmin, signOut, refreshUserProfile } = useSupabase();
+  const { user, userProfile, isAdmin, signOut } = useSupabase();
   const { showMonetisation, enableBoost, enableSellerBadge } = usePhase();
 
   const [activeTab, setActiveTab] = useState<TabId>(() => getTabFromParam(searchParams.get('tab')));
@@ -49,7 +48,6 @@ const ProfilePage: React.FC = () => {
   );
   const [profileStats, setProfileStats] = useState({ activeCount: 0, soldCount: 0, reviewCount: 0 });
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-  const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
@@ -114,7 +112,6 @@ const ProfilePage: React.FC = () => {
     { id: 'reviews', label: 'Avis', count: profileStats.reviewCount, icon: <Star className="w-4 h-4" /> },
     { id: 'favorites', label: 'Favoris', icon: <Heart className="w-4 h-4" /> },
     { id: 'shop', label: 'Boutique', icon: <Store className="w-4 h-4" /> },
-    ...(isPro ? [{ id: 'carousel' as TabId, label: 'Carrousel', icon: <Sparkles className="w-4 h-4 text-orange-500" /> }] : []),
   ];
 
   const renderStars = (rating: number) =>
@@ -179,7 +176,7 @@ const ProfilePage: React.FC = () => {
           </div>
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-xl font-bold text-white">{userProfile?.full_name || 'Utilisateur'}</h2>
-            {(userProfile?.phone || userProfile?.district) && (
+            {(userProfile?.phone || userProfile?.district || userProfile?.rating != null) && (
               <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-orange-100">
                 {userProfile?.phone && (
                   <span className="inline-flex items-center gap-1 tabular-nums">
@@ -200,16 +197,8 @@ const ProfilePage: React.FC = () => {
               </div>
             )}
 
-            <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs text-white">
-              <button
-                type="button"
-                onClick={() => setIsReferralModalOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/15 border border-white/25 px-3 py-1 font-bold text-white backdrop-blur-md hover:bg-white/25 transition-colors active:scale-95"
-              >
-                <Gift className="h-3.5 w-3.5 text-amber-200" />
-                <span className="tabular-nums">Parrainage · {formatPrice(Number((userProfile as any)?.daloa_cash_balance || 0))}</span>
-              </button>
-              {showCodWarningBadge && (
+            {showCodWarningBadge && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white">
                 <span
                   className={cn(
                     'inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold backdrop-blur-md',
@@ -221,8 +210,8 @@ const ProfilePage: React.FC = () => {
                   <ShieldCheck className="h-3.5 w-3.5 text-amber-200" />
                   <span className="tabular-nums">Fiabilité COD : {codScore.toFixed(0)}%</span>
                 </span>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -270,7 +259,33 @@ const ProfilePage: React.FC = () => {
           </button>
         )}
 
-        {enableSellerBadge && !isPro && (
+        {isPro ? (
+          <button
+            type="button"
+            onClick={() => handleTabChange(activeTab === 'carousel' ? 'listings' : 'carousel')}
+            className={cn(
+              'mt-3 flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left transition-all active:scale-[0.99]',
+              activeTab === 'carousel'
+                ? 'bg-gray-900 text-white shadow-md'
+                : 'border border-orange-200 bg-gradient-to-r from-orange-50 via-amber-50/70 to-white text-gray-900 shadow-xs'
+            )}
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', activeTab === 'carousel' ? 'bg-orange-500 text-white' : 'bg-orange-500/15 text-orange-600')}>
+                <Sparkles className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-extrabold leading-tight">
+                  {activeTab === 'carousel' ? 'Gestion du Carrousel Accueil VIP' : 'Affiche Carrousel Accueil VIP'}
+                </p>
+                <p className={cn('truncate text-[11px]', activeTab === 'carousel' ? 'text-gray-300' : 'text-gray-600')}>
+                  {activeTab === 'carousel' ? 'Toucher pour revenir à vos annonces' : 'Diffusez votre bannière en tête d’accueil sur mobile & web'}
+                </p>
+              </div>
+            </div>
+            <ChevronRight className={cn('h-4 w-4 shrink-0 transition-transform', activeTab === 'carousel' ? 'rotate-90 text-orange-400' : 'text-orange-600')} />
+          </button>
+        ) : enableSellerBadge ? (
           <button
             type="button"
             onClick={() => navigate('/devenir-pro')}
@@ -280,16 +295,16 @@ const ProfilePage: React.FC = () => {
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20"><Sparkles className="h-4 w-4 text-white" /></span>
               <div className="min-w-0">
                 <p className="text-xs font-extrabold leading-tight">Passer Vendeur Pro</p>
-                <p className="truncate text-[11px] text-orange-100">Badge vérifié, boost offert et vitrine mise en avant</p>
+                <p className="truncate text-[11px] text-orange-100">Badge vérifié, boost offert et affiche carrousel</p>
               </div>
             </div>
             <ChevronRight className="h-4 w-4 shrink-0 text-white" />
           </button>
-        )}
+        ) : null}
       </div>
 
-      <div className="sticky top-14 z-20 mt-5 bg-gray-50/95 px-4 py-2.5 backdrop-blur-md lg:top-16">
-        <div className={cn('grid gap-1.5', isPro ? 'grid-cols-5' : 'grid-cols-4')}>
+      <div className="sticky top-14 z-20 mt-4 bg-gray-50/95 px-4 py-2.5 backdrop-blur-md lg:top-16">
+        <div className="grid grid-cols-4 gap-1.5">
           {tabs.map((tab) => {
             const isSelected = activeTab === tab.id;
             return (
@@ -341,13 +356,6 @@ const ProfilePage: React.FC = () => {
       <Modal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} title="Votre avis compte !" size="lg">
         <FeedbackForm userId={currentUserId!} onSuccess={() => setIsFeedbackModalOpen(false)} onCancel={() => setIsFeedbackModalOpen(false)} />
       </Modal>
-
-      <ReferralModal
-        isOpen={isReferralModalOpen}
-        onClose={() => setIsReferralModalOpen(false)}
-        userProfile={userProfile}
-        onProfileUpdated={refreshUserProfile}
-      />
     </div>
   );
 };

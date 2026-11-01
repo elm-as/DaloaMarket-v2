@@ -5,10 +5,13 @@ import {
   Loader2,
   Eye,
   MousePointerClick,
+  Check,
+  ArrowRight,
+  Store,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
-import { formatPrice } from '../../lib/utils';
+import { cn, formatPrice } from '../../lib/utils';
 import { Card } from '../ui/Card';
 
 interface PromoBannerItem {
@@ -31,14 +34,14 @@ interface BannerPack {
   id: string;
   days: number;
   price: number;
-  label: string;
-  popular?: boolean;
+  tag: string;
+  perDay: number;
 }
 
 const CAROUSEL_PACKS: BannerPack[] = [
-  { id: 'carousel_7d', days: 7, price: 3000, label: '7 jours de diffusion' },
-  { id: 'carousel_14d', days: 14, price: 5000, label: '14 jours de diffusion', popular: true },
-  { id: 'carousel_30d', days: 30, price: 10000, label: '30 jours de diffusion' },
+  { id: 'carousel_7d', days: 7, price: 3000, tag: 'SEMAINE', perDay: 428 },
+  { id: 'carousel_14d', days: 14, price: 5000, tag: 'POPULAIRE', perDay: 357 },
+  { id: 'carousel_30d', days: 30, price: 10000, tag: 'MOIS COMPLET', perDay: 333 },
 ];
 
 export const ProfileCarouselTab: React.FC<{ user: any; userProfile: any }> = ({ user, userProfile }) => {
@@ -53,8 +56,8 @@ export const ProfileCarouselTab: React.FC<{ user: any; userProfile: any }> = ({ 
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [badgeText, setBadgeText] = useState('VEDETTE PRO');
-  const [badgeColor] = useState('#FF9800');
+  const [badgeText] = useState('VEDETTE PRO');
+  const [badgeColor] = useState('#EA580C');
   const [selectedListingId, setSelectedListingId] = useState<string>('');
 
   const fetchSellerData = useCallback(async () => {
@@ -98,18 +101,23 @@ export const ProfileCarouselTab: React.FC<{ user: any; userProfile: any }> = ({ 
   };
 
   const handleSelectListing = (listingId: string) => {
+    if (selectedListingId === listingId) {
+      setSelectedListingId('');
+      return;
+    }
     setSelectedListingId(listingId);
     const listing = userListings.find((l) => l.id === listingId);
     if (listing) {
-      if (!title) setTitle(listing.title.slice(0, 50));
-      if (!imageUrl && listing.photos?.[0]) setImageUrl(listing.photos[0]);
+      setTitle(listing.title.slice(0, 50));
+      if (listing.photos?.[0]) setImageUrl(listing.photos[0]);
+      if (!subtitle) setSubtitle(`Disponible dès maintenant à ${formatPrice(listing.price)}`);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !imageUrl.trim()) {
-      toast.error('Le titre et le visuel sont requis');
+      toast.error('Choisissez un article ou téléversez un visuel avec un titre');
       return;
     }
     const pack = CAROUSEL_PACKS[selectedPackIndex];
@@ -139,7 +147,7 @@ export const ProfileCarouselTab: React.FC<{ user: any; userProfile: any }> = ({ 
       const { error } = await supabase.from('promo_banners').insert(record);
       if (error) throw error;
 
-      toast.success(`Affiche soumise ! Elle sera validée et activée par l'administrateur.`);
+      toast.success("Affiche soumise ! Elle sera activée dès validation par l'équipe.");
       setTitle('');
       setSubtitle('');
       setImageUrl('');
@@ -161,59 +169,254 @@ export const ProfileCarouselTab: React.FC<{ user: any; userProfile: any }> = ({ 
         <h3 className="mb-1 text-base font-extrabold text-gray-900">
           Carrousel Accueil VIP — Exclusivité Vendeurs Pro
         </h3>
-        <p className="mx-auto mb-4 max-w-md text-xs text-gray-600">
-          Faites afficher votre boutique ou vos articles phares tout en haut de l'accueil de l'application
-          DaloaMarket devant des milliers d'acheteurs.
+        <p className="mx-auto max-w-md text-xs text-gray-600">
+          Faites afficher votre boutique ou vos articles phares tout en haut de l'accueil de DaloaMarket devant tous les acheteurs.
         </p>
       </Card>
     );
   }
 
+  const activePack = CAROUSEL_PACKS[selectedPackIndex];
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between rounded-2xl border border-orange-200 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent p-4">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-600 text-white shadow-sm">
-            <Sparkles size={20} />
+    <div className="space-y-4">
+      {/* 1. APERÇU EN DIRECT MOBILE-FIRST */}
+      <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white p-3.5 sm:p-4 shadow-xs">
+        <div className="mb-2.5 flex items-center justify-between">
+          <span className="text-xs font-extrabold text-gray-900">Aperçu en tête d’accueil</span>
+          <span className="rounded-full bg-orange-50 px-2.5 py-0.5 text-[10px] font-bold text-orange-700">
+            Format 16:9 Mobile & Web
           </span>
-          <div>
-            <h3 className="text-sm font-extrabold text-gray-900">Sponsoring Carrousel Accueil VIP</h3>
-            <p className="text-xs text-gray-500">Emplacement n°1 en tête de l’application réservé aux abonnés Pro</p>
+        </div>
+
+        <div className="relative h-40 sm:h-48 w-full overflow-hidden rounded-2xl bg-slate-900">
+          {imageUrl ? (
+            <img src={imageUrl} alt="Aperçu" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-slate-800 to-slate-950 p-4 text-center">
+              <Sparkles className="mb-1.5 h-6 w-6 text-amber-400" />
+              <p className="text-xs font-semibold text-slate-300">
+                Sélectionnez un article ci-dessous ou téléversez une photo
+              </p>
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent p-3.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-2">
+              <span
+                style={{ backgroundColor: badgeColor }}
+                className="rounded-full px-2.5 py-0.5 text-[9px] font-black tracking-wider text-white uppercase"
+              >
+                {badgeText}
+              </span>
+              <span className="rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs truncate max-w-[140px]">
+                {userProfile?.shop_name || userProfile?.full_name || 'Ma Boutique'}
+              </span>
+            </div>
+
+            <div className="flex items-end justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm sm:text-base font-black text-white">
+                  {title || 'Titre de votre affiche promotionnelle'}
+                </p>
+                <p className="truncate text-[11px] text-white/85">
+                  {subtitle || 'Sous-titre ou offre spéciale à Daloa'}
+                </p>
+              </div>
+              <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-orange-600 px-3 py-1.5 text-[11px] font-extrabold text-white">
+                <span>Voir</span>
+                <ArrowRight className="h-3 w-3" />
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* 2. FORMULAIRE DE CRÉATION FLUIDE SUR MOBILE */}
+      <form onSubmit={handleSubmit} className="space-y-4 rounded-3xl border border-gray-200 bg-white p-4 sm:p-5 shadow-xs">
+        {/* Étape A : Choix rapide d'un article avec miniature */}
+        {userListings.length > 0 && (
+          <div>
+            <label className="mb-2 block text-xs font-extrabold text-gray-900">
+              1. Choisir quoi mettre en avant (1 clic)
+            </label>
+            <div className="no-scrollbar -mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
+              <button
+                type="button"
+                onClick={() => setSelectedListingId('')}
+                className={cn(
+                  'flex h-14 shrink-0 items-center gap-2.5 rounded-2xl border px-3 text-left transition-all',
+                  selectedListingId === ''
+                    ? 'border-2 border-orange-500 bg-orange-50/70'
+                    : 'border-gray-200 bg-gray-50/60 hover:border-gray-300'
+                )}
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+                  <Store className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-xs font-bold text-gray-900">Toute ma boutique</p>
+                  <p className="text-[10px] text-gray-500">Vitrine complète</p>
+                </div>
+              </button>
+
+              {userListings.map((item) => {
+                const isSelected = selectedListingId === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleSelectListing(item.id)}
+                    className={cn(
+                      'flex h-14 w-48 shrink-0 items-center gap-2.5 rounded-2xl border p-1.5 pr-3 text-left transition-all',
+                      isSelected
+                        ? 'border-2 border-orange-500 bg-orange-50/70'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    )}
+                  >
+                    <img
+                      src={item.photos?.[0] || ''}
+                      alt={item.title}
+                      className="h-10 w-10 shrink-0 rounded-xl bg-gray-100 object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-bold text-gray-900">{item.title}</p>
+                      <p className="text-[11px] font-extrabold text-orange-600 tabular-nums">
+                        {formatPrice(item.price)}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Étape B : Durée de diffusion (Radio Cards propres) */}
+        <div>
+          <label className="mb-2 block text-xs font-extrabold text-gray-900">
+            2. Durée de diffusion
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {CAROUSEL_PACKS.map((pack, idx) => {
+              const isSelected = selectedPackIndex === idx;
+              return (
+                <button
+                  key={pack.id}
+                  type="button"
+                  onClick={() => setSelectedPackIndex(idx)}
+                  aria-pressed={isSelected}
+                  className={cn(
+                    'relative flex flex-col justify-between rounded-2xl p-2.5 text-left transition-all',
+                    isSelected
+                      ? 'border-2 border-orange-500 bg-orange-50/60'
+                      : 'border border-gray-200 bg-white hover:border-gray-300'
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className={cn('text-[9px] font-black uppercase', isSelected ? 'text-orange-700' : 'text-gray-400')}>
+                      {pack.tag}
+                    </span>
+                    <span
+                      className={cn(
+                        'flex h-4 w-4 items-center justify-center rounded-full border',
+                        isSelected ? 'border-orange-500 bg-orange-500 text-white' : 'border-gray-300 bg-white'
+                      )}
+                    >
+                      {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}
+                    </span>
+                  </div>
+                  <div className="mt-1.5">
+                    <p className="text-xs font-extrabold text-gray-900">{pack.days} jours</p>
+                    <p className={cn('text-sm font-black tabular-nums', isSelected ? 'text-orange-600' : 'text-gray-900')}>
+                      {formatPrice(pack.price)}
+                    </p>
+                    <p className="text-[10px] text-gray-400 tabular-nums">~{pack.perDay} F / j</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Étape C : Textes & Visuel */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-bold text-gray-700">Titre de l’affiche *</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Ex: Arrivage Robes & Chaussures"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-orange-500 focus:bg-white"
+              maxLength={60}
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-bold text-gray-700">Sous-titre / Offre</label>
+            <input
+              type="text"
+              value={subtitle}
+              onChange={(e) => setSubtitle(e.target.value)}
+              placeholder="Ex: -20% cette semaine à Tazibouo"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3 py-2.5 text-xs font-medium text-gray-900 outline-none focus:border-orange-500 focus:bg-white"
+              maxLength={90}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-bold text-gray-700">Image de couverture *</label>
+          <div className="flex gap-2">
+            <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-orange-50/40 px-3 py-2.5 text-xs font-bold text-orange-700 hover:bg-orange-50 transition-colors">
+              {uploading ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
+              <span>{imageUrl ? 'Changer la photo depuis le téléphone' : 'Choisir une photo depuis le téléphone'}</span>
+              <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+            </label>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={creating || uploading || loading}
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 text-xs sm:text-sm font-black text-white shadow-md shadow-orange-600/20 transition-all hover:bg-orange-700 active:scale-[0.99] disabled:opacity-50"
+        >
+          {creating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+          <span>Diffuser {activePack.days} jours · {formatPrice(activePack.price)}</span>
+        </button>
+      </form>
+
+      {/* 3. MES AFFICHES EN DIFFUSION */}
       {banners.length > 0 && (
-        <div className="space-y-3">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">
-            Mes affiches en diffusion ({banners.length})
+        <div className="space-y-2.5">
+          <h4 className="px-1 text-xs font-extrabold uppercase tracking-wider text-gray-500">
+            Mes affiches ({banners.length})
           </h4>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
             {banners.map((b) => {
               const daysLeft = b.ends_at
                 ? Math.ceil((new Date(b.ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
                 : null;
               return (
-                <div key={b.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-                  <div className="relative h-28 w-full bg-gray-100">
-                    <img src={b.image_url} alt={b.title} className="h-full w-full object-cover" />
-                    {b.badge_text && (
+                <div key={b.id} className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-2.5 shadow-2xs">
+                  <img src={b.image_url} alt={b.title} className="h-14 w-20 shrink-0 rounded-xl bg-gray-100 object-cover" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <h5 className="truncate text-xs font-bold text-gray-900">{b.title}</h5>
                       <span
-                        style={{ backgroundColor: b.badge_color || '#FF9800' }}
-                        className="absolute left-2.5 top-2.5 rounded-full px-2 py-0.5 text-[9px] font-black text-white shadow"
+                        className={cn(
+                          'shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold',
+                          !b.is_active ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                        )}
                       >
-                        {b.badge_text}
+                        {!b.is_active ? 'En validation' : daysLeft != null && daysLeft > 0 ? `${daysLeft}j restants` : 'Terminé'}
                       </span>
-                    )}
-                    <span className={`absolute bottom-2 right-2 rounded-lg px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur ${!b.is_active ? 'bg-amber-600/90' : 'bg-black/60'}`}>
-                      {!b.is_active ? 'En attente' : daysLeft != null && daysLeft > 0 ? `Reste ${daysLeft}j` : 'Terminé'}
-                    </span>
-                  </div>
-                  <div className="p-3">
-                    <h5 className="text-xs font-bold text-gray-900 truncate">{b.title}</h5>
-                    <div className="mt-2 flex items-center justify-between text-xs tabular-nums text-gray-500">
-                      <span className="flex items-center gap-1"><Eye size={13} /> {b.views_count} vues</span>
-                      <span className="flex items-center gap-1 font-semibold text-emerald-600"><MousePointerClick size={13} /> {b.clicks_count} clics</span>
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-3 text-[11px] tabular-nums text-gray-500">
+                      <span className="inline-flex items-center gap-1"><Eye size={12} /> {b.views_count} vues</span>
+                      <span className="inline-flex items-center gap-1 font-bold text-orange-600">
+                        <MousePointerClick size={12} /> {b.clicks_count} clics
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -222,123 +425,6 @@ export const ProfileCarouselTab: React.FC<{ user: any; userProfile: any }> = ({ 
           </div>
         </div>
       )}
-
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h4 className="text-sm font-bold text-gray-900">Créer une nouvelle affiche pour le carrousel</h4>
-
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-gray-700">Formule de diffusion</label>
-          <div className="grid grid-cols-3 gap-2">
-            {CAROUSEL_PACKS.map((pack: BannerPack, idx: number) => {
-              const active = selectedPackIndex === idx;
-              return (
-                <button
-                  key={pack.id}
-                  type="button"
-                  onClick={() => setSelectedPackIndex(idx)}
-                  className={`rounded-2xl border p-2.5 text-center transition-all ${
-                    active ? 'border-orange-500 bg-orange-50/70 shadow-sm' : 'border-gray-200 bg-gray-50 hover:border-gray-300'
-                  }`}
-                >
-                  <p className="text-xs font-bold text-gray-900">{pack.days} jours</p>
-                  <p className="text-sm font-black text-orange-600 tabular-nums">{formatPrice(pack.price)} F</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {userListings.length > 0 && (
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-gray-700">
-              Associer à un article de votre boutique (Optionnel)
-            </label>
-            <select
-              value={selectedListingId}
-              onChange={(e) => handleSelectListing(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 outline-none"
-            >
-              <option value="">Rediriger vers toute ma boutique</option>
-              {userListings.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.title} ({formatPrice(l.price)} FCFA)
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-700">Titre de l’affiche *</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Arrivage Robes & Chaussures VIP"
-              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-xs outline-none focus:border-orange-500"
-              maxLength={60}
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-700">Sous-titre / Promo</label>
-            <input
-              type="text"
-              value={subtitle}
-              onChange={(e) => setSubtitle(e.target.value)}
-              placeholder="Ex: -25% cette semaine à Tazibouo"
-              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-xs outline-none focus:border-orange-500"
-              maxLength={100}
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-gray-700">Affiche 16:9 (HD) *</label>
-          <div className="flex gap-2">
-            <input
-              type="url"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://... ou téléverser"
-              className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-xs outline-none focus:border-orange-500"
-            />
-            <label className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100">
-              {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-              <span>Téléverser</span>
-              <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-            </label>
-          </div>
-        </div>
-
-        {imageUrl && (
-          <div className="relative h-28 w-full overflow-hidden rounded-2xl border border-gray-200 bg-gray-900 shadow-inner">
-            <img src={imageUrl} alt="Aperçu" className="h-full w-full object-cover opacity-85" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-3 flex flex-col justify-between">
-              <span
-                style={{ backgroundColor: badgeColor }}
-                className="self-start rounded-full px-2 py-0.5 text-[9px] font-black text-white uppercase shadow"
-              >
-                {badgeText}
-              </span>
-              <div>
-                <p className="text-sm font-extrabold text-white leading-tight">{title || 'Titre de l’affiche'}</p>
-                {subtitle && <p className="text-xs text-white/90">{subtitle}</p>}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={creating || uploading}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-orange-600 font-bold text-white transition-colors hover:bg-orange-700 disabled:opacity-50"
-        >
-          {creating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-          <span>Diffuser sur le Carrousel ({formatPrice(CAROUSEL_PACKS[selectedPackIndex].price)} F)</span>
-        </button>
-      </form>
     </div>
   );
 };

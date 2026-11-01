@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ChevronLeft, ChevronRight, Zap, Gift } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Zap, Sparkles } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
 
@@ -33,15 +33,15 @@ const DEFAULT_BANNERS: WebPromoBanner[] = [
     priority: 10,
   },
   {
-    id: 'default-referral',
-    title: 'Programme Daloa Cash',
-    subtitle: 'Gagnez 500 FCFA pour chaque ami invité sur DaloaMarket',
-    image_url: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=900&q=80',
-    badge_text: 'BONUS +500 F',
-    badge_color: '#16A34A',
-    sponsor_name: 'DaloaMarket',
-    link_type: 'referral',
-    link_target: null,
+    id: 'default-boost',
+    title: 'Vendez 3x plus vite à Daloa',
+    subtitle: 'Placez vos articles en tête des recherches ou passez Vendeur Pro vérifié',
+    image_url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=900&q=80',
+    badge_text: 'VISIBILITÉ N°1',
+    badge_color: '#D97706',
+    sponsor_name: 'DaloaMarket Pro',
+    link_type: 'none',
+    link_target: '/acheter-pack',
     is_active: true,
     priority: 5,
   },
@@ -61,6 +61,7 @@ export const PromoBannersCarousel: React.FC = () => {
       const { data, error } = await (supabase.from('promo_banners' as any) as any)
         .select('id, title, subtitle, image_url, badge_text, badge_color, sponsor_name, link_type, link_target, is_active, priority, starts_at, ends_at')
         .eq('is_active', true)
+        .neq('link_type', 'referral')
         .order('priority', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -101,9 +102,6 @@ export const PromoBannersCarousel: React.FC = () => {
       case 'express':
         navigate('/express');
         return;
-      case 'referral':
-        navigate('/profile');
-        return;
       case 'listing':
         if (banner.link_target) navigate(`/listings/${banner.link_target}`);
         return;
@@ -114,6 +112,7 @@ export const PromoBannersCarousel: React.FC = () => {
         if (banner.link_target) window.open(banner.link_target, '_blank', 'noopener,noreferrer');
         return;
       default:
+        if (banner.link_target) navigate(banner.link_target);
         return;
     }
   };
@@ -129,12 +128,12 @@ export const PromoBannersCarousel: React.FC = () => {
           <div
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
-            className="lg:col-span-8 relative overflow-hidden rounded-3xl border border-orange-100/80 bg-slate-950 shadow-md group"
+            className="lg:col-span-8 relative overflow-hidden rounded-3xl border border-orange-100/80 bg-slate-950 shadow-sm group"
           >
             <button
               type="button"
               onClick={() => handleBannerClick(currentBanner)}
-              className="relative flex h-40 sm:h-48 lg:h-[210px] w-full flex-col justify-between p-4 sm:p-5 text-left transition-transform active:scale-[0.995]"
+              className="relative flex h-36 sm:h-44 lg:h-[200px] w-full flex-col justify-between p-3.5 sm:p-5 text-left transition-transform active:scale-[0.995]"
             >
               <img
                 src={currentBanner.image_url}
@@ -147,7 +146,7 @@ export const PromoBannersCarousel: React.FC = () => {
               <div className="relative z-10 flex items-center justify-between gap-2 w-full">
                 {currentBanner.badge_text ? (
                   <span
-                    className="inline-flex items-center rounded-full px-3 py-1 text-[10px] font-black tracking-wider text-white uppercase shadow-sm"
+                    className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[9.5px] font-black tracking-wider text-white uppercase shadow-sm"
                     style={{ backgroundColor: currentBanner.badge_color || '#EA580C' }}
                   >
                     {currentBanner.badge_text}
@@ -158,7 +157,7 @@ export const PromoBannersCarousel: React.FC = () => {
 
                 <div className="flex items-center gap-1.5">
                   {currentBanner.sponsor_name && (
-                    <span className="rounded-full bg-slate-900/70 border border-white/20 px-2.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs truncate max-w-[150px]">
+                    <span className="rounded-full bg-slate-900/70 border border-white/20 px-2.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs truncate max-w-[140px]">
                       {currentBanner.sponsor_name}
                     </span>
                   )}
@@ -171,20 +170,20 @@ export const PromoBannersCarousel: React.FC = () => {
               </div>
 
               <div className="relative z-10 flex items-end justify-between gap-3 w-full">
-                <div className="min-w-0 flex-1 space-y-1">
-                  <h3 className="text-base sm:text-xl font-black text-white leading-tight line-clamp-1 drop-shadow-xs">
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <h3 className="text-sm sm:text-lg font-black text-white leading-tight line-clamp-1">
                     {currentBanner.title}
                   </h3>
                   {currentBanner.subtitle && (
-                    <p className="max-w-lg text-xs text-white/90 font-medium line-clamp-2">
+                    <p className="max-w-lg text-[11px] sm:text-xs text-white/90 font-medium line-clamp-1 sm:line-clamp-2">
                       {currentBanner.subtitle}
                     </p>
                   )}
                 </div>
 
-                <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-orange-600 px-3.5 py-2 text-xs font-extrabold text-white shadow-md shadow-orange-950/30 group-hover:bg-orange-500 transition-colors">
-                  <span>J'en profite</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
+                <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-orange-600 px-3 py-1.5 text-[11px] font-extrabold text-white shadow-sm group-hover:bg-orange-500 transition-colors">
+                  <span>Découvrir</span>
+                  <ArrowRight className="h-3 w-3" />
                 </span>
               </div>
             </button>
@@ -213,25 +212,11 @@ export const PromoBannersCarousel: React.FC = () => {
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
-                <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5">
-                  {banners.map((b, idx) => (
-                    <button
-                      key={b.id}
-                      type="button"
-                      aria-label={`Aller à l'affiche ${idx + 1}`}
-                      onClick={() => setActiveIndex(idx)}
-                      className={cn(
-                        'h-1.5 rounded-full transition-all',
-                        idx === activeIndex ? 'w-6 bg-amber-400' : 'w-1.5 bg-white/50 hover:bg-white/80'
-                      )}
-                    />
-                  ))}
-                </div>
               </>
             )}
           </div>
 
-          <div className="hidden lg:flex lg:col-span-4 flex-col gap-3 h-[210px]">
+          <div className="hidden lg:flex lg:col-span-4 flex-col gap-3 h-[200px]">
             <button
               type="button"
               onClick={() => navigate('/express')}
@@ -251,17 +236,17 @@ export const PromoBannersCarousel: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => navigate('/profile')}
-              className="flex-1 flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 p-3.5 text-left text-white shadow-sm hover:opacity-95 transition-opacity"
+              onClick={() => navigate('/acheter-pack')}
+              className="flex-1 flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-3.5 text-left text-white shadow-sm hover:opacity-95 transition-opacity"
             >
               <div className="min-w-0 space-y-0.5">
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-black uppercase">
-                  <Gift className="h-3 w-3" /> Bonus Parrainage
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-black uppercase text-amber-300">
+                  <Sparkles className="h-3 w-3" /> Visibilité Vendeur
                 </span>
-                <p className="text-sm font-black leading-tight">Programme Daloa Cash</p>
-                <p className="text-[11px] text-emerald-100 font-semibold tabular-nums">+500 FCFA par ami invité</p>
+                <p className="text-sm font-black leading-tight">Booster mes annonces</p>
+                <p className="text-[11px] text-slate-300 font-semibold tabular-nums">En tête de liste dès 100 FCFA</p>
               </div>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10">
                 <ArrowRight className="h-4 w-4" />
               </span>
             </button>
