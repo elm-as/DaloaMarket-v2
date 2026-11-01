@@ -287,7 +287,7 @@ export const ProfileListingsTab: React.FC<ProfileListingsTabProps> = ({
               salesCount={salesByListing[listing.id] || 0}
               onMarkSold={handleMarkSold}
               onDelete={handleDeleteClick}
-              onBoost={openBoostModal}
+              onBoost={enableBoost ? openBoostModal : undefined}
               loadingBoost={boostingListingId === listing.id}
             />
           ))}
