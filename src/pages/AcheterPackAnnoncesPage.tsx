@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Zap, Sparkles, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Zap, Sparkles, ShieldCheck, CheckCircle2, AlertCircle, Check } from 'lucide-react';
 import { useSupabase } from '../hooks/useSupabase';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useSystemSettings } from '../hooks/useSystemSettings';
@@ -16,10 +16,10 @@ const PAYMENT_METHODS = [
   { id: 'moov', label: 'Moov Money', color: 'border-emerald-300 bg-emerald-50 text-emerald-800' },
 ];
 
-const PACKS_META: Record<string, { tag: string; tagClass: string; unitPrice: number; savings?: string }> = {
-  credits_pack_5: { tag: 'DÉCOUVERTE', tagClass: 'bg-gray-100 text-gray-700', unitPrice: 100 },
-  credits_pack_12: { tag: 'LE PLUS POPULAIRE', tagClass: 'bg-orange-100 text-orange-800', unitPrice: 83, savings: '-17%' },
-  credits_pack_30: { tag: 'MEILLEURE VALEUR', tagClass: 'bg-emerald-100 text-emerald-800', unitPrice: 67, savings: '-33%' },
+const PACKS_META: Record<string, { tag: string; unitPrice: number; savings?: string }> = {
+  credits_pack_5: { tag: 'DÉCOUVERTE', unitPrice: 100 },
+  credits_pack_12: { tag: 'POPULAIRE', unitPrice: 83, savings: '-17%' },
+  credits_pack_30: { tag: 'MEILLEURE OFFRE', unitPrice: 67, savings: '-33%' },
 };
 
 export default function AcheterPackAnnoncesPage() {
@@ -49,7 +49,7 @@ export default function AcheterPackAnnoncesPage() {
   }
 
   const selectedPack = CREDIT_PACKS.find((p) => p.id === selectedPackId) || CREDIT_PACKS[1];
-  const currentBalance = (userProfile as any)?.boost_credits ?? 0;
+  const currentBalance = (userProfile as any)?.boost_credits ?? userProfile?.listing_credits ?? 0;
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,7 +135,7 @@ export default function AcheterPackAnnoncesPage() {
           </div>
           <div className="flex items-center gap-1.5 rounded-full border border-white/20 bg-black/20 px-3 py-1.5 text-xs font-black backdrop-blur-md">
             <Zap className="h-3.5 w-3.5 fill-amber-300 text-amber-300" />
-            <span className="tabular-nums">{currentBalance}</span> crédits
+            <span className="tabular-nums">{currentBalance}</span> crédit{currentBalance > 1 ? 's' : ''}
           </div>
         </div>
       </header>
@@ -154,40 +154,60 @@ export default function AcheterPackAnnoncesPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {CREDIT_PACKS.map((pack) => {
               const isSelected = selectedPackId === pack.id;
-              const meta = PACKS_META[pack.id] || { tag: 'PACK', tagClass: 'bg-gray-100 text-gray-700', unitPrice: 100 };
-              const isPopular = pack.id === 'credits_pack_12';
+              const meta = PACKS_META[pack.id] || { tag: 'PACK', unitPrice: 100 };
 
               return (
                 <button
                   key={pack.id}
                   type="button"
                   onClick={() => setSelectedPackId(pack.id)}
+                  aria-pressed={isSelected}
                   className={cn(
                     'relative flex flex-col justify-between rounded-3xl p-4 text-left transition-all',
                     isSelected
-                      ? 'border-2 border-orange-500 bg-orange-50/40 shadow-lg shadow-orange-500/10'
-                      : isPopular
-                      ? 'border-2 border-orange-200 bg-white shadow-xs hover:border-orange-300'
+                      ? 'border-2 border-orange-500 bg-orange-50/60 shadow-lg shadow-orange-500/10 ring-2 ring-orange-500/20'
                       : 'border border-gray-200 bg-white hover:border-gray-300'
                   )}
                 >
                   <div>
                     <div className="mb-2 flex items-center justify-between gap-1">
-                      <span className={cn('rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider', meta.tagClass)}>
+                      <span
+                        className={cn(
+                          'rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider',
+                          isSelected ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-600'
+                        )}
+                      >
                         {meta.tag}
                       </span>
-                      {meta.savings && (
-                        <span className="flex items-center gap-0.5 text-[10px] font-bold text-emerald-700">
-                          <Sparkles className="h-3 w-3" /> {meta.savings}
+                      <div className="flex items-center gap-1.5">
+                        {meta.savings && (
+                          <span className="flex items-center gap-0.5 text-[10px] font-bold text-emerald-700">
+                            <Sparkles className="h-3 w-3" /> {meta.savings}
+                          </span>
+                        )}
+                        <span
+                          className={cn(
+                            'flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors',
+                            isSelected
+                              ? 'border-orange-500 bg-orange-500 text-white'
+                              : 'border-gray-300 bg-white'
+                          )}
+                        >
+                          {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
                         </span>
-                      )}
+                      </div>
                     </div>
                     <p className="text-base font-black text-gray-900">{pack.label}</p>
                     <p className="text-xs font-semibold text-gray-500">{pack.credits} crédits de mise en avant</p>
                   </div>
 
                   <div className="mt-4 border-t border-gray-100 pt-3">
-                    <p className="text-xl font-black text-orange-600 tabular-nums">
+                    <p
+                      className={cn(
+                        'text-xl font-black tabular-nums',
+                        isSelected ? 'text-orange-600' : 'text-gray-900'
+                      )}
+                    >
                       {Number(pack.price).toLocaleString('fr-FR')} <span className="text-xs font-bold text-gray-500">FCFA</span>
                     </p>
                     <p className="text-[11px] font-medium text-gray-400 tabular-nums">~{meta.unitPrice} FCFA / crédit</p>

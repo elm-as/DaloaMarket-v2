@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ChevronLeft, ChevronRight, Zap, Gift, Flame, Sparkles } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Zap, Gift } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
-import { usePhase } from '../../contexts/PhaseContext';
 
 export interface WebPromoBanner {
   id: string;
@@ -25,7 +24,7 @@ const DEFAULT_BANNERS: WebPromoBanner[] = [
     title: 'Coursier Express Daloa',
     subtitle: 'Envoi direct de colis, plis et repas entre quartiers dès 500 FCFA',
     image_url: 'https://images.unsplash.com/photo-1526367790999-0150786686a2?auto=format&fit=crop&w=900&q=80',
-    badge_text: '⚡ EXPRESS · DÈS 500 F',
+    badge_text: 'EXPRESS · DÈS 500 F',
     badge_color: '#EA580C',
     sponsor_name: 'DaloaDelivery',
     link_type: 'express',
@@ -38,7 +37,7 @@ const DEFAULT_BANNERS: WebPromoBanner[] = [
     title: 'Programme Daloa Cash',
     subtitle: 'Gagnez 500 FCFA pour chaque ami invité sur DaloaMarket',
     image_url: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=900&q=80',
-    badge_text: '🎁 BONUS +500 F',
+    badge_text: 'BONUS +500 F',
     badge_color: '#16A34A',
     sponsor_name: 'DaloaMarket',
     link_type: 'referral',
@@ -52,7 +51,6 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 export const PromoBannersCarousel: React.FC = () => {
   const navigate = useNavigate();
-  const { enableBoost, enableSellerBadge } = usePhase();
   const [banners, setBanners] = useState<WebPromoBanner[]>(DEFAULT_BANNERS);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -126,10 +124,8 @@ export const PromoBannersCarousel: React.FC = () => {
 
   return (
     <section className="px-4 pt-3 pb-1">
-      <div className="mx-auto max-w-2xl lg:max-w-5xl space-y-2.5">
-        {/* Grille Bento Hero façon Jumia Desktop (8 cols Carrousel + 4 cols Promos Latérales) */}
+      <div className="mx-auto max-w-2xl lg:max-w-5xl">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-          {/* Carrousel Principal (8 colonnes sur Desktop) */}
           <div
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
@@ -138,7 +134,7 @@ export const PromoBannersCarousel: React.FC = () => {
             <button
               type="button"
               onClick={() => handleBannerClick(currentBanner)}
-              className="relative flex h-44 sm:h-52 lg:h-[224px] w-full flex-col justify-between p-4 sm:p-5 text-left transition-transform active:scale-[0.995]"
+              className="relative flex h-40 sm:h-48 lg:h-[210px] w-full flex-col justify-between p-4 sm:p-5 text-left transition-transform active:scale-[0.995]"
             >
               <img
                 src={currentBanner.image_url}
@@ -146,7 +142,6 @@ export const PromoBannersCarousel: React.FC = () => {
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                 loading="lazy"
               />
-              {/* Dégradé directionnel préservant la clarté de l'image produit */}
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/45 to-slate-950/10" />
 
               <div className="relative z-10 flex items-center justify-between gap-2 w-full">
@@ -236,8 +231,7 @@ export const PromoBannersCarousel: React.FC = () => {
             )}
           </div>
 
-          {/* 2 Cartes Promos Empilées à droite sur Desktop (façon Jumia 4 cols) */}
-          <div className="hidden lg:flex lg:col-span-4 flex-col gap-3 h-[224px]">
+          <div className="hidden lg:flex lg:col-span-4 flex-col gap-3 h-[210px]">
             <button
               type="button"
               onClick={() => navigate('/express')}
@@ -272,51 +266,6 @@ export const PromoBannersCarousel: React.FC = () => {
               </span>
             </button>
           </div>
-        </div>
-
-        {/* Barre de raccourcis rapides Jumia (Mobile + Desktop) */}
-        <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-0.5">
-          <button
-            type="button"
-            onClick={() => {
-              const el = document.getElementById('flash-deals-section');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-              else navigate('/search');
-            }}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-extrabold text-red-700 hover:bg-red-100 transition-colors"
-          >
-            <Flame className="h-3.5 w-3.5 text-red-600" />
-            <span>Ventes Flash</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/express')}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-extrabold text-orange-800 hover:bg-orange-100 transition-colors tabular-nums"
-          >
-            <Zap className="h-3.5 w-3.5 text-orange-600" />
-            <span>Coursier dès 500 F</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/profile')}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-extrabold text-emerald-800 hover:bg-emerald-100 transition-colors tabular-nums"
-          >
-            <Gift className="h-3.5 w-3.5 text-emerald-600" />
-            <span>Daloa Cash +500 F</span>
-          </button>
-
-          {(enableBoost || enableSellerBadge) && (
-            <button
-              type="button"
-              onClick={() => navigate(enableBoost ? '/acheter-pack' : '/devenir-pro')}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-extrabold text-amber-900 hover:bg-amber-100 transition-colors"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-amber-600" />
-              <span>{enableBoost ? 'Booster mes annonces' : 'Pass Vendeur Pro'}</span>
-            </button>
-          )}
         </div>
       </div>
     </section>

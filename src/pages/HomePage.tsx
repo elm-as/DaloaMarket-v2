@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertTriangle,
   ArrowRight,
@@ -10,7 +9,6 @@ import {
   ChevronRight,
   Dumbbell,
   Home,
-  Lock,
   MapPin,
   Monitor,
   Plus,
@@ -22,19 +20,16 @@ import {
   Tag,
   Zap,
   Package,
-  Flame,
 } from 'lucide-react';
 
 import { useSupabase } from '../hooks/useSupabase';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useSEO } from '../hooks/useSEO';
-import { formatPrice, interleaveBoosted, diversifySellers, CATEGORIES, cn } from '../lib/utils';
+import { interleaveBoosted, diversifySellers, CATEGORIES, cn } from '../lib/utils';
 import { getCategoryById, getCategoryPath } from '../lib/categoryCatalog';
 import { Button } from '../components/ui/Button';
-import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { useCart } from '../contexts/CartContext';
-import { usePhase } from '../contexts/PhaseContext';
 import { SectionHeader } from '../components/ui/SectionHeader';
 import ListingCard from '../components/listings/ListingCard';
 import ListingCardSkeleton from '../components/listings/ListingCardSkeleton';
@@ -107,9 +102,8 @@ interface CachedFeed {
   timestamp: number;
 }
 
-// Module-level cache to ensure instantaneous rendering and pixel-perfect scroll restoration when returning to Home
 const homeFeedCache = new Map<string, CachedFeed>();
-const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes fresh cache
+const CACHE_TTL_MS = 3 * 60 * 1000;
 
 const HomePage: React.FC = () => {
   useSEO('Accueil', {
@@ -118,7 +112,6 @@ const HomePage: React.FC = () => {
     canonical: 'https://daloamarket.com'
   });
   const navigate = useNavigate();
-  const { isPhase0 } = usePhase();
   const { user, userProfile } = useSupabase();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -130,7 +123,6 @@ const HomePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showLocationWarning, setShowLocationWarning] = useState(false);
 
-  // Hydrate le moteur de reco avec les favoris Supabase de l'utilisateur (persistant, cross-device)
   useEffect(() => {
     if (!user?.id) return;
     (async () => {
@@ -197,10 +189,8 @@ const HomePage: React.FC = () => {
     const isCacheFresh = cached && (Date.now() - cached.timestamp < CACHE_TTL_MS);
 
     if (cached) {
-      // Instantly serve from cache
       setListings(cached.listings);
       setLoading(false);
-      // If cache is still fresh, no need to refetch right now
       if (isCacheFresh) return;
     } else {
       setLoading(true);
@@ -209,7 +199,6 @@ const HomePage: React.FC = () => {
     setError(null);
     try {
       if (cat === 'all') {
-        // Mode général : annonces boostées + dernières annonces diversifiées
         const { data: boostedData } = await supabase
           .from('listings')
           .select('*, users!listings_user_id_fkey(full_name, avatar_url)')
@@ -239,7 +228,6 @@ const HomePage: React.FC = () => {
         homeFeedCache.set(cat, { listings: finalList, timestamp: Date.now() });
         setListings(finalList);
       } else {
-        // Mode catégorie ciblée : interroger la base avec tous les synonymes
         const synonyms = CATEGORY_SYNONYMS[cat] || [cat];
         const { data, error: fetchError } = await supabase
           .from('listings')
@@ -265,7 +253,6 @@ const HomePage: React.FC = () => {
     }
   }, []);
 
-  // Déclencher la recherche dès que la catégorie sélectionnée change
   useEffect(() => {
     fetchListings(selectedCategory);
   }, [selectedCategory, fetchListings]);
@@ -292,12 +279,6 @@ const HomePage: React.FC = () => {
     cart_qty: cartQtyByListingId[l.id] || 0,
   });
 
-  /* Une seule section de recommandations, comme sur mobile.
-     « Populaire à Daloa » et « Pour vous » puisaient dans la même liste que le
-     fil « Dernières annonces » juste en dessous : le même article pouvait
-     apparaître trois fois sur un écran. Le personnalisé passe devant, la
-     tendance complète les places libres, et les articles déjà visibles en tête
-     de fil sont écartés. */
   const forYouRecommendations = useMemo(() => {
     if (selectedCategory !== 'all' || listings.length === 0) return [];
 
@@ -317,11 +298,6 @@ const HomePage: React.FC = () => {
 
   const currentCategoryObj = CATEGORIES.find((cat) => cat.id === selectedCategory);
 
-  /**
-   * « Tout voir » mène au rayon (`/maison-deco`), pas à la recherche filtrée :
-   * la page catégorie est le parcours de navigation, la recherche sert aux
-   * requêtes texte. C'est aussi ce qui donne à ces URL leur maillage interne.
-   */
   const browseAllPath = useCallback(() => {
     if (selectedCategory === 'all') return '/search';
     const target = getCategoryById(selectedCategory);
@@ -353,190 +329,79 @@ const HomePage: React.FC = () => {
         </div>
       )}
 
-      {/* HERO — DESIGN HARMONISÉ */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary via-orange-600 to-amber-700 px-4 pt-6 pb-12 rounded-b-[36px] shadow-lg shadow-orange-500/20 sm:px-6 md:pb-16 md:pt-10 lg:px-12">
+      {/* HERO COMPACT */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-primary via-orange-600 to-amber-700 px-4 pt-5 pb-7 rounded-b-[32px] shadow-md shadow-orange-500/15 sm:px-6 md:py-8 lg:px-12">
         <div className="pointer-events-none absolute -top-12 -right-10 w-48 h-48 rounded-full bg-white/15 blur-2xl" />
-        <div className="pointer-events-none absolute -bottom-14 -left-8 w-36 h-36 rounded-full bg-black/10 blur-xl" />
 
         <div className="relative z-10 mx-auto max-w-2xl lg:max-w-5xl">
-          <div className="lg:flex lg:items-center lg:justify-between lg:gap-12">
+          <div className="lg:flex lg:items-center lg:justify-between lg:gap-10">
             <div className="flex-1 text-left">
-              {/* Badge Local */}
-              <div className="mb-2.5 inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md px-3.5 py-1 text-[11px] font-black text-white border border-white/20 shadow-xs">
-                <Sparkles className="w-3.5 h-3.5 text-amber-200 fill-amber-200" />
+              <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md px-3 py-0.5 text-[11px] font-black text-white border border-white/20">
+                <Sparkles className="w-3 h-3 text-amber-200 fill-amber-200" />
                 <span>Marketplace & Livraison · Daloa</span>
               </div>
 
-              {/* Headline */}
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-[1.12]">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white leading-[1.15]">
                 Tout Daloa,{' '}
-                <span className="bg-gradient-to-r from-amber-200 via-amber-100 to-yellow-200 bg-clip-text text-transparent block sm:inline">
+                <span className="bg-gradient-to-r from-amber-200 via-amber-100 to-yellow-200 bg-clip-text text-transparent">
                   au même endroit.
                 </span>
               </h1>
 
-              {/* Subtitle */}
-              <p className="mt-2.5 max-w-md text-xs sm:text-sm font-medium text-orange-100/90 leading-relaxed">
-                Achetez et vendez en toute confiance. Paiement séquestre garanti et livraison géolocalisée.
+              <p className="mt-1.5 max-w-md text-xs sm:text-sm font-medium text-orange-100/90 leading-relaxed">
+                Achetez et vendez en toute confiance. Paiement garanti et livraison géolocalisée.
               </p>
 
-              {/* Search Bar & Actions */}
-              <div className="mt-4 max-w-xl space-y-2.5">
+              <div className="mt-3.5 max-w-xl flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <Link
                   to="/search"
-                  className="flex h-12 w-full items-center gap-3 rounded-2xl bg-white px-3.5 text-left shadow-xl shadow-orange-950/15 transition-all active:scale-[0.99] border border-orange-100/60 group"
+                  className="flex h-11 flex-1 items-center gap-2.5 rounded-2xl bg-white px-3.5 text-left shadow-lg shadow-orange-950/15 transition-all active:scale-[0.99] border border-orange-100/60 group"
                   aria-label="Rechercher une annonce"
                 >
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-orange-50 text-orange-600 flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-orange-50 text-orange-600 flex-shrink-0">
                     <Search className="h-4 w-4" />
                   </div>
-                  <span className="flex-1 text-xs sm:text-sm font-semibold text-gray-400">
+                  <span className="flex-1 truncate text-xs sm:text-sm font-semibold text-gray-400">
                     Rechercher un produit, un quartier...
                   </span>
-                  <span className="flex items-center gap-1 text-[11px] font-extrabold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-xl">
-                    Explorer <ArrowRight className="h-3 w-3" />
-                  </span>
+                  <ArrowRight className="h-4 w-4 text-orange-600 shrink-0" />
                 </Link>
 
-                <div className="flex items-center gap-2">
-                  <Link
-                    to="/create-listing"
-                    className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-white px-4 text-xs font-black text-orange-600 shadow-md shadow-orange-950/10 hover:bg-orange-50 active:scale-95 transition-all"
-                  >
-                    <Plus className="h-4 w-4 stroke-[3]" />
-                    <span>Publier une annonce</span>
-                  </Link>
-                  <Link
-                    to="/search"
-                    className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 px-4 text-xs font-extrabold text-white hover:bg-white/30 active:scale-95 transition-all"
-                  >
-                    <span>Tout le catalogue</span>
-                  </Link>
-                </div>
+                <Link
+                  to="/create-listing"
+                  className="inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-2xl bg-gray-900/25 backdrop-blur-md border border-white/30 px-4 text-xs font-black text-white hover:bg-gray-900/35 active:scale-95 transition-all"
+                >
+                  <Plus className="h-4 w-4 stroke-[3]" />
+                  <span>Publier une annonce</span>
+                </Link>
               </div>
             </div>
 
-            {/* Desktop Side Highlights */}
-            <div className="hidden w-64 grid-cols-1 gap-3 lg:grid">
-              <div className="rounded-3xl border border-white/30 bg-white/20 backdrop-blur-md p-4 text-white shadow-lg">
-                <div className="flex items-center gap-2.5 mb-1">
-                  <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
-                    <Shield className="h-4 w-4 text-white" />
-                  </div>
-                  <span className="text-xs font-black">Séquestre Escrow</span>
+            <div className="hidden w-60 grid-cols-1 gap-2.5 lg:grid">
+              <div className="rounded-2xl border border-white/25 bg-white/15 backdrop-blur-md p-3.5 text-white">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <Shield className="h-4 w-4 text-amber-200" />
+                  <span className="text-xs font-black">Paiement Garanti</span>
                 </div>
-                <p className="text-[11px] text-orange-100 font-medium">Fonds bloqués jusqu'à confirmation OTP</p>
+                <p className="text-[11px] text-orange-100 font-medium">Séquestre sécurisé ou paiement à la livraison</p>
               </div>
 
-              <div className="rounded-3xl border border-white/30 bg-white/20 backdrop-blur-md p-4 text-white shadow-lg">
-                <div className="flex items-center gap-2.5 mb-1">
-                  <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
-                    <MapPin className="h-4 w-4 text-white" />
-                  </div>
+              <div className="rounded-2xl border border-white/25 bg-white/15 backdrop-blur-md p-3.5 text-white">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <MapPin className="h-4 w-4 text-amber-200" />
                   <span className="text-xs font-black">100% Daloa</span>
                 </div>
-                <p className="text-[11px] text-orange-100 font-medium">Commerçants & livreurs de proximité</p>
+                <p className="text-[11px] text-orange-100 font-medium">Commerçants & coursiers de proximité</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* FLOATING TRUST STRIP */}
-      <section className="relative z-20 -mt-6 px-4">
-        <div className="mx-auto max-w-2xl bg-white rounded-3xl p-3 border border-gray-100 shadow-lg shadow-gray-200/50 flex items-center justify-around gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-              <Shield className="h-4 w-4" />
-            </div>
-            <div className="text-left">
-              <span className="text-xs font-extrabold text-gray-900 block leading-tight">Escrow</span>
-              <span className="text-[10px] text-gray-400 font-semibold hidden sm:inline">Paiement garanti</span>
-            </div>
-          </div>
-
-          <div className="h-5 w-px bg-gray-100" />
-
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center flex-shrink-0">
-              <MapPin className="h-4 w-4" />
-            </div>
-            <div className="text-left">
-              <span className="text-xs font-extrabold text-gray-900 block leading-tight">Local</span>
-              <span className="text-[10px] text-gray-400 font-semibold hidden sm:inline">Vendeurs Daloa</span>
-            </div>
-          </div>
-
-          <div className="h-5 w-px bg-gray-100" />
-
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
-              {isPhase0 ? <Sparkles className="h-4 w-4" /> : <Bike className="h-4 w-4" />}
-            </div>
-            {/* « Sans commission » n'est vrai qu'en phase 0 : en phase 1, on met en avant la livraison. */}
-            <div className="text-left">
-              <span className="text-xs font-extrabold text-gray-900 block leading-tight">{isPhase0 ? 'Gratuit' : 'Livraison'}</span>
-              <span className="text-[10px] text-gray-400 font-semibold hidden sm:inline">{isPhase0 ? 'Sans commission' : 'Par coursier'}</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CARROUSEL PUBLICITAIRE & AFFICHES V2 */}
-      <PromoBannersCarousel />
-
-      {/* VENTES FLASH & PROMOS FAÇON JUMIA */}
-      <WebFlashDealsSection />
-
-      {/* DALOADELIVERY LINK BANNER & COURSIER EXPRESS */}
-      <section className="px-4 pt-2 pb-1">
-        <div className="max-w-2xl lg:max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <Link
-            to="/express"
-            className="flex items-center justify-between gap-2.5 px-3.5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-2xl shadow-xs no-underline active:scale-[0.99] hover:opacity-95 transition-all group"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-xl bg-white/20 text-white flex items-center justify-center flex-shrink-0">
-                <Zap className="w-4 h-4" />
-              </div>
-              <p className="text-xs font-extrabold text-white truncate">
-                Coursier Express · <span className="text-amber-100 font-semibold">Colis & Plis dès 500 F</span>
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-white flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
-
-          <a
-            href="https://delivery.daloamarket.com/annuaire"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-between gap-2.5 px-3.5 py-2.5 bg-white rounded-2xl shadow-xs border border-orange-100/80 no-underline active:scale-[0.99] hover:bg-orange-50/50 transition-all group"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-xl bg-orange-50 text-primary flex items-center justify-center flex-shrink-0">
-                <Bike className="w-4 h-4" />
-              </div>
-              <p className="text-xs font-medium text-gray-700 truncate">
-                Annuaire des coursiers · <span className="text-primary font-black">DaloaDelivery</span>
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-primary flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
-          </a>
-        </div>
-      </section>
-
-      {/* CATEGORY SELECTOR STRIP — PILLS COMPACTES ET FLUIDES */}
+      {/* CATEGORY SELECTOR STRIP — DIRECTEMENT ACCESSIBLE */}
       <section className="pt-3 pb-1">
         <div className="px-4 lg:px-8 max-w-5xl mx-auto">
-          <SectionHeader
-            title="Explorer par catégorie"
-            action={{
-              label: 'Tout voir',
-              to: browseAllPath(),
-            }}
-          />
           <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 -mx-4 px-4 sm:mx-0 sm:px-0">
-            {/* Pill: Toutes les annonces */}
             <button
               type="button"
               onClick={() => setSelectedCategory('all')}
@@ -552,7 +417,6 @@ const HomePage: React.FC = () => {
               <span>Toutes</span>
             </button>
 
-            {/* Category Pills */}
             {CATEGORIES.map((cat) => {
               const isSelected = selectedCategory === cat.id;
               const style = CATEGORY_STYLE[cat.id] || {
@@ -585,13 +449,21 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
+      {/* CARROUSEL PUBLICITAIRE & VENTES FLASH (Uniquement en vue générale "Toutes") */}
+      {selectedCategory === 'all' && (
+        <>
+          <PromoBannersCarousel />
+          <WebFlashDealsSection />
+        </>
+      )}
+
       {/* RECOMMANDATIONS : personnalisé d'abord, tendance en complément */}
       {selectedCategory === 'all' && forYouRecommendations.length > 0 && !loading && (
         <HomeForYouSection recommendations={forYouRecommendations} />
       )}
 
       {/* LISTINGS FEED */}
-      <section className="pb-8 pt-1">
+      <section className="pb-6 pt-2">
         <div className="px-4 lg:px-8 max-w-5xl mx-auto">
           <SectionHeader
             title={selectedCategory === 'all' ? 'Dernières annonces' : (currentCategoryObj?.label || 'Catégorie')}
@@ -661,6 +533,43 @@ const HomePage: React.FC = () => {
               ))}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* DALOADELIVERY & COURSIER EXPRESS (Sous le flux principal) */}
+      <section className="px-4 pb-6">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <Link
+            to="/express"
+            className="flex items-center justify-between gap-2.5 px-4 py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-2xl shadow-xs no-underline active:scale-[0.99] hover:opacity-95 transition-all group"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-white/20 text-white flex items-center justify-center flex-shrink-0">
+                <Zap className="w-4 h-4" />
+              </div>
+              <p className="text-xs font-extrabold text-white truncate">
+                Coursier Express · <span className="text-amber-100 font-semibold">Colis & Plis dès 500 F</span>
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-white flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+
+          <a
+            href="https://delivery.daloamarket.com/annuaire"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between gap-2.5 px-4 py-3 bg-white rounded-2xl shadow-xs border border-orange-100/80 no-underline active:scale-[0.99] hover:bg-orange-50/50 transition-all group"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-orange-50 text-primary flex items-center justify-center flex-shrink-0">
+                <Bike className="w-4 h-4" />
+              </div>
+              <p className="text-xs font-medium text-gray-700 truncate">
+                Annuaire des coursiers · <span className="text-primary font-black">DaloaDelivery</span>
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-primary flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+          </a>
         </div>
       </section>
 

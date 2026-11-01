@@ -114,7 +114,7 @@ const ProfilePage: React.FC = () => {
     { id: 'reviews', label: 'Avis', count: profileStats.reviewCount, icon: <Star className="w-4 h-4" /> },
     { id: 'favorites', label: 'Favoris', icon: <Heart className="w-4 h-4" /> },
     { id: 'shop', label: 'Boutique', icon: <Store className="w-4 h-4" /> },
-    ...(isPro ? [{ id: 'carousel' as TabId, label: 'Carrousel VIP', icon: <Sparkles className="w-4 h-4 text-orange-500" /> }] : []),
+    ...(isPro ? [{ id: 'carousel' as TabId, label: 'Carrousel', icon: <Sparkles className="w-4 h-4 text-orange-500" /> }] : []),
   ];
 
   const renderStars = (rating: number) =>
@@ -127,14 +127,18 @@ const ProfilePage: React.FC = () => {
   const hasPayoutSetup = (userProfile as any)?.payout_network != null && (userProfile as any)?.payout_number != null;
   const showPayoutWarning = profileStats.activeCount > 0 && !hasPayoutSetup;
 
+  const isCodBlocked = Boolean(
+    (userProfile as any)?.cod_blocked_until && new Date((userProfile as any).cod_blocked_until) > new Date()
+  );
+  const codScore = (userProfile as any)?.cod_reliability_score != null ? Number((userProfile as any).cod_reliability_score) : 100;
+  const showCodWarningBadge = isCodBlocked || codScore < 100;
+
   const shortcuts: { label: string; icon: React.ReactNode; onClick: () => void }[] = [
     { label: 'Commandes', icon: <Package className="h-5 w-5" />, onClick: () => navigate('/mes-commandes') },
-    { label: 'Parrainage', icon: <Gift className="h-5 w-5 text-emerald-400" />, onClick: () => setIsReferralModalOpen(true) },
     { label: 'Livreurs', icon: <Truck className="h-5 w-5" />, onClick: () => navigate('/mes-livreurs') },
     { label: 'Stats', icon: <BarChart3 className="h-5 w-5" />, onClick: () => navigate('/mes-statistiques') },
     ...(enableBoost ? [{ label: 'Boosts', icon: <Zap className="h-5 w-5" />, onClick: () => navigate('/acheter-pack') }] : []),
     ...(showMonetisation ? [{ label: 'Paiements', icon: <CreditCard className="h-5 w-5" />, onClick: () => navigate('/mes-paiements') }] : []),
-    ...(isPro ? [{ label: 'Carrousel', icon: <Sparkles className="h-5 w-5 text-amber-500" />, onClick: () => handleTabChange('carousel') }] : []),
     { label: 'Partager', icon: <Share2 className="h-5 w-5" />, onClick: handleShareShop },
   ];
 
@@ -173,44 +177,49 @@ const ProfilePage: React.FC = () => {
               </div>
             )}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h2 className="truncate text-xl font-bold text-white">{userProfile?.full_name || 'Utilisateur'}</h2>
-            {userProfile?.rating != null && (
-              <div className="mt-1 flex items-center gap-1.5">
-                <div className="flex items-center gap-0.5">{renderStars(userProfile.rating)}</div>
-                <span className="text-xs font-semibold text-white">{userProfile.rating.toFixed(1)}</span>
+            {(userProfile?.phone || userProfile?.district) && (
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-orange-100">
+                {userProfile?.phone && (
+                  <span className="inline-flex items-center gap-1 tabular-nums">
+                    <Phone className="h-3 w-3 opacity-80" /> {userProfile.phone}
+                  </span>
+                )}
+                {userProfile?.district && (
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin className="h-3 w-3 opacity-80" /> {userProfile.district}
+                  </span>
+                )}
+                {userProfile?.rating != null && (
+                  <span className="inline-flex items-center gap-1 font-semibold text-white">
+                    <span className="flex items-center gap-0.5">{renderStars(userProfile.rating)}</span>
+                    <span className="tabular-nums">{userProfile.rating.toFixed(1)}</span>
+                  </span>
+                )}
               </div>
             )}
-            <div className="mt-2 flex flex-wrap gap-1.5 text-xs text-white">
-              {userProfile?.phone && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 backdrop-blur-md">
-                  <Phone className="h-3 w-3" /> {userProfile.phone}
-                </span>
-              )}
-              {userProfile?.district && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 backdrop-blur-md">
-                  <MapPin className="h-3 w-3" /> {userProfile.district}
-                </span>
-              )}
+
+            <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs text-white">
               <button
                 type="button"
                 onClick={() => setIsReferralModalOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/25 border border-emerald-400/40 px-2.5 py-1 font-bold text-white backdrop-blur-md hover:bg-emerald-500/35 transition-colors active:scale-95"
+                className="inline-flex items-center gap-1.5 rounded-full bg-white/15 border border-white/25 px-3 py-1 font-bold text-white backdrop-blur-md hover:bg-white/25 transition-colors active:scale-95"
               >
-                <Gift className="h-3.5 w-3.5 text-emerald-300" />
-                <span>Daloa Cash : {formatPrice(Number((userProfile as any)?.daloa_cash_balance || 0))}</span>
+                <Gift className="h-3.5 w-3.5 text-amber-200" />
+                <span className="tabular-nums">Parrainage · {formatPrice(Number((userProfile as any)?.daloa_cash_balance || 0))}</span>
               </button>
-              {(userProfile as any)?.cod_reliability_score != null && (
+              {showCodWarningBadge && (
                 <span
                   className={cn(
                     'inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold backdrop-blur-md',
-                    (userProfile as any)?.cod_blocked_until && new Date((userProfile as any).cod_blocked_until) > new Date()
+                    isCodBlocked
                       ? 'bg-red-500/30 text-red-100 border border-red-400/40'
                       : 'bg-white/15 text-white'
                   )}
                 >
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
-                  <span>Fiabilité COD : {Number((userProfile as any).cod_reliability_score).toFixed(0)}%</span>
+                  <ShieldCheck className="h-3.5 w-3.5 text-amber-200" />
+                  <span className="tabular-nums">Fiabilité COD : {codScore.toFixed(0)}%</span>
                 </span>
               )}
             </div>
@@ -234,13 +243,15 @@ const ProfilePage: React.FC = () => {
 
       <div className="relative z-10 -mt-10 px-4">
         <div
-          className="grid gap-1 rounded-3xl bg-white p-2 shadow-lg shadow-orange-900/5 ring-1 ring-gray-100"
-          style={{ gridTemplateColumns: `repeat(${shortcuts.length}, minmax(0, 1fr))` }}
+          className={cn(
+            'grid gap-1 rounded-3xl bg-white p-2 shadow-lg shadow-orange-900/5 ring-1 ring-gray-100',
+            shortcuts.length <= 4 ? 'grid-cols-4' : 'grid-cols-3 sm:grid-cols-6'
+          )}
         >
           {shortcuts.map((sc) => (
-            <button key={sc.label} type="button" onClick={sc.onClick} className="flex min-w-0 flex-col items-center gap-1.5 rounded-2xl px-1 py-2.5 text-gray-700 transition-colors hover:bg-orange-50 active:scale-95">
+            <button key={sc.label} type="button" onClick={sc.onClick} className="flex min-w-0 flex-col items-center gap-1.5 rounded-2xl px-1.5 py-2.5 text-gray-700 transition-colors hover:bg-orange-50 active:scale-95">
               <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-[var(--color-primary)]">{sc.icon}</span>
-              <span className="w-full truncate text-center text-[11px] font-semibold">{sc.label}</span>
+              <span className="w-full truncate text-center text-xs font-semibold">{sc.label}</span>
             </button>
           ))}
         </div>
@@ -288,11 +299,11 @@ const ProfilePage: React.FC = () => {
                 onClick={() => handleTabChange(tab.id)}
                 aria-pressed={isSelected}
                 className={cn(
-                  'relative flex h-10 items-center justify-center rounded-xl text-[13px] font-semibold transition-colors',
+                  'relative flex h-10 items-center justify-center rounded-xl px-1 text-xs sm:text-[13px] font-semibold transition-colors',
                   isSelected ? 'bg-[var(--color-primary)] text-white shadow-md shadow-orange-500/20' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:text-gray-900'
                 )}
               >
-                {tab.label}
+                <span className="truncate">{tab.label}</span>
                 {tab.count !== undefined && tab.count > 0 && (
                   <span className={cn('absolute -top-1.5 -right-1 min-w-[18px] rounded-full px-1 text-center text-[10px] font-bold leading-[18px] ring-2 ring-gray-50 tabular-nums', isSelected ? 'bg-gray-900 text-white' : 'bg-[var(--color-primary)] text-white')}>
                     {tab.count}

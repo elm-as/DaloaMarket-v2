@@ -49,21 +49,13 @@ export const WebFlashDealsSection: React.FC = () => {
         .order('created_at', { ascending: false })
         .limit(8);
 
-      if (!error && data && data.length > 0) {
-        setDeals(data as FlashDealItem[]);
-        return;
-      }
-
-      const { data: fallback } = await supabase
-        .from('listings')
-        .select('id, title, price, original_price, photos, district, stock, boosted_until')
-        .eq('status', 'active')
-        .not('photos', 'eq', '{}')
-        .order('created_at', { ascending: false })
-        .limit(8);
-
-      if (fallback) {
-        setDeals(fallback as FlashDealItem[]);
+      if (!error && data) {
+        const realPromos = (data as FlashDealItem[]).filter(
+          (item) =>
+            (item.boosted_until && item.boosted_until > nowIso) ||
+            (item.original_price != null && item.original_price > item.price)
+        );
+        setDeals(realPromos);
       }
     } catch {
       // Échec silencieux
@@ -75,18 +67,18 @@ export const WebFlashDealsSection: React.FC = () => {
   }, [fetchFlashDeals]);
 
   useEffect(() => {
+    if (deals.length === 0) return;
     const timer = setInterval(() => {
       setSecondsLeft(computeSecondsToMidnight());
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [deals.length]);
 
   if (deals.length === 0) return null;
 
   return (
     <section id="flash-deals-section" className="px-4 pt-3 pb-1">
       <div className="mx-auto max-w-2xl lg:max-w-5xl rounded-3xl border border-orange-100 bg-white overflow-hidden shadow-sm">
-        {/* Bandeau supérieur Rouge/Orange façon Jumia */}
         <div className="flex flex-wrap items-center justify-between gap-2 bg-gradient-to-r from-red-600 via-orange-600 to-amber-600 px-4 py-2.5 text-white">
           <div className="flex items-center gap-2.5">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-yellow-300 text-red-600 shadow-xs">
@@ -94,7 +86,7 @@ export const WebFlashDealsSection: React.FC = () => {
             </span>
             <div>
               <h2 className="text-xs sm:text-sm font-black uppercase tracking-wide text-white leading-tight">
-                Ventes Flash & Promos Daloa
+                Ventes Flash & Articles Boostés
               </h2>
               <p className="flex items-center gap-1 text-[11px] font-extrabold text-yellow-200 tabular-nums">
                 <Clock className="h-3 w-3" />
@@ -115,7 +107,6 @@ export const WebFlashDealsSection: React.FC = () => {
           )}
         </div>
 
-        {/* Carrousel horizontal de cartes Flash */}
         <div className="no-scrollbar flex items-stretch gap-3 overflow-x-auto p-3.5">
           {deals.map((item) => {
             const photo = item.photos?.[0] || '';
@@ -123,9 +114,6 @@ export const WebFlashDealsSection: React.FC = () => {
             const discountPercent = hasDiscount
               ? Math.min(90, Math.max(5, Math.round(((item.original_price! - item.price) / item.original_price!) * 100)))
               : null;
-            const stock = Math.max(1, Number(item.stock ?? 1));
-            const stockRatio = stock === 1 ? 88 : stock <= 3 ? 72 : 45;
-            const stockLabel = stock === 1 ? 'Dernière pièce !' : `Plus que ${stock} dispo`;
 
             return (
               <button
@@ -172,22 +160,9 @@ export const WebFlashDealsSection: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Jauge de stock façon Jumia */}
-                  <div className="space-y-1">
-                    <div className="relative h-4 w-full overflow-hidden rounded-full bg-orange-100">
-                      <div
-                        className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-red-600 to-orange-500"
-                        style={{ width: `${stockRatio}%` }}
-                      />
-                      <span className="relative z-10 block text-center text-[9.5px] font-extrabold leading-4 text-white drop-shadow-2xs tabular-nums">
-                        {stockLabel}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1 text-[10px] text-gray-500">
-                      <MapPin className="h-3 w-3 shrink-0 text-gray-400" />
-                      <span className="truncate">{item.district || 'Daloa'}</span>
-                    </div>
+                  <div className="flex items-center gap-1 text-[10px] text-gray-500">
+                    <MapPin className="h-3 w-3 shrink-0 text-gray-400" />
+                    <span className="truncate">{item.district || 'Daloa'}</span>
                   </div>
                 </div>
               </button>
@@ -198,4 +173,3 @@ export const WebFlashDealsSection: React.FC = () => {
     </section>
   );
 };
-
