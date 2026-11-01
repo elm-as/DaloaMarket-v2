@@ -20,6 +20,7 @@ import { supabase } from '../../lib/supabase';
 import { ErrorState } from '../ui/ErrorState';
 import { formatPrice, formatDate } from '../../lib/utils';
 import { useAdminPendingCounts } from '../../hooks/useAdminPendingCounts';
+import { fetchAdminOrdersFromServer } from './deliveries/adminOrdersApi';
 import {
   AdminPageHeader,
   AdminStatGrid,
@@ -75,6 +76,21 @@ export const AdminKpisTab: React.FC = () => {
   const fetchDashboardData = useCallback(async () => {
     setError(null);
     try {
+      // 1. Priorité au serveur API (service_role) qui retourne l'intégralité des commandes
+      const serverPayload = await fetchAdminOrdersFromServer();
+      if (serverPayload?.kpis) {
+        setKpis({
+          users: serverPayload.kpis.users,
+          listings: serverPayload.kpis.listings,
+          orders: serverPayload.kpis.orders,
+          activeOrders: serverPayload.kpis.activeOrders,
+          gmvTotal: serverPayload.kpis.gmvTotal,
+        });
+        setRecentOrders(serverPayload.kpis.recentOrders || []);
+        return;
+      }
+
+      // 2. Repli direct Supabase
       const [usersRes, listingsRes, ordersRes, recentOrdersRes] = await Promise.allSettled([
         supabase.from('users').select('id', { count: 'exact', head: true }),
         supabase.from('listings').select('id', { count: 'exact', head: true }).eq('status', 'active'),
@@ -232,7 +248,7 @@ export const AdminKpisTab: React.FC = () => {
                         )}
                         <div className="min-w-0">
                           <p className="truncate text-xs font-semibold text-stone-900">
-                            {order.listing?.title || `Commande #${order.id.slice(0, 8)}`}
+                            {order.listing?.title || `Commande #${order.id.slice(0, 6)}`}
                           </p>
                           <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-stone-500">
                             <span className="font-mono">#{order.id.slice(0, 6)}</span>

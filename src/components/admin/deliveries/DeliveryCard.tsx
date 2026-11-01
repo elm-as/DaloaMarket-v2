@@ -71,7 +71,7 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
   const payoutPending = payout?.status === 'pending' || payout?.status === 'processing';
   const payoutFailed = payout?.status === 'failed';
 
-  const paymentMethod = item.order?.payment_method || 'online';
+  const paymentMethod = item.order?.payment_method || (withDriver ? 'cod' : 'cash_at_shop');
   const isCashPayment = paymentMethod === 'cod' || paymentMethod === 'cash_at_shop';
   const paidInCash = isCashPayment && !payout;
   const driverToPay = withDriver && item.status === 'delivered' && driverNetFee > 0 && !payoutPaid && !paidInCash;
@@ -81,13 +81,15 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
     !['delivered', 'completed', 'auto_released', 'refunded'].includes(item.status) &&
     Boolean(onCancelItem);
 
-  const from = item.pickup_location || seller?.full_name || 'Vendeur';
+  const from = seller?.full_name || item.pickup_location || 'Boutique vendeur';
   const to = withDriver
     ? item.dropoff_location || item.order?.delivery_address || 'Adresse client'
     : 'Retrait en boutique';
 
+  const shortRef = `#${(item.order_id || item.id).slice(0, 6)}`;
   const photoThumb = listing?.photos?.[0];
-  const titleText = listing?.title || (withDriver ? `Course #${item.id.slice(0, 6)}` : `Commande #${(item.order_id || item.id).slice(0, 6)}`);
+  const hasListingTitle = Boolean(listing?.title);
+  const titleText = listing?.title || (withDriver ? `Course ${shortRef}` : `Commande ${shortRef}`);
 
   return (
     <li
@@ -103,7 +105,6 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
         aria-expanded={open}
         className="flex w-full items-center gap-3 px-4 py-3 text-left"
       >
-        {/* Miniature produit ou icône mode */}
         {photoThumb ? (
           <img
             src={photoThumb}
@@ -120,13 +121,13 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-semibold text-stone-900">{titleText}</span>
-            <span className="shrink-0 font-mono text-[11px] text-stone-400">
-              #{(item.order_id || item.id).slice(0, 6)}
-            </span>
+            {hasListingTitle && (
+              <span className="shrink-0 font-mono text-[11px] text-stone-400">{shortRef}</span>
+            )}
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-stone-500">
-            <span className="truncate max-w-[220px]">
-              {buyer?.full_name || 'Acheteur'} → {seller?.full_name || 'Vendeur'}
+            <span className="truncate max-w-[260px]">
+              {buyer?.full_name ? `${buyer.full_name} → ${from}` : `${from} → ${to}`}
             </span>
             {withDriver && driver?.name && (
               <>
@@ -144,14 +145,16 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
           <span className="rounded-md bg-stone-100 px-2 py-0.5 text-[11px] font-medium text-stone-600">
             {withDriver ? 'Livraison' : 'Retrait'}
           </span>
-          <span
-            className={cn(
-              'rounded-md px-2 py-0.5 text-[11px] font-medium',
-              isCashPayment ? 'bg-stone-100 text-stone-600' : 'bg-emerald-50 text-emerald-700'
-            )}
-          >
-            {isCashPayment ? 'Espèces' : 'En ligne'}
-          </span>
+          {item.order && (
+            <span
+              className={cn(
+                'rounded-md px-2 py-0.5 text-[11px] font-medium',
+                isCashPayment ? 'bg-stone-100 text-stone-600' : 'bg-emerald-50 text-emerald-700'
+              )}
+            >
+              {isCashPayment ? 'Espèces' : 'En ligne'}
+            </span>
+          )}
         </div>
 
         {/* Montant tabulaire */}
@@ -162,9 +165,9 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
               isCancelled ? 'text-stone-400 line-through' : 'text-stone-900'
             )}
           >
-            {formatPrice(totalAmount)}
+            {totalAmount > 0 ? formatPrice(totalAmount) : withDriver ? formatPrice(deliveryFee) : 'Retrait'}
           </p>
-          {withDriver && deliveryFee > 0 && (
+          {withDriver && deliveryFee > 0 && productAmount > 0 && (
             <p className="text-[11px] text-stone-400 tabular-nums">
               dont livr. {formatPrice(deliveryFee)}
             </p>
