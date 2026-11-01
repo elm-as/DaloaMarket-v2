@@ -518,11 +518,12 @@ const CheckoutPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, user?.id, isOutOfZone, quoteItemsKey, deliveryMode, deliveryLatitude, deliveryLongitude, deliveryAddress, quoteNonce]);
 
+  const isCashPayment = paymentMethod === 'cash_at_shop' || paymentMethod === 'cod' || isPickup;
   const quoteReady = step === 3 && quoteStatus === 'ready' && serverQuote != null;
   const deliveryFee = quoteReady ? serverQuote!.deliveryTotal : isPickup ? 0 : sumOfSellerFees || pricing.delivery;
-  const buyerFee = quoteReady ? serverQuote!.buyerFeeTotal : pricing.buyerFee;
+  const buyerFee = isCashPayment ? 0 : (quoteReady ? serverQuote!.buyerFeeTotal : pricing.buyerFee);
   const deliveryAndFees = deliveryFee + buyerFee;
-  const total = quoteReady ? serverQuote!.totalAmount : productAmount + deliveryAndFees;
+  const total = isCashPayment ? productAmount + deliveryFee : (quoteReady ? serverQuote!.totalAmount : productAmount + deliveryAndFees);
   const paymentActionLabel =
     paymentMethod === 'cash_at_shop'
       ? 'Réserver en boutique'
@@ -1233,13 +1234,15 @@ const CheckoutPage: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex justify-between items-center text-gray-600 font-medium">
-                    <div className="flex items-center gap-1.5">
-                      <Shield className="h-4 w-4 text-emerald-600" />
-                      <span>Frais de protection ({BUYER_FEE_RATE * 100}%)</span>
+                  {!isCashPayment && buyerFee > 0 && (
+                    <div className="flex justify-between items-center text-gray-600 font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <Shield className="h-4 w-4 text-emerald-600" />
+                        <span>Frais de protection ({BUYER_FEE_RATE * 100}%)</span>
+                      </div>
+                      <span className="font-extrabold text-gray-900 tabular-nums">{formatPrice(buyerFee)}</span>
                     </div>
-                    <span className="font-extrabold text-gray-900 tabular-nums">{formatPrice(buyerFee)}</span>
-                  </div>
+                  )}
 
                 </div>
 
