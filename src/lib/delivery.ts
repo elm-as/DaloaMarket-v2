@@ -34,7 +34,7 @@ export function calculateDeliveryFee(distanceKm: number): number {
   if (distanceKm > DELIVERY_FREE_KM) {
     extraFee = Math.round((distanceKm - DELIVERY_FREE_KM) * DELIVERY_RATE_PER_KM);
   }
-  return baseFee + extraFee;
+  return Math.round((baseFee + extraFee) / 50) * 50;
 }
 
 export function calculateOrder(price: number, distanceKm: number, isProSeller: boolean = false, sellerFeeOverride?: number | null) {
