@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Send, Bell, History } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Send, Bell, History, Sparkles, Bookmark } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { formatDate } from '../../lib/utils';
 import { broadcastPushNotification } from '../../lib/pushNotifications';
-import { NOTIFICATION_TEMPLATES } from './notifications/notificationTemplates';
+import { useCustomTemplates } from './notifications/useCustomTemplates';
+import { NotificationTemplateSelector } from './notifications/NotificationTemplateSelector';
+import type { NotificationTemplate } from './notifications/notificationTemplates.types';
 import {
   AdminPageHeader,
   AdminSection,
@@ -35,13 +37,6 @@ const QUICK_LINKS = [
 const TITLE_MAX = 65;
 const BODY_MAX = 180;
 
-/**
- * Notifications : un formulaire, un aperçu, l'historique.
- *
- * Remplace l'ancien « studio » (simulateur de téléphone, trois onglets) dont
- * le choix d'audience n'était jamais transmis et qui, en cas d'échec d'envoi,
- * enregistrait quand même la notification et affichait un succès.
- */
 export const AdminNotificationsTab: React.FC = () => {
   const [audience, setAudience] = useState<Audience>('all');
   const [templateId, setTemplateId] = useState('');
@@ -50,6 +45,8 @@ export const AdminNotificationsTab: React.FC = () => {
   const [url, setUrl] = useState('');
   const [sending, setSending] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
+
+  const { allTemplates, saveTemplate, deleteTemplate } = useCustomTemplates();
 
   const fetchHistory = useCallback(async () => {
     const { data } = await supabase
@@ -64,24 +61,32 @@ export const AdminNotificationsTab: React.FC = () => {
     fetchHistory();
   }, [fetchHistory]);
 
-  const templatesByCategory = useMemo(() => {
-    const groups = new Map<string, typeof NOTIFICATION_TEMPLATES>();
-    for (const t of NOTIFICATION_TEMPLATES) {
-      groups.set(t.categoryLabel, [...(groups.get(t.categoryLabel) || []), t]);
-    }
-    return [...groups.entries()];
-  }, []);
-
-  const selectedTemplate = NOTIFICATION_TEMPLATES.find((t) => t.id === templateId);
-
-  const applyTemplate = (id: string) => {
-    setTemplateId(id);
-    const t = NOTIFICATION_TEMPLATES.find((tpl) => tpl.id === id);
-    if (!t) return;
+  const handleApplyTemplate = (t: NotificationTemplate) => {
+    setTemplateId(t.id);
     setTitle(t.title);
     setBody(t.body);
     setUrl(t.url);
-    setAudience(t.audience || 'market');
+    setAudience(t.audience || 'all');
+    toast.success(`Modèle « ${t.title} » appliqué`);
+  };
+
+  const handleSaveCurrentAsTemplate = async () => {
+    if (!title.trim() || !body.trim()) {
+      toast.error('Veuillez renseigner un titre et un message');
+      return;
+    }
+    const tpl = await saveTemplate({
+      title: title.trim(),
+      body: body.trim(),
+      url: url.trim() || '/',
+      audience,
+      category: 'custom',
+      categoryLabel: 'Modèles Personnalisés',
+      recommendedTime: 'À tout moment',
+    });
+    if (tpl) {
+      setTemplateId(tpl.id);
+    }
   };
 
   const canSend = title.trim().length > 0 && body.trim().length > 0 && !sending;
@@ -89,7 +94,14 @@ export const AdminNotificationsTab: React.FC = () => {
   const handleSend = async () => {
     if (!canSend) return;
     const target = AUDIENCES.find((a) => a.value === audience)?.label || '';
-    if (!(await confirmDialog({ title: 'Envoyer la notification ?', message: `Destinataires : ${target}`, confirmLabel: 'Envoyer' }))) return;
+    if (
+      !(await confirmDialog({
+        title: 'Envoyer la notification ?',
+        message: `Destinataires : ${target}`,
+        confirmLabel: 'Envoyer',
+      }))
+    )
+      return;
 
     setSending(true);
     try {
@@ -120,23 +132,51 @@ export const AdminNotificationsTab: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <AdminPageHeader
         title="Notifications"
-        description="Message envoyé sur les téléphones et navigateurs abonnés."
+        description="Diffusions de messages en direct sur les téléphones et navigateurs."
       />
 
+      {/* Sélecteur de Modèles en 1 Clic & Création depuis l'Admin */}
+      <AdminSection
+        icon={Sparkles}
+        title="Modèles de notifications (1-Clic & Personnalisables)"
+        description="Choisissez un modèle prédéfini ou créez vos propres modèles enregistrés."
+      >
+        <NotificationTemplateSelector
+          allTemplates={allTemplates}
+          selectedTemplateId={templateId}
+          onSelectTemplate={handleApplyTemplate}
+          onSaveCustomTemplate={saveTemplate}
+          onDeleteCustomTemplate={deleteTemplate}
+          currentFormState={{ title, body, url, audience }}
+        />
+      </AdminSection>
+
+      {/* Formulaire d'envoi et d'édition */}
       <AdminSection
         icon={Bell}
-        title="Nouvelle notification"
+        title="Rédiger & Diffuser la notification"
         footer={
-          <AdminButton variant="primary" icon={Send} loading={sending} disabled={!canSend} onClick={handleSend}>
-            Envoyer
-          </AdminButton>
+          <div className="flex items-center justify-between w-full">
+            <button
+              type="button"
+              disabled={!title.trim() || !body.trim()}
+              onClick={handleSaveCurrentAsTemplate}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 hover:text-amber-800 disabled:opacity-40 transition-colors"
+            >
+              <Bookmark className="h-3.5 w-3.5" />
+              Enregistrer ce message comme modèle
+            </button>
+            <AdminButton variant="primary" icon={Send} loading={sending} disabled={!canSend} onClick={handleSend}>
+              Diffuser maintenant
+            </AdminButton>
+          </div>
         }
       >
         <div className="grid gap-6 lg:grid-cols-[1fr,280px]">
-          <div>
+          <div className="space-y-3">
             <AdminField label="Destinataires" htmlFor="notif-audience">
               <select
                 id="notif-audience"
@@ -152,36 +192,13 @@ export const AdminNotificationsTab: React.FC = () => {
               </select>
             </AdminField>
 
-            <AdminField
-              label="Partir d’un modèle"
-              hint={selectedTemplate ? `Moment conseillé : ${selectedTemplate.recommendedTime}` : 'Facultatif.'}
-              htmlFor="notif-template"
-            >
-              <select
-                id="notif-template"
-                value={templateId}
-                onChange={(e) => applyTemplate(e.target.value)}
-                className={adminInputClass}
-              >
-                <option value="">Aucun</option>
-                {templatesByCategory.map(([category, templates]) => (
-                  <optgroup key={category} label={category}>
-                    {templates.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.title}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </AdminField>
-
             <AdminField label={`Titre (${title.length}/${TITLE_MAX})`} htmlFor="notif-title">
               <input
                 id="notif-title"
                 value={title}
                 maxLength={TITLE_MAX}
                 onChange={(e) => setTitle(e.target.value)}
+                placeholder="Ex: Nouveaux arrivages à Daloa"
                 className={adminInputClass}
               />
             </AdminField>
@@ -193,11 +210,16 @@ export const AdminNotificationsTab: React.FC = () => {
                 value={body}
                 maxLength={BODY_MAX}
                 onChange={(e) => setBody(e.target.value)}
+                placeholder="Rédigez votre message d'alerte..."
                 className={adminInputClass}
               />
             </AdminField>
 
-            <AdminField label="Lien ouvert au clic" hint="Chemin du site (ex. /create-listing) ou adresse complète." htmlFor="notif-url">
+            <AdminField
+              label="Lien de redirection au clic"
+              hint="Chemin sur le site (ex. /create-listing) ou URL externe."
+              htmlFor="notif-url"
+            >
               <input
                 id="notif-url"
                 value={url}
@@ -211,7 +233,7 @@ export const AdminNotificationsTab: React.FC = () => {
                     key={l.url}
                     type="button"
                     onClick={() => setUrl(l.url)}
-                    className="rounded-full border border-gray-200 px-2.5 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
+                    className="rounded-full border border-gray-200 px-2.5 py-0.5 text-xs text-gray-600 hover:bg-gray-50 transition-colors"
                   >
                     {l.label}
                   </button>
@@ -221,7 +243,7 @@ export const AdminNotificationsTab: React.FC = () => {
           </div>
 
           <div>
-            <p className="mb-1.5 text-sm font-medium text-[var(--color-on-surface)]">Aperçu</p>
+            <p className="mb-1.5 text-sm font-medium text-[var(--color-on-surface)]">Aperçu direct</p>
             <div className="rounded-2xl bg-gray-100 p-3">
               <div className="flex gap-2.5 rounded-xl bg-white p-3 shadow-sm">
                 <img src="/android-chrome-192x192.png" alt="" className="h-8 w-8 shrink-0 rounded-lg" />

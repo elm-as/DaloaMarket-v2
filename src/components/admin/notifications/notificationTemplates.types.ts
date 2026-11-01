@@ -1,4 +1,5 @@
 export type NotificationCategory =
+  | 'custom'
   | 'survey'
   | 'diversity'
   | 'first_order'
@@ -20,5 +21,6 @@ export interface NotificationTemplate {
   url: string;
   recommendedTime: string;
   /** Application visée par défaut (sinon DaloaMarket). */
-  audience?: 'market' | 'delivery';
+  audience?: 'all' | 'market' | 'delivery';
+  isCustom?: boolean;
 }

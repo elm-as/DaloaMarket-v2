@@ -561,11 +561,14 @@ const CheckoutPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, user?.id, isOutOfZone, quoteItemsKey, deliveryMode, deliveryLatitude, deliveryLongitude, deliveryAddress, quoteNonce]);
 
+  const isCashPayment = paymentMethod === 'cash_at_shop' || paymentMethod === 'cod' || isPickup;
   const quoteReady = step === 3 && quoteStatus === 'ready' && serverQuote != null;
   const deliveryFee = quoteReady ? serverQuote!.deliveryTotal : isPickup ? 0 : baseDeliveryCalc;
-  const buyerFee = quoteReady ? serverQuote!.buyerFeeTotal : pricing.buyerFee;
+  const buyerFee = isCashPayment ? 0 : (quoteReady ? serverQuote!.buyerFeeTotal : pricing.buyerFee);
   const deliveryAndFees = deliveryFee + buyerFee;
-  const rawTotal = quoteReady ? serverQuote!.totalAmount : productAmount + deliveryAndFees;
+  const rawTotal = isCashPayment
+    ? productAmount + deliveryFee
+    : (quoteReady ? serverQuote!.totalAmount : productAmount + deliveryAndFees);
 
   const applicableDaloaCash = useDaloaCash && !isPickup ? Math.min(daloaCashBalance, deliveryFee) : 0;
   const total = Math.max(0, rawTotal - applicableDaloaCash);
@@ -1291,13 +1294,15 @@ const CheckoutPage: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex justify-between items-center text-gray-600 font-medium">
-                    <div className="flex items-center gap-1.5">
-                      <Shield className="h-4 w-4 text-emerald-600" />
-                      <span>Frais de protection ({BUYER_FEE_RATE * 100}%)</span>
+                  {!isCashPayment && buyerFee > 0 && (
+                    <div className="flex justify-between items-center text-gray-600 font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <Shield className="h-4 w-4 text-emerald-600" />
+                        <span>Frais de protection ({BUYER_FEE_RATE * 100}%)</span>
+                      </div>
+                      <span className="font-extrabold text-gray-900 tabular-nums">{formatPrice(buyerFee)}</span>
                     </div>
-                    <span className="font-extrabold text-gray-900 tabular-nums">{formatPrice(buyerFee)}</span>
-                  </div>
+                  )}
 
                   {isGroupedDelivery && groupedDeliverySavings > 0 && (
                     <div className="flex justify-between items-center text-emerald-700 bg-emerald-50/70 px-3 py-1.5 rounded-xl border border-emerald-100 font-medium text-xs">

@@ -200,8 +200,8 @@ BEGIN
 
       v_seller_rate := COALESCE(v_fee_override, CASE WHEN v_is_pro THEN 0.025 ELSE 0.035 END);
       v_seller_fee  := round(v_group.product_amount * v_seller_rate);
-      v_buyer_fee   := CASE WHEN v_use_quote THEN (v_qs->>'buyer_fee')::integer ELSE round(v_group.product_amount * 0.02) END;
-      v_total       := v_group.product_amount + v_quote.delivery_fee + v_buyer_fee;
+      v_buyer_fee   := 0;
+      v_total       := v_group.product_amount + v_quote.delivery_fee;
 
       INSERT INTO public.orders (
         buyer_id, seller_id, listing_id, variant_id, variant_label, unit_price,
