@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase';
 import type { PayoutItem, DisputeDeliveryItem, PayoutStats, FinancialAuditLogItem } from './types';
 import type { AdminDeliveryItem } from '../deliveries/types';
+import { fetchAdminOrdersFromServer } from '../deliveries/adminOrdersApi';
 
 const EMPTY_STATS: PayoutStats = {
   totalPaidAmount: 0,
@@ -100,81 +101,88 @@ export function useAdminFinanceData() {
       });
 
       // 2. Charger les courses avec litiges ou récentes pour l'arbitrage
-      // Les 50 courses récentes, plus TOUTES les courses en litige : un litige
-      // plus ancien que les 50 dernières courses disparaissait de l'écran.
-      const [{ data: recentAssignments }, { data: disputedAssignments }] = await Promise.all([
-        (supabase as any)
-          .from('delivery_assignments')
-          .select('*, delivery_person:delivery_persons(*)')
-          .order('created_at', { ascending: false })
-          .limit(50),
-        (supabase as any)
-          .from('delivery_assignments')
-          .select('*, delivery_person:delivery_persons(*)')
-          .eq('status', 'disputed'),
-      ]);
-      const seenIds = new Set<string>();
-      const rawAssignments = [...(disputedAssignments || []), ...(recentAssignments || [])].filter((a: any) => {
-        if (seenIds.has(a.id)) return false;
-        seenIds.add(a.id);
-        return true;
-      });
+      const serverPayload = await fetchAdminOrdersFromServer();
+      if (serverPayload?.deliveries) {
+        const onlyAssignments = serverPayload.deliveries.filter((d) => !d.is_order_only);
+        setDeliveries(onlyAssignments);
+        setDisputes(onlyAssignments as any);
+      } else {
+        const [{ data: recentAssignments }, { data: disputedAssignments }] = await Promise.all([
+          (supabase as any)
+            .from('delivery_assignments')
+            .select('*, delivery_person:delivery_persons(*)')
+            .order('created_at', { ascending: false })
+            .limit(50),
+          (supabase as any)
+            .from('delivery_assignments')
+            .select('*, delivery_person:delivery_persons(*)')
+            .eq('status', 'disputed'),
+        ]);
+        const seenIds = new Set<string>();
+        const rawAssignments = [...(disputedAssignments || []), ...(recentAssignments || [])].filter((a: any) => {
+          if (seenIds.has(a.id)) return false;
+          seenIds.add(a.id);
+          return true;
+        });
 
-      if (rawAssignments && rawAssignments.length > 0) {
-        const orderIds = [...new Set(((rawAssignments as any[]) || []).map((a) => a.order_id).filter(Boolean))];
-        const { data: orders } = await supabase
-          .from('orders')
-          .select('id, status, product_amount, delivery_fee, total_amount, delivery_mode, payment_method, delivery_address, buyer_id, seller_id')
-          .in('id', orderIds);
+        if (rawAssignments && rawAssignments.length > 0) {
+          const orderIds = [...new Set(((rawAssignments as any[]) || []).map((a) => a.order_id).filter(Boolean))];
+          const { data: orders } = await supabase
+            .from('orders')
+            .select('id, status, product_amount, delivery_fee, total_amount, delivery_mode, payment_method, delivery_address, buyer_id, seller_id')
+            .in('id', orderIds);
 
-        const orderMap = new Map((orders || []).map((o: any) => [o.id, o]));
-        const allActorIds = [
-          ...new Set(
-            (orders || []).flatMap((o: any) => [o.buyer_id, o.seller_id])
-              .concat(((rawAssignments as any[]) || []).map((a) => a.delivery_person?.user_id))
-              .filter(Boolean)
-          ),
-        ];
+          const orderMap = new Map((orders || []).map((o: any) => [o.id, o]));
+          const allActorIds = [
+            ...new Set(
+              (orders || []).flatMap((o: any) => [o.buyer_id, o.seller_id])
+                .concat(((rawAssignments as any[]) || []).map((a) => a.delivery_person?.user_id))
+                .concat(((rawAssignments as any[]) || []).map((a) => a.seller_id))
+                .filter(Boolean)
+            ),
+          ];
 
-        let actorsMap = new Map<string, any>();
-        if (allActorIds.length > 0) {
-          const { data: actors } = await supabase
-            .from('users_private')
-            .select('id, full_name, phone')
-            .in('id', allActorIds);
-          actorsMap = new Map((actors || []).map((u: any) => [u.id, u]));
-        }
-
-        const payoutByAssignmentId = new Map<string, PayoutItem>();
-        mergedPayouts.forEach((p) => {
-          if (p.type === 'delivery' && p.delivery_assignment_id) {
-            payoutByAssignmentId.set(p.delivery_assignment_id, p);
+          let actorsMap = new Map<string, any>();
+          if (allActorIds.length > 0) {
+            const { data: actors } = await supabase
+              .from('users_private')
+              .select('id, full_name, phone')
+              .in('id', allActorIds);
+            actorsMap = new Map((actors || []).map((u: any) => [u.id, u]));
           }
-        });
 
-        const mergedDeliveries: AdminDeliveryItem[] = ((rawAssignments as any[]) || []).map((a) => {
-          const order = orderMap.get(a.order_id) as any;
-          const dp = a.delivery_person as any;
-          const driverName = dp?.name || (dp?.user_id ? actorsMap.get(dp.user_id)?.full_name : null) || 'Inconnu';
-          const driverPhone = dp?.phone || (dp?.user_id ? actorsMap.get(dp.user_id)?.phone : null) || null;
-          const driverPayout = payoutByAssignmentId.get(a.id) || null;
+          const payoutByAssignmentId = new Map<string, PayoutItem>();
+          mergedPayouts.forEach((p) => {
+            if (p.type === 'delivery' && p.delivery_assignment_id) {
+              payoutByAssignmentId.set(p.delivery_assignment_id, p);
+            }
+          });
 
-          return {
-            ...a,
-            delivery_person: dp ? { ...dp, name: driverName, phone: driverPhone } : null,
-            order: order
-              ? {
-                  ...order,
-                  buyer: actorsMap.get(order.buyer_id) || null,
-                  seller: actorsMap.get(order.seller_id) || null,
-                }
-              : null,
-            driver_payout: driverPayout,
-          };
-        });
+          const mergedDeliveries: AdminDeliveryItem[] = ((rawAssignments as any[]) || []).map((a) => {
+            const order = orderMap.get(a.order_id) as any;
+            const dp = a.delivery_person as any;
+            const driverName = dp?.name || (dp?.user_id ? actorsMap.get(dp.user_id)?.full_name : null) || 'Inconnu';
+            const driverPhone = dp?.phone || (dp?.user_id ? actorsMap.get(dp.user_id)?.phone : null) || null;
+            const driverPayout = payoutByAssignmentId.get(a.id) || null;
+            const fallbackSeller = a.seller_id ? actorsMap.get(a.seller_id) || null : null;
 
-        setDeliveries(mergedDeliveries);
-        setDisputes(mergedDeliveries as any);
+            return {
+              ...a,
+              delivery_person: dp ? { ...dp, name: driverName, phone: driverPhone } : null,
+              order: order
+                ? {
+                    ...order,
+                    buyer: actorsMap.get(order.buyer_id) || null,
+                    seller: actorsMap.get(order.seller_id) || fallbackSeller,
+                  }
+                : null,
+              driver_payout: driverPayout,
+            };
+          });
+
+          setDeliveries(mergedDeliveries);
+          setDisputes(mergedDeliveries as any);
+        }
       }
 
       // 3. Charger les journaux d'audit financier

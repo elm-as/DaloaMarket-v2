@@ -7,6 +7,10 @@ import { formatPrice } from '../../lib/utils';
 import { ErrorState } from '../ui/ErrorState';
 import { confirmDialog } from '../ui/ConfirmDialog';
 import { DeliveryCard } from './deliveries/DeliveryCard';
+import {
+  fetchAdminOrdersFromServer,
+  cancelAdminOrderViaServer,
+} from './deliveries/adminOrdersApi';
 import { isDriverDelivery, type AdminDeliveryItem, type DeliveryTabFilter } from './deliveries/types';
 import type { PayoutItem } from './payouts/types';
 import {
@@ -48,6 +52,15 @@ export const AdminDeliveriesTab: React.FC = () => {
   const fetchDeliveries = useCallback(async () => {
     setError(null);
     try {
+      // 1. Priorité au serveur API (service_role) qui retourne 100% des commandes sans blocage RLS
+      const serverPayload = await fetchAdminOrdersFromServer();
+      if (serverPayload) {
+        setDeliveries(serverPayload.deliveries);
+        setPhotoUrls(serverPayload.photoUrls || {});
+        return;
+      }
+
+      // 2. Repli direct Supabase (fonctionne pleinement dès que 20261101_admin_orders_rls.sql est appliquée)
       const [assignmentsRes, ordersRes, payoutsRes] = await Promise.all([
         (supabase as any)
           .from('delivery_assignments')
@@ -68,23 +81,12 @@ export const AdminDeliveriesTab: React.FC = () => {
 
       const orderMap = new Map(orders.map((o: any) => [o.id, o]));
 
-      // Charger les commandes manquantes référencées par d'anciennes courses
-      const missingOrderIds = [
-        ...new Set(rawAssignments.map((a) => a.order_id).filter((id) => id && !orderMap.has(id))),
-      ];
-      if (missingOrderIds.length > 0) {
-        const { data: extraOrders } = await supabase
-          .from('orders')
-          .select('id, status, product_amount, delivery_fee, total_amount, delivery_mode, payment_method, delivery_address, buyer_id, seller_id, listing_id, created_at, listing:listings(id, title, photos)')
-          .in('id', missingOrderIds);
-        (extraOrders || []).forEach((o: any) => orderMap.set(o.id, o));
-      }
-
       const allOrders = Array.from(orderMap.values());
       const driverUserIds = rawAssignments.map((a) => a.delivery_person?.user_id).filter(Boolean);
+      const assignmentSellerIds = rawAssignments.map((a) => a.seller_id).filter(Boolean);
       const orderUserIds = allOrders.flatMap((o: any) => [o.buyer_id, o.seller_id]).filter(Boolean);
       const mediatorUserIds = rawAssignments.map((a) => a.resolved_by).filter(Boolean);
-      const allUserIds = [...new Set([...orderUserIds, ...driverUserIds, ...mediatorUserIds])];
+      const allUserIds = [...new Set([...orderUserIds, ...assignmentSellerIds, ...driverUserIds, ...mediatorUserIds])];
 
       let userMap = new Map<string, any>();
       if (allUserIds.length > 0) {
@@ -109,6 +111,7 @@ export const AdminDeliveriesTab: React.FC = () => {
         const dp = a.delivery_person as any;
         const driverName = dp?.name || (dp?.user_id ? userMap.get(dp.user_id)?.full_name : null) || 'Inconnu';
         const driverPhone = dp?.phone || (dp?.user_id ? userMap.get(dp.user_id)?.phone : null) || null;
+        const fallbackSeller = a.seller_id ? userMap.get(a.seller_id) ?? null : null;
 
         return {
           ...a,
@@ -119,13 +122,26 @@ export const AdminDeliveriesTab: React.FC = () => {
             ? {
                 ...order,
                 buyer: userMap.get(order.buyer_id) ?? null,
-                seller: userMap.get(order.seller_id) ?? null,
+                seller: userMap.get(order.seller_id) ?? fallbackSeller,
               }
-            : null,
+            : fallbackSeller
+              ? ({
+                  id: a.order_id,
+                  status: a.status,
+                  product_amount: 0,
+                  delivery_fee: a.delivery_price || 0,
+                  total_amount: a.delivery_price || 0,
+                  delivery_mode: a.delivery_price > 0 ? 'delivery' : 'pickup_point',
+                  payment_method: a.delivery_price > 0 ? 'cod' : 'cash_at_shop',
+                  buyer_id: '',
+                  seller_id: a.seller_id,
+                  buyer: null,
+                  seller: fallbackSeller,
+                } as any)
+              : null,
         };
       });
 
-      // Inclure aussi les commandes qui n'ont pas encore de ligne dans delivery_assignments
       const orderOnlyItems: AdminDeliveryItem[] = allOrders
         .filter((o: any) => !assignedOrderIds.has(o.id))
         .map((o: any) => ({
@@ -149,28 +165,6 @@ export const AdminDeliveriesTab: React.FC = () => {
       );
 
       setDeliveries(combined);
-
-      const urls: Record<string, string> = {};
-      for (const item of mergedFromAssignments) {
-        if (item.delivery_photo_url) {
-          try {
-            const marker = '/storage/v1/object/public/delivery-photos/';
-            const idx = item.delivery_photo_url.indexOf(marker);
-            if (idx !== -1) {
-              const path = item.delivery_photo_url.substring(idx + marker.length).split('#')[0].split('?')[0];
-              const { data: signData, error: signError } = await supabase.storage
-                .from('delivery-photos')
-                .createSignedUrl(path, 3600);
-              if (signData?.signedUrl && !signError) {
-                urls[item.id] = signData.signedUrl;
-              }
-            }
-          } catch {
-            // Ignorer une photo introuvable sans bloquer la liste
-          }
-        }
-      }
-      setPhotoUrls(urls);
     } catch (err: any) {
       setError(err.message || 'Erreur lors du chargement des commandes et livraisons');
     } finally {
@@ -199,19 +193,18 @@ export const AdminDeliveriesTab: React.FC = () => {
 
     setCancellingId(item.id);
     try {
-      if (item.order_id) {
-        const { error: ordErr } = await supabase
-          .from('orders')
-          .update({ status: 'cancelled' })
-          .eq('id', item.order_id);
-        if (ordErr) throw ordErr;
-      }
-      if (!item.is_order_only) {
-        const { error: assErr } = await (supabase as any)
-          .from('delivery_assignments')
-          .update({ status: 'cancelled' })
-          .eq('id', item.id);
-        if (assErr) throw assErr;
+      try {
+        await cancelAdminOrderViaServer({
+          orderId: item.order_id,
+          assignmentId: item.is_order_only ? undefined : item.id,
+        });
+      } catch {
+        if (item.order_id) {
+          await supabase.from('orders').update({ status: 'cancelled' }).eq('id', item.order_id);
+        }
+        if (!item.is_order_only) {
+          await (supabase as any).from('delivery_assignments').update({ status: 'cancelled' }).eq('id', item.id);
+        }
       }
       toast.success('Commande annulée');
       await fetchDeliveries();
