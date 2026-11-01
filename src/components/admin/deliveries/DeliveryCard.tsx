@@ -1,29 +1,56 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ExternalLink, ArrowRight } from 'lucide-react';
+import {
+  ChevronDown,
+  ExternalLink,
+  ArrowRight,
+  Package,
+  Store,
+  Truck,
+  Phone,
+  XCircle,
+} from 'lucide-react';
 import { cn, formatDate, formatPrice } from '../../../lib/utils';
 import { type AdminDeliveryItem, isDriverDelivery } from './types';
-import { AdminBadge } from '../ui/AdminUI';
+import { AdminBadge, AdminButton } from '../ui/AdminUI';
 import { deliveryStatus } from './status';
-
-const person = (name?: string | null, phone?: string | null) => (
-  <>
-    {name || 'Inconnu'}
-    {phone && <span className="text-gray-500"> · {phone}</span>}
-  </>
-);
 
 interface DeliveryCardProps {
   item: AdminDeliveryItem;
   photoUrl?: string;
+  cancellingId?: string | null;
+  onCancelItem?: (item: AdminDeliveryItem) => void;
 }
 
-/**
- * Course sous forme de ligne compacte ; un clic déplie le détail. En lecture
- * seule : l'arbitrage se fait à la page Litiges et le versement livreur à la
- * page Versements (la carte portait les deux, en double).
- */
-export const DeliveryCard: React.FC<DeliveryCardProps> = ({ item, photoUrl }) => {
+const ContactLine: React.FC<{ role: string; name?: string | null; phone?: string | null }> = ({
+  role,
+  name,
+  phone,
+}) => (
+  <div className="flex items-center justify-between gap-2 py-1 text-xs">
+    <span className="text-stone-500">{role}</span>
+    <div className="flex items-center gap-2 font-medium text-stone-900">
+      <span className="truncate max-w-[160px]">{name || 'Non renseigné'}</span>
+      {phone && (
+        <a
+          href={`tel:${phone}`}
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[11px] text-stone-700 hover:bg-stone-200"
+        >
+          <Phone size={10} />
+          {phone}
+        </a>
+      )}
+    </div>
+  </div>
+);
+
+export const DeliveryCard: React.FC<DeliveryCardProps> = ({
+  item,
+  photoUrl,
+  cancellingId,
+  onCancelItem,
+}) => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
@@ -31,136 +58,269 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({ item, photoUrl }) =>
   const buyer = item.order?.buyer;
   const seller = item.order?.seller;
   const driver = item.delivery_person;
+  const listing = item.order?.listing;
   const withDriver = isDriverDelivery(item);
 
-  const deliveryFee = item.delivery_price || item.order?.delivery_fee || 0;
-  // 90 % au livreur, arrondi comme create_delivery_payout.
+  const productAmount = item.order?.product_amount || 0;
+  const deliveryFee = item.delivery_price ?? item.order?.delivery_fee ?? 0;
+  const totalAmount = item.order?.total_amount || productAmount + deliveryFee;
+
   const driverNetFee = Math.max(0, deliveryFee - Math.round(deliveryFee * 0.1));
   const payout = item.driver_payout;
   const payoutPaid = payout?.status === 'paid' || payout?.status === 'completed';
   const payoutPending = payout?.status === 'pending' || payout?.status === 'processing';
   const payoutFailed = payout?.status === 'failed';
-  // Paiement à la livraison : aucun séquestre, le livreur encaisse sa course
-  // en espèces à la remise ; aucun virement n'est attendu.
-  const paidInCash = item.order?.payment_method === 'cod' && !payout;
-  const driverToPay = withDriver && item.status === 'delivered' && driverNetFee > 0 && !payoutPaid && !paidInCash;
-  // Course annulée sans versement : rien n'est dû au livreur (s'il a été
-  // dédommagé lors d'un litige, le versement existe et s'affiche normalement).
-  const cancelledUnpaid = item.status === 'cancelled' && !payout;
 
-  const from = item.pickup_location || 'Vendeur';
-  const to = withDriver ? item.dropoff_location || 'Adresse de livraison' : 'Retrait en boutique';
+  const paymentMethod = item.order?.payment_method || 'online';
+  const isCashPayment = paymentMethod === 'cod' || paymentMethod === 'cash_at_shop';
+  const paidInCash = isCashPayment && !payout;
+  const driverToPay = withDriver && item.status === 'delivered' && driverNetFee > 0 && !payoutPaid && !paidInCash;
+  const isCancelled = item.status === 'cancelled' || item.order?.status === 'cancelled';
+  const canAdminCancel =
+    !isCancelled &&
+    !['delivered', 'completed', 'auto_released', 'refunded'].includes(item.status) &&
+    Boolean(onCancelItem);
+
+  const from = item.pickup_location || seller?.full_name || 'Vendeur';
+  const to = withDriver
+    ? item.dropoff_location || item.order?.delivery_address || 'Adresse client'
+    : 'Retrait en boutique';
+
+  const photoThumb = listing?.photos?.[0];
+  const titleText = listing?.title || (withDriver ? `Course #${item.id.slice(0, 6)}` : `Commande #${(item.order_id || item.id).slice(0, 6)}`);
 
   return (
-    <li className="rounded-xl border border-gray-200 bg-white">
+    <li
+      className={cn(
+        'rounded-xl border bg-white transition-colors',
+        open ? 'border-stone-300 shadow-xs' : 'border-stone-200/90 hover:border-stone-300'
+      )}
+    >
+      {/* Ligne principale : lecture directe en 1 coup d'œil */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
+        className="flex w-full items-center gap-3 px-4 py-3 text-left"
       >
-        <span className="w-20 shrink-0 font-mono text-xs text-gray-500">#{item.id.slice(0, 8)}</span>
-        <span className="w-32 shrink-0">
-          <AdminBadge tone={status.tone}>{status.label}</AdminBadge>
-        </span>
-        <span className="min-w-0 flex-1 truncate text-sm text-gray-800">
-          {from} → {to}
-        </span>
-        {withDriver && (
-          <span
-            className={cn(
-              'hidden shrink-0 text-sm tabular-nums sm:inline',
-              cancelledUnpaid ? 'text-gray-400 line-through' : 'text-gray-700'
-            )}
-          >
-            {formatPrice(deliveryFee)}
-          </span>
+        {/* Miniature produit ou icône mode */}
+        {photoThumb ? (
+          <img
+            src={photoThumb}
+            alt=""
+            className="h-10 w-10 shrink-0 rounded-lg border border-stone-200/80 object-cover"
+          />
+        ) : (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-500">
+            {withDriver ? <Truck size={17} /> : <Store size={17} />}
+          </div>
         )}
-        {(driverToPay || payoutFailed) && <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" title="Livreur à régler" />}
-        <span className="hidden w-24 shrink-0 text-right text-xs text-gray-500 md:inline">{formatDate(item.created_at)}</span>
-        <ChevronDown size={16} className={cn('shrink-0 text-gray-400 transition-transform', open && 'rotate-180')} />
-      </button>
 
-      {open && (
-        <div className="space-y-3 border-t border-gray-100 px-3 py-3">
-          <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-xs">
-            <dt className="text-gray-500">Acheteur</dt>
-            <dd className="text-gray-900">{person(buyer?.full_name, buyer?.phone)}</dd>
-            <dt className="text-gray-500">Vendeur</dt>
-            <dd className="text-gray-900">{person(seller?.full_name, seller?.phone)}</dd>
-            <dt className="text-gray-500">Livreur</dt>
-            <dd className="text-gray-900">
-              {withDriver ? person(driver?.name || 'Non assigné', driver?.phone) : 'Aucun (retrait en boutique)'}
-            </dd>
-            <dt className="text-gray-500">Créée le</dt>
-            <dd className="text-gray-900">{formatDate(item.created_at)}</dd>
-            {withDriver && (
+        {/* Produit + Acteurs */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-sm font-semibold text-stone-900">{titleText}</span>
+            <span className="shrink-0 font-mono text-[11px] text-stone-400">
+              #{(item.order_id || item.id).slice(0, 6)}
+            </span>
+          </div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-stone-500">
+            <span className="truncate max-w-[220px]">
+              {buyer?.full_name || 'Acheteur'} → {seller?.full_name || 'Vendeur'}
+            </span>
+            {withDriver && driver?.name && (
               <>
-                <dt className="text-gray-500">Course</dt>
-                <dd className="text-gray-900">
-                  {cancelledUnpaid ? (
-                    <>{formatPrice(deliveryFee)} prévus · non dus, course annulée</>
-                  ) : (
-                    <>
-                      {formatPrice(deliveryFee)} · livreur {formatPrice(driverNetFee)} · commission{' '}
-                      {formatPrice(deliveryFee - driverNetFee)}
-                    </>
-                  )}
-                </dd>
-                <dt className="text-gray-500">Versement livreur</dt>
-                <dd>
-                  {payoutPaid ? (
-                    <AdminBadge tone="success">
-                      Payé{payout?.withdraw_mode ? ` via ${payout.withdraw_mode.replace('-ci', '')}` : ''}
-                    </AdminBadge>
-                  ) : payoutPending ? (
-                    <AdminBadge tone="warning">En attente d’envoi</AdminBadge>
-                  ) : payoutFailed ? (
-                    <AdminBadge tone="danger">Échec</AdminBadge>
-                  ) : driverToPay ? (
-                    <AdminBadge tone="danger">Non créé</AdminBadge>
-                  ) : paidInCash && item.status !== 'cancelled' ? (
-                    <span className="text-gray-500">En espèces à la remise (pas de virement)</span>
-                  ) : cancelledUnpaid ? (
-                    <span className="text-gray-500">Aucun : course annulée</span>
-                  ) : (
-                    <span className="text-gray-500">Après la livraison</span>
-                  )}
-                </dd>
+                <span className="text-stone-300">·</span>
+                <span className="text-stone-600 font-medium">🛵 {driver.name}</span>
               </>
             )}
-          </dl>
+            <span className="text-stone-300 hidden sm:inline">·</span>
+            <span className="hidden sm:inline text-stone-400">{formatDate(item.created_at)}</span>
+          </div>
+        </div>
 
-          {photoUrl && (
-            <button
-              type="button"
-              onClick={() => window.open(photoUrl, '_blank')}
-              className="inline-flex items-center gap-1 text-xs text-gray-700 hover:underline"
-            >
-              <ExternalLink size={12} /> Voir la preuve de livraison
-            </button>
+        {/* Mode & Paiement (Bureau) */}
+        <div className="hidden md:flex shrink-0 items-center gap-1.5">
+          <span className="rounded-md bg-stone-100 px-2 py-0.5 text-[11px] font-medium text-stone-600">
+            {withDriver ? 'Livraison' : 'Retrait'}
+          </span>
+          <span
+            className={cn(
+              'rounded-md px-2 py-0.5 text-[11px] font-medium',
+              isCashPayment ? 'bg-stone-100 text-stone-600' : 'bg-emerald-50 text-emerald-700'
+            )}
+          >
+            {isCashPayment ? 'Espèces' : 'En ligne'}
+          </span>
+        </div>
+
+        {/* Montant tabulaire */}
+        <div className="shrink-0 text-right">
+          <p
+            className={cn(
+              'text-sm font-bold tabular-nums',
+              isCancelled ? 'text-stone-400 line-through' : 'text-stone-900'
+            )}
+          >
+            {formatPrice(totalAmount)}
+          </p>
+          {withDriver && deliveryFee > 0 && (
+            <p className="text-[11px] text-stone-400 tabular-nums">
+              dont livr. {formatPrice(deliveryFee)}
+            </p>
           )}
+        </div>
 
-          {(item.status === 'disputed' || driverToPay || payoutFailed) && (
-            <div className="flex flex-wrap gap-3">
-              {item.status === 'disputed' && (
-                <button
-                  onClick={() => navigate('/admin/litiges')}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-red-700 hover:underline"
-                >
-                  Arbitrer ce litige <ArrowRight size={12} />
-                </button>
-              )}
-              {(driverToPay || payoutFailed) && (
-                <button
-                  onClick={() => navigate('/admin/versements')}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-gray-700 hover:underline"
-                >
-                  Régler le livreur <ArrowRight size={12} />
-                </button>
+        {/* Statut */}
+        <div className="flex shrink-0 items-center gap-2">
+          {(driverToPay || payoutFailed) && (
+            <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" title="Livreur à régler" />
+          )}
+          <AdminBadge tone={status.tone}>{status.label}</AdminBadge>
+          <ChevronDown
+            size={16}
+            className={cn('shrink-0 text-stone-400 transition-transform', open && 'rotate-180')}
+          />
+        </div>
+      </button>
+
+      {/* Tiroir de détail structuré en 3 blocs clairs */}
+      {open && (
+        <div className="border-t border-stone-100 bg-stone-50/50 px-4 py-4 rounded-b-xl">
+          <div className="grid gap-4 lg:grid-cols-3">
+            {/* 1. Acteurs & Trajet */}
+            <div className="rounded-lg border border-stone-200/80 bg-white p-3">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-stone-400">
+                Acteurs & Trajet
+              </p>
+              <div className="divide-y divide-stone-100">
+                <ContactLine role="Acheteur" name={buyer?.full_name} phone={buyer?.phone} />
+                <ContactLine role="Vendeur" name={seller?.full_name} phone={seller?.phone} />
+                <ContactLine
+                  role="Livreur"
+                  name={withDriver ? driver?.name || 'Non assigné' : 'Retrait boutique'}
+                  phone={withDriver ? driver?.phone : null}
+                />
+              </div>
+              <p className="mt-2 border-t border-stone-100 pt-2 text-xs text-stone-600">
+                <span className="font-medium text-stone-900">Itinéraire :</span> {from} → {to}
+              </p>
+            </div>
+
+            {/* 2. Détail financier */}
+            <div className="rounded-lg border border-stone-200/80 bg-white p-3">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-stone-400">
+                Détail financier
+              </p>
+              <dl className="space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <dt className="text-stone-500">Montant article</dt>
+                  <dd className="font-medium text-stone-900 tabular-nums">{formatPrice(productAmount)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-stone-500">Frais de livraison</dt>
+                  <dd className="font-medium text-stone-900 tabular-nums">{formatPrice(deliveryFee)}</dd>
+                </div>
+                <div className="flex justify-between border-t border-stone-100 pt-1.5 font-semibold text-stone-900">
+                  <dt>Total commande</dt>
+                  <dd className="tabular-nums">{formatPrice(totalAmount)}</dd>
+                </div>
+                <div className="flex justify-between pt-1">
+                  <dt className="text-stone-500">Mode de règlement</dt>
+                  <dd className="font-medium text-stone-800">
+                    {isCashPayment ? 'Espèces (à la remise)' : 'Payé en ligne (Séquestre)'}
+                  </dd>
+                </div>
+                {withDriver && (
+                  <div className="flex items-center justify-between pt-1">
+                    <dt className="text-stone-500">Part livreur ({formatPrice(driverNetFee)})</dt>
+                    <dd>
+                      {payoutPaid ? (
+                        <AdminBadge tone="success">Payé</AdminBadge>
+                      ) : payoutPending ? (
+                        <AdminBadge tone="warning">En cours</AdminBadge>
+                      ) : payoutFailed ? (
+                        <AdminBadge tone="danger">Échec</AdminBadge>
+                      ) : driverToPay ? (
+                        <AdminBadge tone="danger">À verser</AdminBadge>
+                      ) : paidInCash ? (
+                        <span className="text-stone-500">Encaissé cash</span>
+                      ) : isCancelled ? (
+                        <span className="text-stone-400">Annulée</span>
+                      ) : (
+                        <span className="text-stone-500">Après remise</span>
+                      )}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+
+            {/* 3. Actions & Vérifications */}
+            <div className="flex flex-col justify-between rounded-lg border border-stone-200/80 bg-white p-3">
+              <div>
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-stone-400">
+                  Actions & Preuves
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {item.order?.listing_id && (
+                    <AdminButton
+                      size="sm"
+                      icon={Package}
+                      onClick={() => navigate(`/listing/${item.order?.listing_id}`)}
+                    >
+                      Voir l'annonce
+                    </AdminButton>
+                  )}
+                  {photoUrl && (
+                    <AdminButton
+                      size="sm"
+                      icon={ExternalLink}
+                      onClick={() => window.open(photoUrl, '_blank')}
+                    >
+                      Preuve photo
+                    </AdminButton>
+                  )}
+                  {item.status === 'disputed' && (
+                    <AdminButton
+                      size="sm"
+                      variant="danger"
+                      icon={ArrowRight}
+                      onClick={() => navigate('/admin/litiges')}
+                    >
+                      Arbitrer le litige
+                    </AdminButton>
+                  )}
+                  {(driverToPay || payoutFailed) && (
+                    <AdminButton
+                      size="sm"
+                      variant="primary"
+                      icon={ArrowRight}
+                      onClick={() => navigate('/admin/versements')}
+                    >
+                      Régler le livreur
+                    </AdminButton>
+                  )}
+                </div>
+              </div>
+
+              {canAdminCancel && (
+                <div className="mt-3 border-t border-stone-100 pt-2.5 flex items-center justify-between">
+                  <span className="text-[11px] text-stone-400">Commande test ou bloquée ?</span>
+                  <AdminButton
+                    size="sm"
+                    variant="ghost"
+                    icon={XCircle}
+                    loading={cancellingId === item.id}
+                    onClick={() => onCancelItem?.(item)}
+                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                  >
+                    Annuler la commande
+                  </AdminButton>
+                </div>
               )}
             </div>
-          )}
+          </div>
         </div>
       )}
     </li>

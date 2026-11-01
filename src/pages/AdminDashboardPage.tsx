@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import {
   LayoutDashboard,
   Flag,
@@ -15,6 +15,7 @@ import {
   Rocket,
   CreditCard,
   Wrench,
+  ArrowUpRight,
   type LucideIcon,
 } from 'lucide-react';
 import { useSupabase } from '../hooks/useSupabase';
@@ -41,28 +42,68 @@ import { AdminMaintenanceSettings } from '../components/admin/config/AdminMainte
 interface AdminPage {
   key: string;
   label: string;
+  shortLabel?: string;
   icon: LucideIcon;
-  /** Premier chemin = chemin canonique ; les suivants restent acceptés. */
   paths: string[];
-  /** Réservé aux rôles admin et superadmin (pas aux modérateurs). */
   adminOnly?: boolean;
+  quickMobile?: boolean;
   render: () => React.ReactNode;
 }
 
-/**
- * Administration : pages rangées par groupe, chaque fonction à un seul endroit.
- *
- * Avant : onze onglets à plat, avec des doublons (litiges tranchés dans
- * Livraisons ET Versements, versement livreur déclenché à deux endroits,
- * resynchronisation des versements dans la Configuration ET dans Versements)
- * et une page « Configuration & Urgences » qui mélangeait monétisation,
- * maintenance, paiements et bannissements d'IP.
- */
 const GROUPS: { label: string; pages: AdminPage[] }[] = [
   {
     label: 'Pilotage',
     pages: [
-      { key: 'kpis', label: 'Tableau de bord', icon: LayoutDashboard, paths: ['/admin', '/admin/kpis'], adminOnly: true, render: () => <AdminKpisTab /> },
+      {
+        key: 'kpis',
+        label: 'Tableau de bord',
+        shortLabel: 'Aperçu',
+        icon: LayoutDashboard,
+        paths: ['/admin', '/admin/kpis'],
+        adminOnly: true,
+        quickMobile: true,
+        render: () => <AdminKpisTab />,
+      },
+      {
+        key: 'livraisons',
+        label: 'Commandes & Livraisons',
+        shortLabel: 'Commandes',
+        icon: Truck,
+        paths: ['/admin/livraisons'],
+        quickMobile: true,
+        render: () => <AdminDeliveriesTab />,
+      },
+      {
+        key: 'notifications',
+        label: 'Notifications Push',
+        shortLabel: 'Notifs',
+        icon: Bell,
+        paths: ['/admin/notifications'],
+        quickMobile: true,
+        render: () => <AdminNotificationsTab />,
+      },
+    ],
+  },
+  {
+    label: 'Arbitrage & Finances',
+    pages: [
+      {
+        key: 'litiges',
+        label: 'Litiges',
+        icon: ShieldAlert,
+        paths: ['/admin/litiges'],
+        quickMobile: true,
+        render: () => <AdminDisputesTab />,
+      },
+      {
+        key: 'versements',
+        label: 'Versements',
+        icon: Banknote,
+        paths: ['/admin/versements', '/admin/payouts'],
+        adminOnly: true,
+        quickMobile: true,
+        render: () => <AdminPayoutsTab />,
+      },
     ],
   },
   {
@@ -74,29 +115,15 @@ const GROUPS: { label: string; pages: AdminPage[] }[] = [
     ],
   },
   {
-    label: 'Opérations',
-    pages: [
-      { key: 'livraisons', label: 'Livraisons', icon: Truck, paths: ['/admin/livraisons'], render: () => <AdminDeliveriesTab /> },
-      { key: 'litiges', label: 'Litiges', icon: ShieldAlert, paths: ['/admin/litiges'], render: () => <AdminDisputesTab /> },
-      { key: 'versements', label: 'Versements', icon: Banknote, paths: ['/admin/versements', '/admin/payouts'], adminOnly: true, render: () => <AdminPayoutsTab /> },
-    ],
-  },
-  {
     label: 'Communauté',
     pages: [
-      { key: 'feedbacks', label: 'Avis', icon: MessageSquare, paths: ['/admin/feedbacks'], render: () => <AdminFeedbacksTab /> },
-      { key: 'features', label: 'Idées', icon: Lightbulb, paths: ['/admin/features'], render: () => <AdminFeaturesTab /> },
+      { key: 'feedbacks', label: 'Avis clients', icon: MessageSquare, paths: ['/admin/feedbacks'], render: () => <AdminFeedbacksTab /> },
+      { key: 'features', label: 'Boîte à idées', icon: Lightbulb, paths: ['/admin/features'], render: () => <AdminFeaturesTab /> },
       { key: 'ambassadeurs', label: 'Ambassadeurs', icon: Award, paths: ['/admin/ambassadeurs'], adminOnly: true, render: () => <AdminAmbassadorsTab /> },
     ],
   },
   {
-    label: 'Communication',
-    pages: [
-      { key: 'notifications', label: 'Notifications', icon: Bell, paths: ['/admin/notifications'], render: () => <AdminNotificationsTab /> },
-    ],
-  },
-  {
-    label: 'Réglages',
+    label: 'Configuration',
     pages: [
       { key: 'monetisation', label: 'Monétisation', icon: Rocket, paths: ['/admin/monetisation', '/admin/settings'], adminOnly: true, render: () => <AdminMonetisationSettings /> },
       { key: 'paiements', label: 'Paiements', icon: CreditCard, paths: ['/admin/paiements'], adminOnly: true, render: () => <AdminPaymentSettings /> },
@@ -106,11 +133,11 @@ const GROUPS: { label: string; pages: AdminPage[] }[] = [
 ];
 
 export default function AdminDashboardPage() {
-  usePageTitle('Administration');
+  usePageTitle('Console Administration');
   const location = useLocation();
   const navigate = useNavigate();
   const { user, userProfile, isAdmin } = useSupabase();
-  const { byTab } = useAdminPendingCounts(Boolean(isAdmin));
+  const { byTab, total: totalPending } = useAdminPendingCounts(Boolean(isAdmin));
 
   const role = String(userProfile?.role || '').toLowerCase();
   const isFullAdmin = role === 'admin' || role === 'superadmin';
@@ -124,77 +151,144 @@ export default function AdminDashboardPage() {
   if (!user || !isAdmin) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
-        <ErrorState message="Accès non autorisé" />
+        <ErrorState message="Accès réservé à l'administration" />
       </div>
     );
   }
 
   const current = pages.find((p) => p.paths.includes(location.pathname)) || pages[0];
+  const quickPages = pages.filter((p) => p.quickMobile);
   const go = (page: AdminPage) => navigate(page.paths[0]);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Navigation mobile : un sélecteur groupé */}
-      <div className="sticky top-0 z-20 border-b border-gray-200 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
-        <label className="sr-only" htmlFor="admin-page">
-          Page d’administration
-        </label>
-        <select
-          id="admin-page"
-          value={current?.key}
-          onChange={(e) => {
-            const page = pages.find((p) => p.key === e.target.value);
-            if (page) go(page);
-          }}
-          className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-medium text-gray-900 outline-none"
-        >
-          {groups.map((g) => (
-            <optgroup key={g.label} label={g.label}>
-              {g.pages.map((p) => {
-                const n = byTab[p.key] || 0;
-                return (
-                  <option key={p.key} value={p.key}>
-                    {n > 0 ? `${p.label} (${n})` : p.label}
-                  </option>
-                );
-              })}
-            </optgroup>
-          ))}
-        </select>
-      </div>
+    <div className="min-h-screen bg-[#FAF9F6] pb-20 text-stone-900">
+      {/* Bandeau supérieur sobre */}
+      <header className="sticky top-0 z-30 border-b border-stone-200/90 bg-white/95 backdrop-blur-xs">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2.5 lg:px-6">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="h-2 w-2 rounded-full bg-[var(--color-primary)] shrink-0" />
+            <span className="text-xs font-bold tracking-tight text-stone-900">DALOAMARKET ADMIN</span>
+            <span className="text-stone-300">/</span>
+            <span className="truncate text-xs font-medium text-stone-600">{current?.label}</span>
+          </div>
 
-      <div className="mx-auto mt-6 max-w-7xl px-4 lg:flex lg:items-start lg:gap-8 lg:px-6">
-        {/* Navigation bureau : groupes */}
-        <nav className="sticky top-20 hidden w-60 shrink-0 space-y-5 rounded-2xl border border-gray-200 bg-white p-3 lg:block">
-          <p className="px-2 pt-1 text-sm font-semibold text-gray-900">Administration</p>
-          {groups.map((g) => (
-            <div key={g.label}>
-              <p className="px-2 pb-1 text-xs font-medium text-gray-400">{g.label}</p>
-              {g.pages.map((p) => {
-                const active = current?.key === p.key;
-                const Icon = p.icon;
-                const n = byTab[p.key] || 0;
-                return (
-                  <button
-                    key={p.key}
-                    onClick={() => go(p)}
-                    className={cn(
-                      'flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm transition-colors',
-                      active
-                        ? 'bg-[var(--color-primary-50)] font-medium text-[var(--color-primary-dark)]'
-                        : 'text-gray-600 hover:bg-gray-50'
-                    )}
-                  >
-                    <Icon size={16} className={active ? 'text-[var(--color-primary)]' : 'text-gray-400'} />
-                    <span className="flex-1">{p.label}</span>
-                    {n > 0 && (
-                      <span className="rounded-full bg-red-500 px-1.5 text-xs font-medium tabular-nums text-white" aria-label={`${n} en attente`}>
-                        {n}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+          <div className="flex items-center gap-3 shrink-0">
+            {totalPending > 0 && (
+              <span className="hidden sm:inline-flex items-center gap-1.5 rounded-md bg-amber-50 border border-amber-200/70 px-2 py-0.5 text-xs font-medium text-amber-800 tabular-nums">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                {totalPending} en attente
+              </span>
+            )}
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50 transition-colors"
+            >
+              Boutique <ArrowUpRight size={13} className="text-stone-400" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Navigation rapide Mobile (accès 1-clic aux pages clés + menu complet) */}
+        <div className="border-t border-stone-100 bg-stone-50/70 px-4 py-2 lg:hidden">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+            {quickPages.map((p) => {
+              const active = current?.key === p.key;
+              const Icon = p.icon;
+              const n = byTab[p.key] || 0;
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => go(p)}
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors',
+                    active
+                      ? 'bg-stone-900 text-white'
+                      : 'bg-white text-stone-600 border border-stone-200/80 hover:bg-stone-100'
+                  )}
+                >
+                  <Icon size={13} />
+                  <span>{p.shortLabel || p.label}</span>
+                  {n > 0 && (
+                    <span className={cn(
+                      'rounded-full px-1.5 text-[10px] font-bold tabular-nums',
+                      active ? 'bg-red-500 text-white' : 'bg-red-100 text-red-700'
+                    )}>
+                      {n}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+            <select
+              aria-label="Toutes les rubriques d'administration"
+              value={current?.key}
+              onChange={(e) => {
+                const page = pages.find((p) => p.key === e.target.value);
+                if (page) go(page);
+              }}
+              className="ml-auto h-7 shrink-0 rounded-lg border border-stone-200 bg-white px-2 text-xs font-medium text-stone-700 outline-none"
+            >
+              {groups.map((g) => (
+                <optgroup key={g.label} label={g.label}>
+                  {g.pages.map((p) => {
+                    const n = byTab[p.key] || 0;
+                    return (
+                      <option key={p.key} value={p.key}>
+                        {n > 0 ? `${p.label} (${n})` : p.label}
+                      </option>
+                    );
+                  })}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto mt-6 max-w-7xl px-4 lg:flex lg:items-start lg:gap-7 lg:px-6">
+        {/* Barre latérale Bureau */}
+        <nav
+          aria-label="Navigation administration"
+          className="sticky top-16 hidden w-56 shrink-0 space-y-4 rounded-xl border border-stone-200/90 bg-white p-3 shadow-2xs lg:block"
+        >
+          {groups.map((g, idx) => (
+            <div key={g.label} className={cn(idx > 0 && 'border-t border-stone-100 pt-3')}>
+              <p className="px-2.5 pb-1.5 text-[11px] font-semibold text-stone-400">{g.label}</p>
+              <div className="space-y-0.5">
+                {g.pages.map((p) => {
+                  const active = current?.key === p.key;
+                  const Icon = p.icon;
+                  const n = byTab[p.key] || 0;
+                  return (
+                    <button
+                      key={p.key}
+                      type="button"
+                      onClick={() => go(p)}
+                      className={cn(
+                        'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors',
+                        active
+                          ? 'bg-stone-900 font-semibold text-white'
+                          : 'font-medium text-stone-600 hover:bg-stone-100 hover:text-stone-900'
+                      )}
+                    >
+                      <Icon size={15} className={active ? 'text-[var(--color-primary)]' : 'text-stone-400'} />
+                      <span className="flex-1 truncate">{p.label}</span>
+                      {n > 0 && (
+                        <span
+                          className={cn(
+                            'rounded-full px-1.5 py-0.2 text-[10px] font-semibold tabular-nums',
+                            active ? 'bg-red-500 text-white' : 'bg-red-50 text-red-700'
+                          )}
+                          aria-label={`${n} en attente`}
+                        >
+                          {n}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           ))}
         </nav>

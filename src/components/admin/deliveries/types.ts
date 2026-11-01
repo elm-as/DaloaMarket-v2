@@ -1,10 +1,12 @@
 import type { PayoutItem } from '../payouts/types';
 
-export type DeliveryTabFilter = 'all' | 'active' | 'delivered' | 'cancelled';
+export type DeliveryTabFilter = 'all' | 'active' | 'delivered' | 'pickup' | 'cancelled';
 
 export interface AdminDeliveryItem {
   id: string;
   order_id: string;
+  /** Vrai si l'élément provient d'une commande sans ligne dans delivery_assignments */
+  is_order_only?: boolean;
   delivery_person_id: string | null;
   status: string;
   created_at: string;
@@ -37,6 +39,12 @@ export interface AdminDeliveryItem {
     delivery_address?: string | null;
     buyer_id: string;
     seller_id: string;
+    listing_id?: string | null;
+    listing?: {
+      id?: string;
+      title: string;
+      photos?: string[] | null;
+    } | null;
     buyer?: { id: string; full_name: string | null; phone: string | null } | null;
     seller?: { id: string; full_name: string | null; phone: string | null } | null;
   } | null;
@@ -48,11 +56,8 @@ export interface AdminDeliveryItem {
  * Détermine si une course implique un livreur (exclut les retraits directs en boutique).
  */
 export const isDriverDelivery = (item: AdminDeliveryItem): boolean => {
-  // Les retraits en boutique / point relais ne nécessitent aucun livreur
-  if (item.order?.delivery_mode === 'pickup_point') return false;
-  // Sans livreur affecté et avec 0 frais de livraison, aucun versement livreur requis
+  if (item.order?.delivery_mode === 'pickup' || item.order?.delivery_mode === 'pickup_point') return false;
   const fee = item.delivery_price ?? item.order?.delivery_fee ?? 0;
   if (!item.delivery_person_id && !item.driver_payout && fee === 0) return false;
   return true;
 };
-

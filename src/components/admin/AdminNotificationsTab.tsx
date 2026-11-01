@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Send, Bell, History, Sparkles, Bookmark } from 'lucide-react';
+import { Send, Bell, History, Sparkles, Bookmark, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
-import { formatDate } from '../../lib/utils';
+import { cn, formatDate } from '../../lib/utils';
 import { broadcastPushNotification } from '../../lib/pushNotifications';
 import { useCustomTemplates } from './notifications/useCustomTemplates';
 import { NotificationTemplateSelector } from './notifications/NotificationTemplateSelector';
@@ -20,16 +20,17 @@ import { confirmDialog } from '../../components/ui/ConfirmDialog';
 
 type Audience = 'all' | 'market' | 'delivery';
 
-const AUDIENCES: { value: Audience; label: string }[] = [
-  { value: 'all', label: 'Tout le monde (DaloaMarket et DaloaDelivery)' },
-  { value: 'market', label: 'DaloaMarket (acheteurs et vendeurs)' },
-  { value: 'delivery', label: 'DaloaDelivery (livreurs)' },
+const AUDIENCES: { value: Audience; label: string; sub: string }[] = [
+  { value: 'all', label: 'Tout le monde', sub: 'Market & Delivery' },
+  { value: 'market', label: 'DaloaMarket', sub: 'Acheteurs & Vendeurs' },
+  { value: 'delivery', label: 'DaloaDelivery', sub: 'Livreurs uniquement' },
 ];
 
 const QUICK_LINKS = [
   { label: 'Accueil', url: '/' },
   { label: 'Publier', url: '/create-listing' },
   { label: 'Ma boutique', url: '/profile?tab=shop' },
+  { label: 'Pack Crédits', url: '/acheter-pack' },
   { label: 'Chaîne WhatsApp', url: 'https://whatsapp.com/channel/0029Vb94o2vJENy5kkADR42U' },
   { label: 'Espace livreur', url: 'https://delivery.daloamarket.com/dashboard' },
 ];
@@ -42,7 +43,7 @@ export const AdminNotificationsTab: React.FC = () => {
   const [templateId, setTemplateId] = useState('');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState('/');
   const [sending, setSending] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
 
@@ -53,7 +54,7 @@ export const AdminNotificationsTab: React.FC = () => {
       .from('notifications')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(30);
+      .limit(20);
     setHistory(data || []);
   }, []);
 
@@ -67,12 +68,12 @@ export const AdminNotificationsTab: React.FC = () => {
     setBody(t.body);
     setUrl(t.url);
     setAudience(t.audience || 'all');
-    toast.success(`Modèle « ${t.title} » appliqué`);
+    toast.success(`Modèle « ${t.title} » chargé`);
   };
 
   const handleSaveCurrentAsTemplate = async () => {
     if (!title.trim() || !body.trim()) {
-      toast.error('Veuillez renseigner un titre et un message');
+      toast.error('Renseignez un titre et un message avant d’enregistrer le modèle');
       return;
     }
     const tpl = await saveTemplate({
@@ -91,14 +92,15 @@ export const AdminNotificationsTab: React.FC = () => {
 
   const canSend = title.trim().length > 0 && body.trim().length > 0 && !sending;
 
-  const handleSend = async () => {
+  const handleSend = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!canSend) return;
-    const target = AUDIENCES.find((a) => a.value === audience)?.label || '';
+    const target = AUDIENCES.find((a) => a.value === audience);
     if (
       !(await confirmDialog({
-        title: 'Envoyer la notification ?',
-        message: `Destinataires : ${target}`,
-        confirmLabel: 'Envoyer',
+        title: 'Diffuser cette notification ?',
+        message: `Cible : ${target?.label} (${target?.sub})`,
+        confirmLabel: 'Diffuser maintenant',
       }))
     )
       return;
@@ -116,12 +118,12 @@ export const AdminNotificationsTab: React.FC = () => {
       }
       toast.success(
         res.sent && res.sent > 0
-          ? `Notification envoyée sur ${res.sent} appareil${res.sent > 1 ? 's' : ''}`
-          : 'Notification enregistrée (aucun appareil abonné pour cette audience)'
+          ? `Envoyée sur ${res.sent} appareil${res.sent > 1 ? 's' : ''}`
+          : 'Notification enregistrée'
       );
       setTitle('');
       setBody('');
-      setUrl('');
+      setUrl('/');
       setTemplateId('');
       fetchHistory();
     } catch (err: any) {
@@ -134,67 +136,82 @@ export const AdminNotificationsTab: React.FC = () => {
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="Notifications"
-        description="Diffusions de messages en direct sur les téléphones et navigateurs."
+        title="Notifications Push"
+        description="Studio de rédaction et bibliothèque de modèles en 1 clic pour les téléphones et navigateurs."
       />
 
-      {/* Sélecteur de Modèles en 1 Clic & Création depuis l'Admin */}
-      <AdminSection
-        icon={Sparkles}
-        title="Modèles de notifications (1-Clic & Personnalisables)"
-        description="Choisissez un modèle prédéfini ou créez vos propres modèles enregistrés."
-      >
-        <NotificationTemplateSelector
-          allTemplates={allTemplates}
-          selectedTemplateId={templateId}
-          onSelectTemplate={handleApplyTemplate}
-          onSaveCustomTemplate={saveTemplate}
-          onDeleteCustomTemplate={deleteTemplate}
-          currentFormState={{ title, body, url, audience }}
-        />
-      </AdminSection>
-
-      {/* Formulaire d'envoi et d'édition */}
-      <AdminSection
-        icon={Bell}
-        title="Rédiger & Diffuser la notification"
-        footer={
-          <div className="flex items-center justify-between w-full">
-            <button
-              type="button"
-              disabled={!title.trim() || !body.trim()}
-              onClick={handleSaveCurrentAsTemplate}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 hover:text-amber-800 disabled:opacity-40 transition-colors"
-            >
-              <Bookmark className="h-3.5 w-3.5" />
-              Enregistrer ce message comme modèle
-            </button>
-            <AdminButton variant="primary" icon={Send} loading={sending} disabled={!canSend} onClick={handleSend}>
-              Diffuser maintenant
-            </AdminButton>
-          </div>
-        }
-      >
-        <div className="grid gap-6 lg:grid-cols-[1fr,280px]">
-          <div className="space-y-3">
-            <AdminField label="Destinataires" htmlFor="notif-audience">
-              <select
-                id="notif-audience"
-                value={audience}
-                onChange={(e) => setAudience(e.target.value as Audience)}
-                className={adminInputClass}
+      {/* Studio 2 colonnes : Rédaction à gauche, Modèles 1-clic à droite */}
+      <div className="grid gap-6 lg:grid-cols-[1fr,390px]">
+        {/* Colonne Gauche : Rédaction & Aperçu direct */}
+        <AdminSection
+          icon={Bell}
+          title="Rédiger & Diffuser"
+          description="Composez votre message ou cliquez sur un modèle à droite pour pré-remplir."
+          footer={
+            <div className="flex w-full items-center justify-between gap-2">
+              <button
+                type="button"
+                disabled={!title.trim() || !body.trim()}
+                onClick={handleSaveCurrentAsTemplate}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-600 hover:text-stone-900 disabled:opacity-40 transition-colors"
               >
-                {AUDIENCES.map((a) => (
-                  <option key={a.value} value={a.value}>
-                    {a.label}
-                  </option>
-                ))}
-              </select>
-            </AdminField>
+                <Bookmark size={14} className="text-[var(--color-primary)]" />
+                Sauvegarder en modèle
+              </button>
+              <AdminButton
+                variant="primary"
+                icon={Send}
+                loading={sending}
+                disabled={!canSend}
+                onClick={() => handleSend()}
+              >
+                Diffuser maintenant
+              </AdminButton>
+            </div>
+          }
+        >
+          <form onSubmit={handleSend} className="space-y-3">
+            <fieldset>
+              <legend className="mb-1.5 block text-xs font-semibold text-stone-700">
+                Audience cible
+              </legend>
+              <div className="grid grid-cols-3 gap-2">
+                {AUDIENCES.map((a) => {
+                  const selected = audience === a.value;
+                  return (
+                    <label
+                      key={a.value}
+                      className={cn(
+                        'flex cursor-pointer flex-col rounded-lg border p-2.5 transition-all',
+                        selected
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary-50)]/40 ring-1 ring-[var(--color-primary)]'
+                          : 'border-stone-200 bg-white hover:bg-stone-50'
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="notif-audience"
+                        value={a.value}
+                        checked={selected}
+                        onChange={() => setAudience(a.value)}
+                        className="sr-only"
+                      />
+                      <span className="text-xs font-bold text-stone-900">{a.label}</span>
+                      <span className="mt-0.5 text-[10px] text-stone-500">{a.sub}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
 
-            <AdminField label={`Titre (${title.length}/${TITLE_MAX})`} htmlFor="notif-title">
+            <AdminField
+              label="Titre de la notification"
+              rightLabel={`${title.length}/${TITLE_MAX}`}
+              htmlFor="notif-title"
+            >
               <input
                 id="notif-title"
+                name="title"
                 value={title}
                 maxLength={TITLE_MAX}
                 onChange={(e) => setTitle(e.target.value)}
@@ -203,27 +220,35 @@ export const AdminNotificationsTab: React.FC = () => {
               />
             </AdminField>
 
-            <AdminField label={`Message (${body.length}/${BODY_MAX})`} htmlFor="notif-body">
+            <AdminField
+              label="Message"
+              rightLabel={`${body.length}/${BODY_MAX}`}
+              htmlFor="notif-body"
+            >
               <textarea
                 id="notif-body"
+                name="body"
                 rows={3}
                 value={body}
                 maxLength={BODY_MAX}
                 onChange={(e) => setBody(e.target.value)}
-                placeholder="Rédigez votre message d'alerte..."
+                placeholder="Rédigez un message clair et direct..."
                 className={adminInputClass}
               />
             </AdminField>
 
             <AdminField
-              label="Lien de redirection au clic"
-              hint="Chemin sur le site (ex. /create-listing) ou URL externe."
+              label="Lien d'ouverture au clic"
               htmlFor="notif-url"
             >
               <input
                 id="notif-url"
+                name="url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
                 placeholder="/"
                 className={adminInputClass}
               />
@@ -233,48 +258,113 @@ export const AdminNotificationsTab: React.FC = () => {
                     key={l.url}
                     type="button"
                     onClick={() => setUrl(l.url)}
-                    className="rounded-full border border-gray-200 px-2.5 py-0.5 text-xs text-gray-600 hover:bg-gray-50 transition-colors"
+                    className={cn(
+                      'rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors',
+                      url === l.url
+                        ? 'border-stone-900 bg-stone-900 text-white'
+                        : 'border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100'
+                    )}
                   >
                     {l.label}
                   </button>
                 ))}
               </div>
             </AdminField>
-          </div>
 
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-[var(--color-on-surface)]">Aperçu direct</p>
-            <div className="rounded-2xl bg-gray-100 p-3">
-              <div className="flex gap-2.5 rounded-xl bg-white p-3 shadow-sm">
-                <img src="/android-chrome-192x192.png" alt="" className="h-8 w-8 shrink-0 rounded-lg" />
-                <div className="min-w-0">
-                  <p className="text-[11px] text-gray-400">
-                    {audience === 'delivery' ? 'DaloaDelivery' : 'DaloaMarket'} · maintenant
-                  </p>
-                  <p className="truncate text-sm font-semibold text-gray-900">{title || 'Titre de la notification'}</p>
-                  <p className="line-clamp-3 text-xs text-gray-600">{body || 'Le message apparaît ici.'}</p>
+            {/* Aperçu Téléphone intégré */}
+            <div className="pt-2">
+              <p className="mb-1.5 text-xs font-semibold text-stone-500">Aperçu sur téléphone</p>
+              <div className="rounded-xl border border-stone-200/80 bg-stone-100/80 p-3">
+                <div className="flex items-start gap-3 rounded-lg bg-white p-3 shadow-2xs border border-stone-200/60">
+                  <img
+                    src="/android-chrome-192x192.png"
+                    alt=""
+                    className="h-9 w-9 shrink-0 rounded-lg border border-stone-100"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between text-[11px] text-stone-400">
+                      <span className="font-semibold text-stone-600">
+                        {audience === 'delivery' ? 'DaloaDelivery' : 'DaloaMarket'}
+                      </span>
+                      <span>maintenant</span>
+                    </div>
+                    <p className="mt-0.5 truncate text-xs font-bold text-stone-900">
+                      {title || 'Titre de votre notification'}
+                    </p>
+                    <p className="mt-0.5 line-clamp-2 text-xs text-stone-600">
+                      {body || 'Le contenu de votre message apparaîtra ici en temps réel.'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </AdminSection>
+          </form>
+        </AdminSection>
 
-      <AdminSection icon={History} title="Historique" description="Les 30 derniers envois." bodyClassName="p-0">
+        {/* Colonne Droite : Bibliothèque de modèles 1-Clic */}
+        <AdminSection
+          icon={Sparkles}
+          title="Modèles rapides (1-Clic)"
+          description="Cliquez sur un modèle pour remplir l'éditeur."
+        >
+          <NotificationTemplateSelector
+            allTemplates={allTemplates}
+            selectedTemplateId={templateId}
+            onSelectTemplate={handleApplyTemplate}
+            onSaveCustomTemplate={saveTemplate}
+            onDeleteCustomTemplate={deleteTemplate}
+            currentFormState={{ title, body, url, audience }}
+          />
+        </AdminSection>
+      </div>
+
+      {/* Historique des diffusions avec bouton Réutiliser */}
+      <AdminSection
+        icon={History}
+        title="Historique des diffusions"
+        description="Les 20 dernières notifications envoyées."
+        bodyClassName="p-0"
+      >
         {history.length === 0 ? (
           <div className="p-5">
             <AdminEmpty title="Aucune notification envoyée" />
           </div>
         ) : (
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-stone-100">
             {history.map((n) => (
-              <li key={n.id} className="flex items-start justify-between gap-4 px-5 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-gray-900">{n.title}</p>
-                  <p className="line-clamp-2 text-xs text-gray-500">{n.body}</p>
-                  {n.url && <p className="mt-0.5 truncate text-xs text-gray-400">{n.url}</p>}
+              <li
+                key={n.id}
+                className="flex items-center justify-between gap-4 px-5 py-3 hover:bg-stone-50/60 transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-xs font-semibold text-stone-900">{n.title}</p>
+                    {n.url && (
+                      <span className="hidden sm:inline truncate font-mono text-[11px] text-stone-400">
+                        {n.url}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 line-clamp-1 text-xs text-stone-500">{n.body}</p>
                 </div>
-                <AdminBadge>{formatDate(n.created_at)}</AdminBadge>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  <AdminBadge>{formatDate(n.created_at)}</AdminBadge>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTitle(n.title || '');
+                      setBody(n.body || '');
+                      setUrl(n.url || '/');
+                      toast.success('Message rechargé dans l’éditeur');
+                    }}
+                    className="inline-flex items-center gap-1 rounded-md border border-stone-200 bg-white px-2 py-1 text-[11px] font-medium text-stone-600 hover:bg-stone-100"
+                    title="Réutiliser ce message"
+                  >
+                    <RotateCcw size={11} />
+                    Réutiliser
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
