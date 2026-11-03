@@ -177,3 +177,40 @@ async function computeBillableDistanceKm(origin: LatLng, destination: LatLng): P
 
   return clampBillableDistanceKm(straight * DISTANCE_RULE.roadFactor);
 }
+
+export function findNearestDistrict(lat?: number | null, lng?: number | null): string | null {
+  if (lat == null || lng == null) return null;
+  const numLat = Number(lat);
+  const numLng = Number(lng);
+  if (!Number.isFinite(numLat) || !Number.isFinite(numLng)) return null;
+
+  let bestDistrict: string | null = null;
+  let minDistanceSq = Infinity;
+
+  for (const [name, coords] of Object.entries(DALOA_DISTRICT_COORDINATES)) {
+    const dLat = numLat - coords.latitude;
+    const dLng = (numLng - coords.longitude) * Math.cos((coords.latitude * Math.PI) / 180);
+    const distSq = dLat * dLat + dLng * dLng;
+    if (distSq < minDistanceSq) {
+      minDistanceSq = distSq;
+      bestDistrict = name;
+    }
+  }
+
+  return bestDistrict;
+}
+
+export function detectDistrictInText(text?: string | null): string | null {
+  if (!text) return null;
+  const normalized = text.toLowerCase();
+
+  for (const district of Object.keys(DALOA_DISTRICT_COORDINATES)) {
+    const distLower = district.toLowerCase();
+    const regex = new RegExp(`(^|[^a-z0-9à-ÿ])${distLower}([^a-z0-9à-ÿ]|$)`, 'i');
+    if (regex.test(normalized)) {
+      return district;
+    }
+  }
+
+  return null;
+}

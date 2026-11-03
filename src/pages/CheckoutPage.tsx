@@ -41,6 +41,7 @@ import {
   resolveSellerPoint,
   resolveBuyerPoint,
   resolveBillableDistanceKm,
+  findNearestDistrict,
 } from "../lib/daloaGeo";
 import { calculateDeliveryFee } from "../lib/delivery";
 import { affiliatedDeliverersService } from "../services/affiliatedDeliverersService";
@@ -67,7 +68,7 @@ const CheckoutPage: React.FC = () => {
   const { listingId } = useParams<{ listingId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useSupabase();
+  const { user, userProfile } = useSupabase();
   const { phaseConfig } = useSystemSettings();
   const { items: cartItems, clearCart, removeFromCart, updateQuantity } = useCart();
   usePageTitle("Commander");
@@ -626,11 +627,17 @@ const CheckoutPage: React.FC = () => {
           p_items: items,
           p_delivery_mode: isShopPickup ? 'pickup' : 'delivery',
           p_payment_method: isShopPickup ? 'cash_at_shop' : 'cod',
-          p_delivery_address: isShopPickup ? 'Retrait en boutique' : (deliveryAddress || 'Daloa'),
+          p_delivery_address: isShopPickup
+            ? 'Retrait en boutique'
+            : (() => {
+                const dist = findNearestDistrict(deliveryLatitude, deliveryLongitude) || userProfile?.district;
+                const txt = (deliveryAddress || 'Daloa').trim();
+                return dist && !txt.toLowerCase().includes(dist.toLowerCase()) ? `Quartier ${dist} — ${txt}` : txt;
+              })(),
           // Paramètres facultatifs de la RPC : `undefined` les omet (défaut SQL = NULL).
           p_delivery_lat: isShopPickup ? undefined : (deliveryLatitude ?? undefined),
           p_delivery_lng: isShopPickup ? undefined : (deliveryLongitude ?? undefined),
-          p_delivery_district: undefined,
+          p_delivery_district: isShopPickup ? undefined : (findNearestDistrict(deliveryLatitude, deliveryLongitude) || userProfile?.district || undefined),
           p_road_km: isShopPickup ? {} : roadKmBySeller,
           ...(quoteId ? { p_quote_id: quoteId } : {}),
         } as never);
@@ -682,7 +689,11 @@ const CheckoutPage: React.FC = () => {
         ? 'Envoi numérique direct en privé (Messagerie / WhatsApp)'
         : isPickupMode
           ? 'Retrait en boutique'
-          : (deliveryAddress || 'Daloa');
+          : (() => {
+              const dist = findNearestDistrict(deliveryLatitude, deliveryLongitude) || userProfile?.district;
+              const txt = (deliveryAddress || 'Daloa').trim();
+              return dist && !txt.toLowerCase().includes(dist.toLowerCase()) ? `Quartier ${dist} — ${txt}` : txt;
+            })();
 
       const processItem = async (targetListingId: string, targetVariantId?: string, targetQty: number = 1, targetAmount: number = total) => {
         const result = await createOrder({

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, RefreshCw, AlertCircle, Phone, ArrowUpRight, Copy } from 'lucide-react';
+import { Search, RefreshCw, AlertCircle, Phone, ArrowUpRight, Copy, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn, formatPrice, formatDate } from '../../../lib/utils';
 import type { PayoutItem, PayoutStatus, PayoutType } from './types';
@@ -47,6 +47,39 @@ export const PayoutsTable: React.FC<PayoutsTableProps> = ({ payouts, onRefresh }
       }
     } catch (err: any) {
       toast.error(err.message || 'Erreur lors de la tentative de versement');
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
+  const handleMarkManualPayout = async (payoutId: string) => {
+    if (!window.confirm("Confirmez-vous avoir réglé ce montant de votre poche (ex: Wave perso) ? Cela soldera la ligne et l'enregistrera dans le journal d'audit.")) {
+      return;
+    }
+    setRetryingId(payoutId);
+    try {
+      const apiUrl = import.meta.env.VITE_PAYMENT_API_URL || 'https://api.daloamarket.com';
+      const { data: sess } = await supabase.auth.getSession();
+      const accessToken = sess.session?.access_token;
+      if (!accessToken) throw new Error('Session expirée');
+
+      const res = await fetch(`${apiUrl}/mark-payout-manual/${payoutId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ note: 'Avancé sur fonds propres administrateur suite indisponibilité passerelle' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Versement marqué payé manuellement et tracé !');
+        onRefresh();
+      } else {
+        toast.error(data.message || 'Erreur lors de la mise à jour');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Erreur de connexion');
     } finally {
       setRetryingId(null);
     }
@@ -257,15 +290,29 @@ export const PayoutsTable: React.FC<PayoutsTableProps> = ({ payouts, onRefresh }
 
                       {/* Actions */}
                       <td className="py-3 px-4 text-right">
-                        {isFailed && (
-                          <button
-                            onClick={() => handleRetrySinglePayout(p.id)}
-                            disabled={isRetrying}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-[11px] transition-all disabled:opacity-50"
-                          >
-                            <RefreshCw className={cn('w-3 h-3', isRetrying && 'animate-spin')} />
-                            {isRetrying ? 'Envoi...' : 'Réessayer'}
-                          </button>
+                        {(isFailed || p.status === 'pending') && (
+                          <div className="flex items-center justify-end gap-1.5">
+                            {isFailed && (
+                              <button
+                                onClick={() => handleRetrySinglePayout(p.id)}
+                                disabled={isRetrying}
+                                title="Réessayer le virement automatique via la passerelle"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-[11px] transition-all disabled:opacity-50"
+                              >
+                                <RefreshCw className={cn('w-3 h-3', isRetrying && 'animate-spin')} />
+                                {isRetrying ? 'Envoi...' : 'Réessayer'}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleMarkManualPayout(p.id)}
+                              disabled={isRetrying}
+                              title="Marquer comme payé de ma poche (Wave perso, etc.)"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px] transition-all border border-slate-300 disabled:opacity-50"
+                            >
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              Payé perso
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>
