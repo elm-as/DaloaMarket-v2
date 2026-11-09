@@ -248,6 +248,61 @@ export async function broadcastPushNotification(params: {
   }
 }
 
+export interface CampaignPreviewSample {
+  userId: string;
+  recipientName: string;
+  title: string;
+  body: string;
+  url: string;
+}
+
+export interface SegmentedCampaignResponse {
+  success: boolean;
+  dryRun?: boolean;
+  segment?: 'dormant' | 'active_seller';
+  recipientsCount?: number;
+  sent?: number;
+  samples?: CampaignPreviewSample[];
+  error?: string;
+  message?: string;
+}
+
+/**
+ * Envoie ou prévisualise une campagne push personnalisée par segment (`$nom`, `$lien`, `$chaine`, `$numero`).
+ */
+export async function sendSegmentedPushCampaign(params: {
+  segment: 'dormant' | 'active_seller';
+  title: string;
+  body: string;
+  url?: string;
+  dryRun?: boolean;
+}): Promise<SegmentedCampaignResponse> {
+  try {
+    const headers = await authHeaders();
+    if (!headers) {
+      return { success: false, error: 'Session absente' };
+    }
+
+    const response = await fetch(`${PUSH_API_URL}/push/campaign`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        segment: params.segment,
+        title: params.title,
+        body: params.body,
+        url: params.url || '/',
+        dryRun: Boolean(params.dryRun),
+      }),
+    });
+
+    const data = await response.json().catch(() => ({ success: response.ok }));
+    return data;
+  } catch (err: any) {
+    console.warn('[Push Campaign] Erreur:', err?.message);
+    return { success: false, error: err?.message };
+  }
+}
+
 /**
  * Send a targeted push notification to a specific user (Chat, Orders, etc.).
  */

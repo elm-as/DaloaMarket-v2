@@ -8,6 +8,68 @@ import type { NotificationTemplate } from './notificationTemplates.types';
  *  - Déclencher la première commande sécurisée avec livraison express
  */
 export const GROWTH_TEMPLATES: NotificationTemplate[] = [
+  // 🎯 CAMPAGNES CIBLÉES & PERSONNALISÉES ($nom, $lien, $chaine, $numero)
+  {
+    id: 'seg-dormant-tchaii-calecon',
+    category: 'segmented',
+    categoryLabel: '🎯 Ciblage : Inscrits Inactifs (0 annonce / 0 achat)',
+    title: 'Tchaii $nom 😒',
+    body: "Tu as installé, tu as créé ton compte, tout ça là pour ne rien faire ? Si tu commandes pas, faut publier des choses au moins. Même si c'est ton caleçon 🩲",
+    url: '/publier',
+    audience: 'dormant',
+    recommendedTime: 'Midi vers 12h30 ou Soir vers 19h00',
+  },
+  {
+    id: 'seg-dormant-on-dit-quoi',
+    category: 'segmented',
+    categoryLabel: '🎯 Ciblage : Inscrits Inactifs (0 annonce / 0 achat)',
+    title: '$nom, on dit quoi ? 👀',
+    body: 'Ton compte est là, il dort hein ! Y a pas un pagne, une paire de chaussures ou un téléphone qui traîne chez toi ? Mets ça en ligne, ça va partir.',
+    url: '/publier',
+    audience: 'dormant',
+    recommendedTime: 'Samedi matin ou Soir vers 18h30',
+  },
+  {
+    id: 'seg-dormant-cest-comment',
+    category: 'segmented',
+    categoryLabel: '🎯 Ciblage : Inscrits Inactifs (0 annonce / 0 achat)',
+    title: "Eh $nom, c'est comment ? 😅",
+    body: 'Tu regardes seulement, tu achètes pas, tu vends pas… Faut bouger un peu ! 1 photo + 1 prix, c’est fini en 1 minute.',
+    url: '/publier',
+    audience: 'dormant',
+    recommendedTime: 'Après-midi vers 15h00',
+  },
+  {
+    id: 'seg-seller-partage-boutique',
+    category: 'segmented',
+    categoryLabel: '🎯 Ciblage : Vendeurs Actifs (Annonces en ligne)',
+    title: '$nom, ta boutique est prête 🛍️',
+    body: 'Faut essayer de partager ta boutique, mets ton lien en statut, des gens vont venir voir, tu verras 👉 $lien. Si tu sais pas faire, viens demander sur WhatsApp au $numero',
+    url: '/profile?tab=shop',
+    audience: 'active_seller',
+    recommendedTime: 'Matin entre 08h30 et 10h00',
+  },
+  {
+    id: 'seg-seller-articles-qui-sait',
+    category: 'segmented',
+    categoryLabel: '🎯 Ciblage : Vendeurs Actifs (Annonces en ligne)',
+    title: '$nom, tes articles sont là, mais qui sait ? 🤷🏾',
+    body: 'Si tu partages pas, personne va voir hein. Mets ton lien en statut ce soir 👉 $lien. Besoin d’aide ? Demande dans la chaîne ou au $numero',
+    url: '/profile?tab=shop',
+    audience: 'active_seller',
+    recommendedTime: 'Soir vers 18h30',
+  },
+  {
+    id: 'seg-seller-stop-30-photos',
+    category: 'segmented',
+    categoryLabel: '🎯 Ciblage : Vendeurs Actifs (Annonces en ligne)',
+    title: "Arrête d'envoyer 30 photos, $nom 📸",
+    body: 'Mets juste ton lien en statut, tes clients voient tout avec les prix 👉 $lien. Si tu bloques, écris-nous sur WhatsApp au $numero',
+    url: '/profile?tab=shop',
+    audience: 'active_seller',
+    recommendedTime: 'Matin vers 09h00',
+  },
+
   // 📊 SONDAGES WHATSAPP & ÉCOUTE DE LA COMMUNAUTÉ
   {
     id: 'survey-what-to-buy',

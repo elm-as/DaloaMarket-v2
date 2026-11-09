@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Search, Check, Trash2, Edit2, Bookmark, X } from 'lucide-react';
-import type { NotificationTemplate } from './notificationTemplates.types';
+import type { NotificationTemplate, NotificationAudience } from './notificationTemplates.types';
 import { adminInputClass, AdminButton } from '../ui/AdminUI';
 import { confirmDialog } from '../../ui/ConfirmDialog';
 import { cn } from '../../../lib/utils';
@@ -15,11 +15,26 @@ interface Props {
     title: string;
     body: string;
     url: string;
-    audience: 'all' | 'market' | 'delivery';
+    audience: NotificationAudience;
   };
 }
 
-type CategoryFilter = 'all' | 'custom' | 'growth' | 'delivery';
+type CategoryFilter = 'all' | 'segmented' | 'custom' | 'growth' | 'delivery';
+
+function formatAudienceBadgeLabel(audience?: NotificationAudience): string {
+  switch (audience) {
+    case 'dormant':
+      return '🎯 Inactifs (0 annonce / 0 achat)';
+    case 'active_seller':
+      return '🎯 Vendeurs actifs';
+    case 'delivery':
+      return 'Livreurs';
+    case 'market':
+      return 'Market';
+    default:
+      return 'Tous';
+  }
+}
 
 export const NotificationTemplateSelector: React.FC<Props> = ({
   allTemplates,
@@ -37,7 +52,7 @@ export const NotificationTemplateSelector: React.FC<Props> = ({
   const [draftTitle, setDraftTitle] = useState('');
   const [draftBody, setDraftBody] = useState('');
   const [draftUrl, setDraftUrl] = useState('/');
-  const [draftAudience, setDraftAudience] = useState<'all' | 'market' | 'delivery'>('all');
+  const [draftAudience, setDraftAudience] = useState<NotificationAudience>('all');
   const [saving, setSaving] = useState(false);
 
   const openCreateModal = (tplToEdit?: NotificationTemplate | null) => {
@@ -102,9 +117,11 @@ export const NotificationTemplateSelector: React.FC<Props> = ({
 
   const filteredTemplates = useMemo(() => {
     return allTemplates.filter((t) => {
+      if (filterCategory === 'segmented' && t.category !== 'segmented' && t.audience !== 'dormant' && t.audience !== 'active_seller') return false;
       if (filterCategory === 'custom' && !t.isCustom) return false;
       if (
         filterCategory === 'growth' &&
+        t.category !== 'segmented' &&
         t.category !== 'diversity' &&
         t.category !== 'first_order' &&
         t.category !== 'whatsapp' &&
@@ -130,6 +147,7 @@ export const NotificationTemplateSelector: React.FC<Props> = ({
         <div className="flex items-center gap-1 overflow-x-auto pb-0.5 text-xs">
           {[
             { key: 'all' as const, label: `Tous (${allTemplates.length})` },
+            { key: 'segmented' as const, label: '🎯 Ciblés' },
             { key: 'custom' as const, label: `Perso (${customCount})` },
             { key: 'growth' as const, label: 'Croissance' },
             { key: 'delivery' as const, label: 'Livreurs' },
@@ -205,7 +223,7 @@ export const NotificationTemplateSelector: React.FC<Props> = ({
                   <p className="mt-0.5 line-clamp-2 text-[11px] leading-relaxed text-stone-500">{t.body}</p>
                   <div className="mt-1 flex items-center gap-2 text-[10px] text-stone-400">
                     <span>
-                      Cible : {t.audience === 'delivery' ? 'Livreurs' : t.audience === 'market' ? 'Market' : 'Tous'}
+                      Cible : {formatAudienceBadgeLabel(t.audience)}
                     </span>
                     <span>·</span>
                     <span className="truncate font-mono">{t.url}</span>
@@ -309,8 +327,10 @@ export const NotificationTemplateSelector: React.FC<Props> = ({
                     className={adminInputClass}
                   >
                     <option value="all">Tout le monde</option>
-                    <option value="market">DaloaMarket</option>
-                    <option value="delivery">DaloaDelivery</option>
+                    <option value="market">DaloaMarket (Tous)</option>
+                    <option value="dormant">🎯 Inactifs (0 annonce / 0 achat)</option>
+                    <option value="active_seller">🎯 Vendeurs actifs (Annonces en ligne)</option>
+                    <option value="delivery">DaloaDelivery (Livreurs)</option>
                   </select>
                 </div>
                 <div>

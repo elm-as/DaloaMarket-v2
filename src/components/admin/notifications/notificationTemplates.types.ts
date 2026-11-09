@@ -1,5 +1,8 @@
+export type NotificationAudience = 'all' | 'market' | 'delivery' | 'dormant' | 'active_seller';
+
 export type NotificationCategory =
   | 'custom'
+  | 'segmented'
   | 'survey'
   | 'diversity'
   | 'first_order'
@@ -20,7 +23,7 @@ export interface NotificationTemplate {
   body: string;
   url: string;
   recommendedTime: string;
-  /** Application visée par défaut (sinon DaloaMarket). */
-  audience?: 'all' | 'market' | 'delivery';
+  /** Audience ou segment ciblé par défaut. */
+  audience?: NotificationAudience;
   isCustom?: boolean;
 }
