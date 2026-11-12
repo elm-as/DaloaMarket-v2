@@ -36,8 +36,12 @@ import ListingCardSkeleton from '../components/listings/ListingCardSkeleton';
 import { userBehaviorService } from '../services/userBehaviorService';
 import { getTrendingRecommendations } from '../lib/feedCuration';
 import { HomeForYouSection } from '../components/home/HomeForYouSection';
+<<<<<<< HEAD
 import { PromoBannersCarousel } from '../components/home/PromoBannersCarousel';
 import { WebFlashDealsSection } from '../components/home/WebFlashDealsSection';
+=======
+import { CommunityProofStrip } from '../components/home/CommunityProofStrip';
+>>>>>>> 43fd096 (feat(market): implement 9 psychological levers, live seller payout simulator, flash promo presets and strict Daloa geofence)
 
 const CATEGORY_STYLE: Record<string, { icon: React.ReactNode; bg: string; border: string; emoji: string }> = {
   fashion: { icon: <Shirt className="h-4 w-4" />, bg: 'bg-pink-50 text-pink-600', border: 'border-pink-200', emoji: '👗' },
@@ -397,6 +401,9 @@ const HomePage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* FLOATING TRUST & COMMUNITY PROOF STRIP */}
+      <CommunityProofStrip isPhase0={isPhase0} />
 
       {/* CATEGORY SELECTOR STRIP — DIRECTEMENT ACCESSIBLE */}
       <section className="pt-3 pb-1">

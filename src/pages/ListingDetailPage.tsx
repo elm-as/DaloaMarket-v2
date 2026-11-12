@@ -19,6 +19,7 @@ import OwnerControls from '../components/listings/detail/OwnerControls';
 import ReportListingModal from '../components/listings/detail/ReportListingModal';
 import DeleteListingModal from '../components/listings/detail/DeleteListingModal';
 import StickyBuyBar from '../components/listings/detail/StickyBuyBar';
+import { AddToCartSection } from '../components/listings/AddToCartSection';
 import type { ListingVariant } from '../types/listing';
 import { getUnavailabilityReason, isListingAvailable } from '../lib/availability';
 import { getListingPath } from '../lib/utils';
@@ -181,6 +182,16 @@ const ListingDetailPage: React.FC = () => {
             selectedVariant={selectedVariant}
             onVariantChange={handleVariantChange}
           />
+
+          {/* CTA Achat / Panier visible sur grand écran (StickyBuyBar est lg:hidden) */}
+          {!isSold && listing.user_id !== user?.id && (
+            <div className="hidden lg:block bg-white rounded-3xl p-4 shadow-lg shadow-gray-200/50 border border-gray-100">
+              <AddToCartSection
+                listing={listing}
+                selectedVariant={selectedVariant}
+              />
+            </div>
+          )}
 
           <SellerCard
             listing={listing}

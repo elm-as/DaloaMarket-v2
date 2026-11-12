@@ -12,7 +12,7 @@ import { usePhase } from '../contexts/PhaseContext';
 import { SELLER_FEE_RATE, PRO_SELLER_FEE_RATE } from '../lib/pricing';
 import { Button } from '../components/ui/Button';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { getListingPath } from '../lib/utils';
+import { getListingPath, isLocationInDaloa } from '../lib/utils';
 import type { ListingVariant } from '../types/listing';
 import { listingDraftService } from '../services/listingDraftService';
 
@@ -470,8 +470,12 @@ const ListingCreatePage: React.FC = () => {
     return null;
   }
 
+  const isSuperOrAdmin = userProfile?.role === 'admin' || userProfile?.role === 'superadmin';
   const hasPayoutInfo = !!userProfile?.payout_network && !!userProfile?.payout_number;
   const hasShopLocation = userProfile?.shop_latitude != null && userProfile?.shop_longitude != null;
+  const isShopInDaloa =
+    hasShopLocation &&
+    (isSuperOrAdmin || isLocationInDaloa(Number(userProfile!.shop_latitude), Number(userProfile!.shop_longitude)));
 
   return (
     <motion.div
@@ -519,22 +523,28 @@ const ListingCreatePage: React.FC = () => {
             </Button>
           </div>
         </div>
-      ) : !hasShopLocation ? (
+      ) : !hasShopLocation || !isShopInDaloa ? (
         <div className="px-4 py-8 max-w-lg mx-auto">
           <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-xl shadow-gray-200/50 flex flex-col items-center text-center">
             <div className="w-14 h-14 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mb-3.5 shadow-xs">
               <AlertTriangle className="w-7 h-7" />
             </div>
-            <h2 className="text-base font-black text-gray-900 mb-1.5">Position de boutique requise</h2>
+            <h2 className="text-base font-black text-gray-900 mb-1.5">
+              {hasShopLocation && !isShopInDaloa
+                ? 'Vente réservée à la ville de Daloa'
+                : 'Position de boutique requise'}
+            </h2>
             <p className="text-xs text-gray-500 mb-5 leading-relaxed">
-              Afin que vos acheteurs et les livreurs de Daloa puissent localiser vos articles et calculer la livraison, veuillez positionner votre boutique sur la carte.
+              {hasShopLocation && !isShopInDaloa
+                ? "Nous ne sommes encore présents qu'à Daloa pour le moment. Seuls les vendeurs physiquement basés à Daloa sont autorisés à publier des annonces."
+                : 'Afin que vos acheteurs et les livreurs de Daloa puissent localiser vos articles et calculer la livraison, veuillez positionner votre boutique sur la carte à Daloa.'}
             </p>
             <Button
               color="primary"
               onClick={() => navigate('/settings?tab=boutique')}
               className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-black shadow-lg shadow-orange-500/25 active:scale-[0.98]"
             >
-              Définir la position GPS
+              Définir la position GPS à Daloa
             </Button>
           </div>
         </div>
@@ -621,6 +631,7 @@ const ListingCreatePage: React.FC = () => {
                     <ListingPricingSection
                       register={register}
                       errors={errors}
+                      setValue={setValue}
                       priceNum={priceNum}
                       sellerFee={sellerFee}
                       discountPercent={discountPercent}

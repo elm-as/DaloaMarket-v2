@@ -1,6 +1,6 @@
 import React from 'react';
-import { Percent, Sparkles, CheckCircle2 } from 'lucide-react';
-import type { UseFormRegister, FieldErrors } from 'react-hook-form';
+import { Percent, Sparkles, CheckCircle2, Flame, ShieldCheck, Crown } from 'lucide-react';
+import type { UseFormRegister, FieldErrors, UseFormSetValue } from 'react-hook-form';
 import type { ListingFormValues } from '../../../pages/ListingCreatePage';
 import { formatPrice } from '../../../lib/utils';
 import { ListingVariantsSection } from './ListingVariantsSection';
@@ -9,6 +9,7 @@ import type { ListingVariant } from '../../../types/listing';
 interface ListingPricingSectionProps {
   register: UseFormRegister<ListingFormValues>;
   errors: FieldErrors<ListingFormValues>;
+  setValue?: UseFormSetValue<ListingFormValues>;
   priceNum: number;
   discountPercent: number;
   sellerFee: number;
@@ -19,9 +20,17 @@ interface ListingPricingSectionProps {
   onVariantsChange: (variants: ListingVariant[]) => void;
 }
 
+const FLASH_PROMO_PRESETS = [
+  { label: 'Promo -10%', pct: 0.1 },
+  { label: 'Promo -15%', pct: 0.15 },
+  { label: 'Promo -20%', pct: 0.2 },
+  { label: 'Promo -30%', pct: 0.3 },
+];
+
 export const ListingPricingSection: React.FC<ListingPricingSectionProps> = ({
   register,
   errors,
+  setValue,
   priceNum,
   discountPercent,
   sellerFee,
@@ -31,6 +40,12 @@ export const ListingPricingSection: React.FC<ListingPricingSectionProps> = ({
   variants,
   onVariantsChange,
 }) => {
+  const applyFlashPromoPreset = (pct: number) => {
+    if (!setValue || isNaN(priceNum) || priceNum < 300) return;
+    const rawOriginal = Math.round(priceNum / (1 - pct));
+    const roundedOriginal = Math.ceil(rawOriginal / 50) * 50;
+    setValue('original_price', String(roundedOriginal), { shouldDirty: true, shouldValidate: true });
+  };
   return (
     <div className="space-y-4">
       {/* ── 2-COLUMN PRICE GRID ── */}
@@ -85,16 +100,92 @@ export const ListingPricingSection: React.FC<ListingPricingSectionProps> = ({
         </div>
       </div>
 
-      {/* ── SIMULATEUR DE COMMISSION (UNIQUEMENT SI COMMISSION > 0) ── */}
-      {sellerFeeRate > 0 && !isNaN(priceNum) && priceNum > 0 && (
-        <div className="p-3.5 rounded-2xl bg-orange-50/40 border border-orange-100 text-xs space-y-2">
-          <div className="flex justify-between items-center text-gray-600 font-medium">
-            <span>Frais de service ({(sellerFeeRate * 100).toFixed(0)}%)</span>
-            <span className="text-red-500 font-bold">-{formatPrice(sellerFee)}</span>
+      {/* ── SIMULATEUR DE GAIN VENDEUR EN DIRECT (TOUJOURS VISIBLE DÈS SAISIE) ── */}
+      {!isNaN(priceNum) && priceNum >= 300 && (
+        <div className="p-3.5 rounded-2xl bg-gradient-to-br from-emerald-50/90 via-teal-50/60 to-white border border-emerald-200/80 text-xs space-y-2 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="inline-flex items-center gap-1.5 font-extrabold text-emerald-900">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              Simulation de votre revenu en direct
+            </span>
+            {isPro ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black">
+                <Crown className="w-3 h-3" /> Tarif PRO (2,5%)
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold text-emerald-700">
+                Paiement Mobile Money garanti
+              </span>
+            )}
           </div>
-          <div className="flex justify-between items-center text-gray-900 font-bold pt-2 border-t border-orange-150/60">
-            <span>Votre gain net reversé</span>
-            <span className="text-orange-600 font-black text-sm">{formatPrice(netPayout)}</span>
+
+          <div className="flex justify-between items-center text-gray-600 font-medium pt-1">
+            <span>Prix affiché à l'acheteur</span>
+            <span className="font-bold text-gray-900 tabular-nums">{formatPrice(priceNum)}</span>
+          </div>
+
+          <div className="flex justify-between items-center text-gray-600 font-medium">
+            <span>
+              Commission DaloaMarket ({(sellerFeeRate * 100).toFixed(1).replace('.0', '')}%)
+            </span>
+            <span className="text-red-500 font-bold tabular-nums">
+              {sellerFee > 0 ? `-${formatPrice(sellerFee)}` : '0 FCFA (Offert)'}
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center text-gray-900 font-bold pt-2 border-t border-emerald-200/70">
+            <span className="text-xs font-extrabold text-emerald-950">
+              💰 Ce que vous touchez réellement
+            </span>
+            <span className="text-emerald-700 font-black text-base tabular-nums">
+              {formatPrice(netPayout)}
+            </span>
+          </div>
+
+          {!isPro && sellerFeeRate > 0.025 && priceNum >= 2000 && (
+            <p className="text-[11px] text-amber-800 bg-amber-50/90 border border-amber-200/60 rounded-xl px-2.5 py-1.5 font-semibold">
+              💡 Avec le <strong>Pack Vendeur PRO</strong> (commission réduite à 2,5%), vous toucheriez{' '}
+              <strong className="tabular-nums">{formatPrice(priceNum - Math.round(priceNum * 0.025))}</strong> sur cette vente.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── BOUTONS PROMO TEMPORAIRE / FLASH FOMO (1 CLIC) ── */}
+      {!isNaN(priceNum) && priceNum >= 300 && setValue && (
+        <div className="p-3 rounded-2xl bg-orange-50/50 border border-orange-200/60 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-orange-950">
+              <Flame className="w-3.5 h-3.5 text-orange-600 fill-orange-500" />
+              Activer une Promo Flash (FOMO)
+            </span>
+            <span className="text-[10px] font-bold text-orange-700">
+              Vend jusqu'à 3× plus vite
+            </span>
+          </div>
+          <p className="text-[11px] text-gray-600 leading-snug">
+            Cliquez sur un badge pour afficher un prix barré et le tag <strong>« 🔥 Offre Flash »</strong> sur votre annonce :
+          </p>
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            {FLASH_PROMO_PRESETS.map((preset) => (
+              <button
+                key={preset.label}
+                type="button"
+                onClick={() => applyFlashPromoPreset(preset.pct)}
+                className="px-2.5 py-1 rounded-xl bg-white hover:bg-orange-600 hover:text-white text-orange-700 border border-orange-200 text-[11px] font-extrabold transition-all active:scale-95 shadow-2xs cursor-pointer"
+              >
+                ⚡ {preset.label}
+              </button>
+            ))}
+            {discountPercent > 0 && (
+              <button
+                type="button"
+                onClick={() => setValue('original_price', '', { shouldDirty: true })}
+                className="px-2.5 py-1 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 text-[11px] font-bold transition-all cursor-pointer"
+              >
+                Retirer la promo
+              </button>
+            )}
           </div>
         </div>
       )}
