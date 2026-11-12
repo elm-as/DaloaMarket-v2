@@ -256,10 +256,12 @@ export interface CampaignPreviewSample {
   url: string;
 }
 
+export type CampaignSegment = 'dormant' | 'active_seller' | 'seller_no_promo' | 'buyer_cancelled';
+
 export interface SegmentedCampaignResponse {
   success: boolean;
   dryRun?: boolean;
-  segment?: 'dormant' | 'active_seller';
+  segment?: CampaignSegment;
   recipientsCount?: number;
   sent?: number;
   samples?: CampaignPreviewSample[];
@@ -271,7 +273,7 @@ export interface SegmentedCampaignResponse {
  * Envoie ou prévisualise une campagne push personnalisée par segment (`$nom`, `$lien`, `$chaine`, `$numero`).
  */
 export async function sendSegmentedPushCampaign(params: {
-  segment: 'dormant' | 'active_seller';
+  segment: CampaignSegment;
   title: string;
   body: string;
   url?: string;

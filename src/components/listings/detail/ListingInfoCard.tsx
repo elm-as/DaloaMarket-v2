@@ -8,6 +8,7 @@ import DiscountBadge from '../DiscountBadge';
 import { getListingStartingPrice } from '../../../types/listing';
 import type { ListingFull, ListingVariant } from '../../../types/listing';
 import ListingVariantSelector from '../ListingVariantSelector';
+import ListingPsychologicalSignals from './ListingPsychologicalSignals';
 
 interface ListingInfoCardProps {
   listing: ListingFull;
@@ -82,6 +83,14 @@ const ListingInfoCard: React.FC<ListingInfoCardProps> = ({ listing, selectedVari
           </span>
         )}
       </div>
+
+      {/* Signaux FOMO, Confiance (Satisfait ou Remboursé) & Livraison Express */}
+      <ListingPsychologicalSignals
+        listingId={listing.id}
+        stock={selectedVariant?.stock ?? listing.stock ?? 1}
+        currentPrice={effectivePrice}
+        originalPrice={listing.original_price}
+      />
 
       {/* Description */}
       {listing.description && (

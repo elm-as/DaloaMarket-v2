@@ -89,7 +89,7 @@ export const LocationConfirmModal: React.FC<LocationConfirmModalProps> = ({
                   <span>Règle de proximité DaloaMarket :</span>
                 </div>
                 <p className="text-[11px] text-red-800 leading-tight">
-                  DaloaMarket est une marketplace locale 100% dédiée à la ville de Daloa. Seuls les commerçants et artisans physiquement basés à Daloa peuvent ouvrir une boutique.
+                  Nous ne sommes encore présents qu'à Daloa pour le moment. Vous n'êtes pas autorisé à vendre hors de Daloa.
                 </p>
               </div>
             </>

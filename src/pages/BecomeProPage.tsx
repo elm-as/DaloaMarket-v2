@@ -11,6 +11,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { cn, formatPrice } from '../lib/utils';
 import { initiatePayment } from '../lib/payment';
 import { SELLER_BADGE_PRICE, SELLER_BADGE_YEARLY_PRICE } from '../lib/featureFlags';
+import ProBeforeAfterCard from '../components/pro/ProBeforeAfterCard';
 
 const PRO_HIGHLIGHTS = [
   {
@@ -144,6 +145,9 @@ export default function BecomeProPage() {
       </header>
 
       <div className="relative z-10 -mt-8 max-w-md lg:max-w-5xl mx-auto px-4 space-y-6">
+        {/* Aspiration (Avant/Après) & Appartenance */}
+        <ProBeforeAfterCard />
+
         {/* Desktop 2-Column Layout */}
         <div className="lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start">
           {/* LEFT COLUMN: Plan Switcher & Checkout Card */}

@@ -7,7 +7,9 @@ import {
   broadcastPushNotification,
   sendSegmentedPushCampaign,
   type SegmentedCampaignResponse,
+  type CampaignSegment,
 } from '../../lib/pushNotifications';
+import { triggerBehavioralNudges } from '../../lib/engagementSignals';
 import { useCustomTemplates } from './notifications/useCustomTemplates';
 import { NotificationTemplateSelector } from './notifications/NotificationTemplateSelector';
 import { NotificationBroadcastHistory } from './notifications/NotificationBroadcastHistory';
@@ -28,8 +30,10 @@ const AUDIENCES: { value: NotificationAudience; label: string; sub: string; isSe
   { value: 'all', label: 'Tout le monde', sub: 'Market & Delivery' },
   { value: 'market', label: 'DaloaMarket', sub: 'Acheteurs & Vendeurs' },
   { value: 'delivery', label: 'DaloaDelivery', sub: 'Livreurs uniquement' },
-  { value: 'dormant', label: '🎯 Inactifs (0 annonce / 0 achat)', sub: 'Perso avec $nom', isSegmented: true },
-  { value: 'active_seller', label: '🎯 Vendeurs actifs', sub: 'Perso avec $nom & $lien', isSegmented: true },
+  { value: 'dormant', label: '🎯 Inactifs (0 annonce / 0 achat)', sub: 'Culpabilité / Activation ($nom)', isSegmented: true },
+  { value: 'active_seller', label: '🎯 Vendeurs actifs', sub: 'Appartenance / Statut WA ($nom, $lien)', isSegmented: true },
+  { value: 'seller_no_promo', label: '🔥 Vendeurs sans promo', sub: 'FOMO Promo Flash ($nom, $lien)', isSegmented: true },
+  { value: 'buyer_cancelled', label: '🛡️ Acheteurs hésitants', sub: 'Confiance / Satisfait ou remboursé ($nom)', isSegmented: true },
 ];
 
 const QUICK_LINKS = [
@@ -68,10 +72,40 @@ export const AdminNotificationsTab: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [campaignPreview, setCampaignPreview] = useState<SegmentedCampaignResponse | null>(null);
+  const [runningNudges, setRunningNudges] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
 
   const { allTemplates, saveTemplate, deleteTemplate } = useCustomTemplates();
-  const isSegmentedAudience = audience === 'dormant' || audience === 'active_seller';
+  const isSegmentedAudience =
+    audience === 'dormant' ||
+    audience === 'active_seller' ||
+    audience === 'seller_no_promo' ||
+    audience === 'buyer_cancelled';
+
+  const handleRunBehavioralNudges = async () => {
+    setRunningNudges(true);
+    try {
+      const res = await triggerBehavioralNudges(false);
+      if (!res.ok) throw new Error(res.error || 'Échec relances automatiques');
+      if (res.skippedReason) {
+        toast(`Relances en pause (${res.skippedReason})`, { icon: '🌙' });
+      } else {
+        const total =
+          (res.stats?.reviewNudgesSent || 0) +
+          (res.stats?.priceDropNudgesSent || 0) +
+          (res.stats?.lowStockNudgesSent || 0);
+        toast.success(
+          total > 0
+            ? `${total} relance(s) comportementale(s) envoyée(s) (Avis/Promo/Stock)`
+            : 'Aucune nouvelle relance comportementale à envoyer pour le moment'
+        );
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Erreur lors des relances automatiques');
+    } finally {
+      setRunningNudges(false);
+    }
+  };
 
   const fetchHistory = useCallback(async () => {
     const { data } = await supabase
@@ -125,7 +159,7 @@ export const AdminNotificationsTab: React.FC = () => {
     setPreviewing(true);
     try {
       const res = await sendSegmentedPushCampaign({
-        segment: audience,
+        segment: audience as CampaignSegment,
         title: title.trim(),
         body: body.trim(),
         url: url.trim() || '/',
@@ -162,7 +196,7 @@ export const AdminNotificationsTab: React.FC = () => {
     try {
       const res = isSegmentedAudience
         ? await sendSegmentedPushCampaign({
-            segment: audience,
+            segment: audience as CampaignSegment,
             title: title.trim(),
             body: body.trim(),
             url: url.trim() || '/',
@@ -199,8 +233,19 @@ export const AdminNotificationsTab: React.FC = () => {
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="Notifications Push"
-        description="Studio de rédaction, campagnes segmentées ($nom, $lien) et bibliothèque de modèles en 1 clic."
+        title="Notifications Push & Leviers Psychologiques"
+        description="Studio de rédaction, campagnes segmentées ($nom, $lien) et relances comportementales automatiques."
+        actions={
+          <AdminButton
+            type="button"
+            variant="secondary"
+            icon={Sparkles}
+            loading={runningNudges}
+            onClick={handleRunBehavioralNudges}
+          >
+            Relances Auto (Avis / Promos / Stock)
+          </AdminButton>
+        }
       />
 
       <div className="grid gap-6 lg:grid-cols-[1fr,390px]">

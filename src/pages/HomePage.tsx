@@ -41,6 +41,7 @@ import ListingCardSkeleton from '../components/listings/ListingCardSkeleton';
 import { userBehaviorService } from '../services/userBehaviorService';
 import { getTrendingRecommendations } from '../lib/feedCuration';
 import { HomeForYouSection } from '../components/home/HomeForYouSection';
+import { CommunityProofStrip } from '../components/home/CommunityProofStrip';
 
 const CATEGORY_STYLE: Record<string, { icon: React.ReactNode; bg: string; border: string; emoji: string }> = {
   fashion: { icon: <Shirt className="h-4 w-4" />, bg: 'bg-pink-50 text-pink-600', border: 'border-pink-200', emoji: '👗' },
@@ -440,45 +441,8 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* FLOATING TRUST STRIP */}
-      <section className="relative z-20 -mt-6 px-4">
-        <div className="mx-auto max-w-2xl bg-white rounded-3xl p-3 border border-gray-100 shadow-lg shadow-gray-200/50 flex items-center justify-around gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-              <Shield className="h-4 w-4" />
-            </div>
-            <div className="text-left">
-              <span className="text-xs font-extrabold text-gray-900 block leading-tight">Escrow</span>
-              <span className="text-[10px] text-gray-400 font-semibold hidden sm:inline">Paiement garanti</span>
-            </div>
-          </div>
-
-          <div className="h-5 w-px bg-gray-100" />
-
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center flex-shrink-0">
-              <MapPin className="h-4 w-4" />
-            </div>
-            <div className="text-left">
-              <span className="text-xs font-extrabold text-gray-900 block leading-tight">Local</span>
-              <span className="text-[10px] text-gray-400 font-semibold hidden sm:inline">Vendeurs Daloa</span>
-            </div>
-          </div>
-
-          <div className="h-5 w-px bg-gray-100" />
-
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
-              {isPhase0 ? <Sparkles className="h-4 w-4" /> : <Bike className="h-4 w-4" />}
-            </div>
-            {/* « Sans commission » n'est vrai qu'en phase 0 : en phase 1, on met en avant la livraison. */}
-            <div className="text-left">
-              <span className="text-xs font-extrabold text-gray-900 block leading-tight">{isPhase0 ? 'Gratuit' : 'Livraison'}</span>
-              <span className="text-[10px] text-gray-400 font-semibold hidden sm:inline">{isPhase0 ? 'Sans commission' : 'Par coursier'}</span>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* FLOATING TRUST & COMMUNITY PROOF STRIP */}
+      <CommunityProofStrip isPhase0={isPhase0} />
 
       {/* DALOADELIVERY LINK BANNER */}
       <section className="px-4 pt-3 pb-1">

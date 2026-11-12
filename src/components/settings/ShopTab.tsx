@@ -5,7 +5,7 @@ import { Camera, Save, Store, Upload, Image as ImageIcon, Share2 } from 'lucide-
 import { useNavigate } from 'react-router-dom';
 import { useSupabase } from '../../hooks/useSupabase';
 import { supabase } from '../../lib/supabase';
-import { cn } from '../../lib/utils';
+import { cn, isLocationInDaloa } from '../../lib/utils';
 import ProBadge from '../profile/ProBadge';
 import { friendlyError } from '../../lib/messages';
 import { usePhase } from '../../contexts/PhaseContext';
@@ -120,7 +120,16 @@ export const ShopTab: React.FC = () => {
     Math.abs(savedPosition.lat - shopLatitude) > 1e-6 ||
     Math.abs(savedPosition.lng - shopLongitude) > 1e-6;
 
+  const isSuperOrAdmin = (userProfile as any)?.role === 'admin' || (userProfile as any)?.role === 'superadmin';
+
   const handleLocationSave = useCallback(async (lat: number, lng: number) => {
+    if (!isLocationInDaloa(lat, lng) && !isSuperOrAdmin) {
+      toast.error(
+        "Nous ne sommes encore présents qu'à Daloa pour le moment. Vous n'êtes pas autorisé à vendre hors de Daloa.",
+        { icon: '🚫', duration: 5000 }
+      );
+      return;
+    }
     setLocationSaving(true);
     try {
       await updateUserProfile({
@@ -129,13 +138,17 @@ export const ShopTab: React.FC = () => {
         shop_updated_at: new Date().toISOString(),
       } as any);
       setSavedPosition({ lat, lng });
-      toast.success('Position enregistrée');
+      toast.success(
+        !isLocationInDaloa(lat, lng) && isSuperOrAdmin
+          ? 'Position enregistrée (Mode Admin / Test hors-Daloa)'
+          : 'Position enregistrée'
+      );
     } catch (err: any) {
       toast.error(friendlyError(err));
     } finally {
       setLocationSaving(false);
     }
-  }, [updateUserProfile]);
+  }, [updateUserProfile, isSuperOrAdmin]);
 
   const onShopSubmit = async (data: ShopFormData) => {
     setShopSaving(true);

@@ -1,8 +1,16 @@
-export type NotificationAudience = 'all' | 'market' | 'delivery' | 'dormant' | 'active_seller';
+export type NotificationAudience =
+  | 'all'
+  | 'market'
+  | 'delivery'
+  | 'dormant'
+  | 'active_seller'
+  | 'seller_no_promo'
+  | 'buyer_cancelled';
 
 export type NotificationCategory =
   | 'custom'
   | 'segmented'
+  | 'psychology'
   | 'survey'
   | 'diversity'
   | 'first_order'
