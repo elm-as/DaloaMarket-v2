@@ -125,6 +125,7 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
  * vol d'oiseau majoré. Même cascade que les applications et le serveur.
  */
 /** Itinéraires déjà calculés, pour ne pas réinterroger Mapbox/OSRM au même point. */
+const MAX_ROUTE_CACHE = 200;
 const routeCache = new Map<string, number>();
 
 export async function resolveBillableDistanceKm(
@@ -137,6 +138,10 @@ export async function resolveBillableDistanceKm(
   const cached = routeCache.get(key);
   if (cached != null) return cached;
   const km = await computeBillableDistanceKm(origin, destination);
+  if (routeCache.size >= MAX_ROUTE_CACHE) {
+    const oldestKey = routeCache.keys().next().value;
+    if (oldestKey !== undefined) routeCache.delete(oldestKey);
+  }
   routeCache.set(key, km);
   return km;
 }

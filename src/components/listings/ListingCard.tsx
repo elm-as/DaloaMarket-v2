@@ -72,7 +72,14 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, index = 0 }) => {
     }
     try {
       const photo = listing.photos && listing.photos.length > 0 ? listing.photos[0] : '';
-      await addToCart(listing.id, listing.title, displayPrice, photo, maxQty, 1);
+      await addToCart({
+        listingId: listing.id,
+        listingTitle: listing.title,
+        listingPrice: displayPrice,
+        listingPhoto: photo,
+        maxQty,
+        qty: 1,
+      });
       toast.success('Ajouté au panier');
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erreur lors de l'ajout");

@@ -1,6 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bike, Shield, Package } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Bike,
+  Check,
+  FileText,
+  KeyRound,
+  Package,
+  Shield,
+  Utensils,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { useSupabase } from '../hooks/useSupabase';
@@ -14,10 +24,10 @@ import { ExpressRouteContactsSection } from '../components/express/ExpressRouteC
 const DALOA_DISTRICTS: string[] = Object.keys(DALOA_DISTRICT_COORDINATES);
 
 const PACKAGE_TYPES = [
-  { id: 'parcel', label: 'Colis standard', emoji: '📦' },
-  { id: 'document', label: 'Pli / Document', emoji: '📄' },
-  { id: 'food', label: 'Repas / Courses', emoji: '🍱' },
-  { id: 'keys_urgent', label: 'Clés / Urgent', emoji: '🔑' },
+  { id: 'parcel', label: 'Colis standard', Icon: Package },
+  { id: 'document', label: 'Pli / Document', Icon: FileText },
+  { id: 'food', label: 'Repas / Courses', Icon: Utensils },
+  { id: 'keys_urgent', label: 'Clés / Urgent', Icon: KeyRound },
 ] as const;
 
 interface CreatedExpressRun {
@@ -104,8 +114,6 @@ const ExpressDeliveryPage: React.FC = () => {
         p_dropoff_address: dropoffAddress.trim() || 'Centre',
         p_dropoff_lat: quote.dCoords.lat,
         p_dropoff_lng: quote.dCoords.lng,
-        p_distance_km: quote.roadKm,
-        p_delivery_fee: quote.deliveryFee,
         p_package_type: packageType,
         p_package_description: discreteDescription,
         p_sender_name: senderName.trim() || userProfile?.full_name || 'Expéditeur',
@@ -113,6 +121,8 @@ const ExpressDeliveryPage: React.FC = () => {
         p_recipient_name: recipientName.trim() || 'Destinataire',
         p_recipient_phone: recipientPhone.trim(),
         p_payer_role: payerRole,
+        p_payment_method: payerRole === 'recipient' ? 'cod' : 'cash',
+        p_road_km: quote.roadKm,
       });
 
       if (error) throw error;
@@ -179,22 +189,25 @@ const ExpressDeliveryPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            {PACKAGE_TYPES.map((pt) => (
-              <button
-                key={pt.id}
-                type="button"
-                onClick={() => setPackageType(pt.id)}
-                className={cn(
-                  'flex flex-col items-center gap-1 rounded-2xl border p-3 text-center transition-all',
-                  packageType === pt.id
-                    ? 'border-orange-500 bg-orange-50/70 text-orange-950 font-black'
-                    : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-semibold'
-                )}
-              >
-                <span className="text-xl">{pt.emoji}</span>
-                <span className="text-xs">{pt.label}</span>
-              </button>
-            ))}
+            {PACKAGE_TYPES.map((pt) => {
+              const Icon = pt.Icon;
+              return (
+                <button
+                  key={pt.id}
+                  type="button"
+                  onClick={() => setPackageType(pt.id)}
+                  className={cn(
+                    'flex flex-col items-center gap-1.5 rounded-2xl border p-3 text-center transition-colors',
+                    packageType === pt.id
+                      ? 'border-orange-500 bg-orange-50/70 text-orange-950 font-black'
+                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-semibold'
+                  )}
+                >
+                  <Icon className="h-5 w-5 text-orange-600" />
+                  <span className="text-xs">{pt.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -202,21 +215,23 @@ const ExpressDeliveryPage: React.FC = () => {
               type="button"
               onClick={() => setIsSealed((v) => !v)}
               className={cn(
-                'rounded-xl border px-3 py-1.5 text-xs font-bold transition-all',
+                'inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition-colors',
                 isSealed ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-gray-200 text-gray-600'
               )}
             >
-              ✓ Colis scellé / fermé
+              <Check className="h-3.5 w-3.5" />
+              <span>Colis scellé / fermé</span>
             </button>
             <button
               type="button"
               onClick={() => setIsFragile((v) => !v)}
               className={cn(
-                'rounded-xl border px-3 py-1.5 text-xs font-bold transition-all',
+                'inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition-colors',
                 isFragile ? 'border-amber-500 bg-amber-50 text-amber-800' : 'border-gray-200 text-gray-600'
               )}
             >
-              ⚠️ Fragile
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span>Fragile</span>
             </button>
           </div>
 
@@ -296,7 +311,7 @@ const ExpressDeliveryPage: React.FC = () => {
           <button
             type="submit"
             disabled={submitting}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 px-6 text-sm font-black text-white shadow-md hover:opacity-95 disabled:opacity-50 transition-all"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 px-6 text-sm font-black text-white hover:bg-orange-700 disabled:opacity-50 transition-colors"
           >
             <Bike className="h-4 w-4" />
             <span>{submitting ? 'Publication en cours...' : `Appeler un coursier · ${formatPrice(quote.deliveryFee)}`}</span>

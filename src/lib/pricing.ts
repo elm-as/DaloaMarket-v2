@@ -1,4 +1,10 @@
-import { calculateOrder, calculateDeliveryFee, haversineDistance, type LatLng } from './delivery';
+import {
+  calculateOrder,
+  calculateDeliveryFee,
+  haversineDistance,
+  type CalculateOrderInput,
+  type LatLng,
+} from './delivery';
 
 export const DELIVERY_FEE = 500;
 export {
@@ -18,9 +24,13 @@ export const SELLER_BADGE_YEARLY_PRICE = 25000;
 export const LISTING_PACK_PRICE = 500;
 export const PACK_PRO_PRICE = 2500;
 
-export function calculateOrderPricing(productPrice: number, distanceKm: number = 0, isProSeller: boolean = false, sellerFeeOverride?: number | null) {
-  return calculateOrder(productPrice, distanceKm, isProSeller, sellerFeeOverride);
+/**
+ * Calcule le détail tarifaire d'une commande à partir d'un objet d'entrée typé.
+ * @param input Paramètres de tarification (prix produit, distance, statut vendeur pro).
+ */
+export function calculateOrderPricing(input: CalculateOrderInput) {
+  return calculateOrder(input);
 }
 
 export { haversineDistance, calculateDeliveryFee, calculateOrder };
-export type { LatLng };
+export type { CalculateOrderInput, LatLng };

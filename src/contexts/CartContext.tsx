@@ -13,17 +13,19 @@ export interface CartItem {
   variant_label?: string;
 }
 
+export interface AddToCartPayload {
+  listingId: string;
+  listingTitle: string;
+  listingPrice: number;
+  listingPhoto: string;
+  maxQty: number;
+  qty?: number;
+  variant?: { id: string; label: string };
+}
+
 interface CartContextType {
   items: CartItem[];
-  addToCart: (
-    listingId: string,
-    listingTitle: string,
-    listingPrice: number,
-    listingPhoto: string,
-    maxQty: number,
-    qty?: number,
-    variant?: { id: string; label: string }
-  ) => Promise<void>;
+  addToCart: (payload: AddToCartPayload) => Promise<void>;
   removeFromCart: (cartItemId: string) => Promise<void>;
   updateQuantity: (cartItemId: string, qty: number, maxQty?: number) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -43,14 +45,18 @@ function loadLocalCart(): CartItem[] {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed as CartItem[];
     }
-  } catch {}
+  } catch (err) {
+    console.warn('[CartContext] Impossible de lire le panier local:', err);
+  }
   return [];
 }
 
 function saveLocalCart(items: CartItem[]) {
   try {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items));
-  } catch {}
+  } catch (err) {
+    console.warn('[CartContext] Impossible de sauvegarder le panier local:', err);
+  }
 }
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -65,15 +71,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [items]);
 
   const addToCart = useCallback(
-    async (
-      listingId: string,
-      listingTitle: string,
-      listingPrice: number,
-      listingPhoto: string,
-      maxQty: number,
-      qty: number = 1,
-      variant?: { id: string; label: string }
-    ) => {
+    async ({
+      listingId,
+      listingTitle,
+      listingPrice,
+      listingPhoto,
+      maxQty,
+      qty = 1,
+      variant,
+    }: AddToCartPayload) => {
       if (!userRef.current) {
         throw new Error("Veuillez vous connecter pour ajouter des articles au panier");
       }

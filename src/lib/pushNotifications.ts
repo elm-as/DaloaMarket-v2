@@ -1,252 +1,21 @@
-import { supabase, isSupabaseConfigured } from './supabase';
+import {
+  getExistingSubscription,
+  getPermissionState,
+  getPushAuthHeaders,
+  isPushSupported,
+  subscribeToPush,
+  unsubscribeFromPush,
+} from './pushSubscriptionClient';
 
-const VAPID_PUBLIC_KEY =
-  import.meta.env.VITE_VAPID_PUBLIC_KEY ||
-  'BCU8msD00uw2OYTKGZ_U-d-2cp2SPo7iQzkapnEP9hVsKzPf_eAZduYOqmmzGz58b0k-zT-Z3ogsymll11ZfRx4';
-
-/**
- * En-têtes pour les routes push du serveur, qui exigent désormais un
- * utilisateur authentifié (/push/register, /push/notify-user) ou un
- * administrateur (/push/broadcast). Renvoie null si la session a expiré.
- */
-async function authHeaders(): Promise<Record<string, string> | null> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  if (!token) return null;
-  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
-}
+export {
+  getExistingSubscription,
+  getPermissionState,
+  isPushSupported,
+  subscribeToPush,
+  unsubscribeFromPush,
+};
 
 const PUSH_API_URL = import.meta.env.VITE_PAYMENT_API_URL || 'https://api.daloamarket.com';
-
-/**
- * Convert a base64url string to a Uint8Array (needed for applicationServerKey).
- */
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
-
-/**
- * Check if push notifications are supported in this browser.
- */
-export function isPushSupported(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    'serviceWorker' in navigator &&
-    'PushManager' in window &&
-    'Notification' in window
-  );
-}
-
-/**
- * Get the current notification permission state.
- */
-export function getPermissionState(): NotificationPermission {
-  if (typeof window === 'undefined' || !('Notification' in window)) return 'denied';
-  return Notification.permission;
-}
-
-/**
- * Get the active push subscription, if any.
- */
-export async function getExistingSubscription(): Promise<PushSubscription | null> {
-  if (!isPushSupported()) return null;
-  try {
-    const registration = await navigator.serviceWorker.ready;
-    return await registration.pushManager.getSubscription();
-  } catch (err) {
-    console.warn('[Push] Error getting subscription:', err);
-    return null;
-  }
-}
-
-/**
- * Subscribe the current browser to push notifications and persist to Supabase.
- * Returns the PushSubscription on success, or null on failure.
- */
-export async function subscribeToPush(userId: string): Promise<PushSubscription | null> {
-  console.log('[Push] 🔄 subscribeToPush requested for user:', userId);
-
-  if (!isPushSupported()) {
-    console.warn('[Push] ❌ Web push is not supported in this environment');
-    return null;
-  }
-
-  if (!isSupabaseConfigured) {
-    console.warn('[Push] ❌ Supabase client is not configured');
-    return null;
-  }
-
-  try {
-    const permission = await Notification.requestPermission();
-    console.log('[Push] 🔑 Permission status:', permission);
-
-    if (permission !== 'granted') {
-      console.warn('[Push] ⚠️ Notification permission not granted');
-      return null;
-    }
-
-    const registration = await navigator.serviceWorker.ready;
-    console.log('[Push] 📦 ServiceWorker registration ready');
-
-    // Check for existing subscription first
-    let subscription = await registration.pushManager.getSubscription();
-
-    // Verify that existing subscription matches the current VAPID public key
-    if (subscription) {
-      try {
-        const rawAppKey = subscription.options?.applicationServerKey;
-        const currentKeyBytes = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-        let matches = false;
-        if (rawAppKey) {
-          const subKeyBytes = new Uint8Array(rawAppKey);
-          if (
-            subKeyBytes.length === currentKeyBytes.length &&
-            subKeyBytes.every((v, i) => v === currentKeyBytes[i])
-          ) {
-            matches = true;
-          }
-        }
-        if (!matches) {
-          console.log('[Push] Existing subscription was signed with old/different VAPID key. Renewing...');
-          await subscription.unsubscribe();
-          subscription = null;
-        }
-      } catch (keyErr) {
-        console.warn('[Push] Error validating subscription key, renewing:', keyErr);
-        if (subscription) {
-          await subscription.unsubscribe().catch(() => {});
-        }
-        subscription = null;
-      }
-    }
-
-    if (!subscription) {
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as any,
-      });
-    }
-
-    if (!subscription) {
-      return null;
-    }
-
-    // Extract keys from the subscription
-    const subscriptionJSON = subscription.toJSON();
-    const endpoint = subscription.endpoint;
-    const keys_p256dh = subscriptionJSON.keys?.p256dh || '';
-    const keys_auth = subscriptionJSON.keys?.auth || '';
-
-    console.log('[Push] 📤 Envoi du token au serveur Railway /push/register...');
-
-    // Envoyer le token au serveur Railway (qui utilise service_role pour bypass RLS)
-    const headers = await authHeaders();
-    if (!headers) {
-      console.warn('[Push] Session absente, enregistrement reporté.');
-      return null;
-    }
-
-    const registerResponse = await fetch(`${PUSH_API_URL}/push/register`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        // Conservé pour l'ancien serveur, qui l'exige encore. Le serveur durci
-        // l'ignore et déduit l'utilisateur du jeton : le web reste donc
-        // compatible avec les deux versions, sans fenêtre de coupure.
-        user_id: userId,
-        endpoint,
-        keys_p256dh,
-        keys_auth,
-        user_agent: navigator.userAgent,
-      }),
-    });
-
-    const registerResult = await registerResponse.json().catch(() => ({ success: false, message: 'Réponse invalide du serveur' }));
-
-    if (!registerResponse.ok || !registerResult.success) {
-      console.error('[Push] ❌ Échec enregistrement sur le serveur:', registerResult.message || registerResponse.status);
-      return null;
-    }
-
-    console.log('[Push] ✅ Token push enregistré avec succès sur le serveur pour user', userId);
-    return subscription;
-  } catch (err) {
-    console.error('[Push] Subscription failed:', err);
-    return null;
-  }
-}
-
-/**
- * Unsubscribe from push notifications and remove from Supabase.
- */
-export async function unsubscribeFromPush(userId: string): Promise<boolean> {
-  if (!isPushSupported() || !isSupabaseConfigured) return false;
-
-  try {
-    const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.getSubscription();
-
-    if (subscription) {
-      // Remove from DB first
-      await (supabase.from('push_subscriptions' as any) as any)
-        .delete()
-        .eq('user_id', userId)
-        .eq('endpoint', subscription.endpoint);
-
-      // Then unsubscribe browser
-      await subscription.unsubscribe();
-    }
-
-    return true;
-  } catch (err) {
-    console.error('[Push] Unsubscribe failed:', err);
-    return false;
-  }
-}
-
-/**
- * Broadcast a push notification via backend API (Admin).
- */
-export async function broadcastPushNotification(params: {
-  title: string;
-  body: string;
-  url?: string;
-  image?: string;
-  /** Application visée ; absent = toutes. */
-  appType?: 'market' | 'delivery';
-}): Promise<{ success: boolean; sent?: number; total?: number; error?: string; message?: string }> {
-  try {
-    const headers = await authHeaders();
-    if (!headers) {
-      return { success: false, error: 'Session absente' };
-    }
-
-    const response = await fetch(`${PUSH_API_URL}/push/broadcast`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        title: params.title,
-        body: params.body,
-        url: params.url || '/',
-        image: params.image || null,
-        appType: params.appType,
-      }),
-    });
-
-    const data = await response.json().catch(() => ({ success: response.ok }));
-    return data;
-  } catch (err: any) {
-    console.warn('[Push Broadcast] Erreur:', err?.message);
-    return { success: false, error: err?.message };
-  }
-}
 
 export interface CampaignPreviewSample {
   userId: string;
@@ -256,7 +25,11 @@ export interface CampaignPreviewSample {
   url: string;
 }
 
-export type CampaignSegment = 'dormant' | 'active_seller' | 'seller_no_promo' | 'buyer_cancelled';
+export type CampaignSegment =
+  | 'dormant'
+  | 'active_seller'
+  | 'seller_no_promo'
+  | 'buyer_cancelled';
 
 export interface SegmentedCampaignResponse {
   success: boolean;
@@ -270,6 +43,54 @@ export interface SegmentedCampaignResponse {
 }
 
 /**
+ * Diffuse ou simule (`dryRun`) une notification push globale ou filtrée par app (`market`/`delivery`).
+ * Les variables dynamiques (`$nom`, `$lien`, `$numero`, `$chaine`) sont résolues côté serveur.
+ */
+export async function broadcastPushNotification(params: {
+  title: string;
+  body: string;
+  url?: string;
+  image?: string;
+  appType?: 'market' | 'delivery';
+  dryRun?: boolean;
+}): Promise<{
+  success: boolean;
+  dryRun?: boolean;
+  recipientsCount?: number;
+  devicesCount?: number;
+  sent?: number;
+  total?: number;
+  samples?: CampaignPreviewSample[];
+  error?: string;
+  message?: string;
+}> {
+  try {
+    const headers = await getPushAuthHeaders();
+    if (!headers) {
+      return { success: false, error: 'Session absente' };
+    }
+
+    const response = await fetch(`${PUSH_API_URL}/push/broadcast`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        title: params.title,
+        body: params.body,
+        url: params.url || '/',
+        image: params.image || null,
+        appType: params.appType,
+        dryRun: Boolean(params.dryRun),
+      }),
+    });
+
+    return await response.json().catch(() => ({ success: response.ok }));
+  } catch (err: any) {
+    console.warn('[Push Broadcast] Erreur:', err?.message);
+    return { success: false, error: err?.message };
+  }
+}
+
+/**
  * Envoie ou prévisualise une campagne push personnalisée par segment (`$nom`, `$lien`, `$chaine`, `$numero`).
  */
 export async function sendSegmentedPushCampaign(params: {
@@ -280,7 +101,7 @@ export async function sendSegmentedPushCampaign(params: {
   dryRun?: boolean;
 }): Promise<SegmentedCampaignResponse> {
   try {
-    const headers = await authHeaders();
+    const headers = await getPushAuthHeaders();
     if (!headers) {
       return { success: false, error: 'Session absente' };
     }
@@ -297,8 +118,7 @@ export async function sendSegmentedPushCampaign(params: {
       }),
     });
 
-    const data = await response.json().catch(() => ({ success: response.ok }));
-    return data;
+    return await response.json().catch(() => ({ success: response.ok }));
   } catch (err: any) {
     console.warn('[Push Campaign] Erreur:', err?.message);
     return { success: false, error: err?.message };
@@ -306,7 +126,7 @@ export async function sendSegmentedPushCampaign(params: {
 }
 
 /**
- * Send a targeted push notification to a specific user (Chat, Orders, etc.).
+ * Envoie une notification push ciblée à un utilisateur spécifique (Chat, Commandes, etc.).
  */
 export async function notifyUserPush(params: {
   targetUserId: string;
@@ -320,7 +140,7 @@ export async function notifyUserPush(params: {
   orderId?: string;
 }): Promise<{ success: boolean; sent?: number; error?: string }> {
   try {
-    const headers = await authHeaders();
+    const headers = await getPushAuthHeaders();
     if (!headers) {
       return { success: false, error: 'Session absente' };
     }
@@ -341,8 +161,7 @@ export async function notifyUserPush(params: {
       }),
     });
 
-    const data = await response.json().catch(() => ({ success: response.ok }));
-    return data;
+    return await response.json().catch(() => ({ success: response.ok }));
   } catch (err: any) {
     console.warn('[Push NotifyUser] Erreur:', err?.message);
     return { success: false, error: err?.message };
@@ -350,7 +169,7 @@ export async function notifyUserPush(params: {
 }
 
 /**
- * Alias for backward compatibility
+ * Alias de compatibilité pour les appels existants.
  */
 export const sendPushNotification = async (params: {
   target: 'all' | string[];

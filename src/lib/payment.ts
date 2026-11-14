@@ -237,12 +237,18 @@ export const triggerPayoutProcessing = async (options: { force?: boolean } = {})
   if (!PAYMENT_API_URL) return;
   try {
     const accessToken = await getAccessToken();
-    await fetch(`${PAYMENT_API_URL}/process-payouts${options.force ? '?force=true' : ''}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-  } catch {
-    // Silencieux : l'échec du déclenchement ne doit pas bloquer la remise.
-    // Les virements restent en 'pending' et repartiront au prochain appel.
+    const res = await fetch(
+      `${PAYMENT_API_URL}/process-payouts${options.force ? '?force=true' : ''}`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+    if (!res.ok) {
+      console.warn('[Payout] Déclenchement refusé:', res.status);
+    }
+  } catch (err) {
+    console.warn('[Payout] Erreur réseau triggerPayoutProcessing:', err);
   }
 };
 

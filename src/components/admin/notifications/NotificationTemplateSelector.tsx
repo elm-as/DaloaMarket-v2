@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Search, Check, Trash2, Edit2, Bookmark, X } from 'lucide-react';
+import { Plus, Search, Check, Trash2, Edit2 } from 'lucide-react';
 import type { NotificationTemplate, NotificationAudience } from './notificationTemplates.types';
-import { adminInputClass, AdminButton } from '../ui/AdminUI';
+import { CustomTemplateModal } from './CustomTemplateModal';
 import { confirmDialog } from '../../ui/ConfirmDialog';
 import { cn } from '../../../lib/utils';
 
@@ -53,56 +53,17 @@ export const NotificationTemplateSelector: React.FC<Props> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<NotificationTemplate | null>(null);
 
-  const [draftTitle, setDraftTitle] = useState('');
-  const [draftBody, setDraftBody] = useState('');
-  const [draftUrl, setDraftUrl] = useState('/');
-  const [draftAudience, setDraftAudience] = useState<NotificationAudience>('all');
-  const [saving, setSaving] = useState(false);
-
   const openCreateModal = (tplToEdit?: NotificationTemplate | null) => {
-    if (tplToEdit) {
-      setEditingTemplate(tplToEdit);
-      setDraftTitle(tplToEdit.title);
-      setDraftBody(tplToEdit.body);
-      setDraftUrl(tplToEdit.url);
-      setDraftAudience(tplToEdit.audience || 'all');
-    } else if (currentFormState && (currentFormState.title || currentFormState.body)) {
-      setEditingTemplate(null);
-      setDraftTitle(currentFormState.title);
-      setDraftBody(currentFormState.body);
-      setDraftUrl(currentFormState.url || '/');
-      setDraftAudience(currentFormState.audience || 'all');
-    } else {
-      setEditingTemplate(null);
-      setDraftTitle('');
-      setDraftBody('');
-      setDraftUrl('/');
-      setDraftAudience('all');
-    }
+    setEditingTemplate(tplToEdit || null);
     setIsModalOpen(true);
   };
 
-  const handleSaveModal = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!draftTitle.trim() || !draftBody.trim()) return;
-    setSaving(true);
-    try {
-      await onSaveCustomTemplate({
-        id: editingTemplate?.id,
-        category: 'custom',
-        categoryLabel: 'Modèles Personnalisés',
-        title: draftTitle.trim(),
-        body: draftBody.trim(),
-        url: draftUrl.trim() || '/',
-        audience: draftAudience,
-        recommendedTime: 'À tout moment',
-      });
-      setIsModalOpen(false);
-      setEditingTemplate(null);
-    } finally {
-      setSaving(false);
+  const initialModalDraft = useMemo(() => {
+    if (!currentFormState || (!currentFormState.title && !currentFormState.body)) {
+      return undefined;
     }
-  };
+    return currentFormState;
+  }, [currentFormState]);
 
   const handleDelete = async (e: React.MouseEvent, id: string, title: string) => {
     e.stopPropagation();
@@ -275,101 +236,16 @@ export const NotificationTemplateSelector: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Modale de création / édition de modèle */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-xl border border-stone-200 bg-white p-5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Bookmark className="h-4 w-4 text-[var(--color-primary)]" />
-                <h3 className="text-sm font-bold text-stone-900">
-                  {editingTemplate ? 'Modifier le modèle' : 'Nouveau modèle de notification'}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="text-stone-400 hover:text-stone-600"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveModal} className="space-y-3">
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-stone-700">Titre (max 65)</label>
-                <input
-                  type="text"
-                  maxLength={65}
-                  required
-                  value={draftTitle}
-                  onChange={(e) => setDraftTitle(e.target.value)}
-                  placeholder="Ex: Arrivage frais ce week-end à Daloa"
-                  className={adminInputClass}
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-stone-700">Message (max 180)</label>
-                <textarea
-                  rows={3}
-                  maxLength={180}
-                  required
-                  value={draftBody}
-                  onChange={(e) => setDraftBody(e.target.value)}
-                  placeholder="Rédigez le texte du modèle..."
-                  className={adminInputClass}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-stone-700">Audience</label>
-                  <select
-                    value={draftAudience}
-                    onChange={(e) => setDraftAudience(e.target.value as any)}
-                    className={adminInputClass}
-                  >
-                    <option value="all">Tout le monde</option>
-                    <option value="market">DaloaMarket (Tous)</option>
-                    <option value="dormant">Inactifs (0 annonce / 0 achat)</option>
-                    <option value="active_seller">Vendeurs actifs (Annonces en ligne)</option>
-                    <option value="delivery">DaloaDelivery (Livreurs)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-stone-700">Lien au clic</label>
-                  <input
-                    type="text"
-                    value={draftUrl}
-                    onChange={(e) => setDraftUrl(e.target.value)}
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck={false}
-                    placeholder="/"
-                    className={adminInputClass}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 border-t border-stone-100 pt-3">
-                <AdminButton type="button" variant="ghost" size="sm" onClick={() => setIsModalOpen(false)}>
-                  Annuler
-                </AdminButton>
-                <AdminButton
-                  type="submit"
-                  variant="primary"
-                  size="sm"
-                  loading={saving}
-                  disabled={!draftTitle.trim() || !draftBody.trim()}
-                >
-                  {editingTemplate ? 'Enregistrer' : 'Créer le modèle'}
-                </AdminButton>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <CustomTemplateModal
+        isOpen={isModalOpen}
+        editingTemplate={editingTemplate}
+        initialDraft={initialModalDraft}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingTemplate(null);
+        }}
+        onSave={onSaveCustomTemplate}
+      />
     </div>
   );
 };

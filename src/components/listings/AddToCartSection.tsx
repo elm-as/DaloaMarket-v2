@@ -37,15 +37,15 @@ export const AddToCartSection: React.FC<AddToCartSectionProps> = ({ listing, sel
         toast.error('Rupture de stock');
         return;
       }
-      await addToCart(
-        listing.id,
-        listing.title,
-        selectedVariant?.price ?? listing.price,
-        listing.photos?.[0] || '',
+      await addToCart({
+        listingId: listing.id,
+        listingTitle: listing.title,
+        listingPrice: selectedVariant?.price ?? listing.price,
+        listingPhoto: listing.photos?.[0] || '',
         maxQty,
         qty,
-        selectedVariant ? { id: selectedVariant.id, label: selectedVariant.label } : undefined,
-      );
+        variant: selectedVariant ? { id: selectedVariant.id, label: selectedVariant.label } : undefined,
+      });
       toast.success(`Ajouté au panier (x${qty})`);
       setQty(1);
     } catch (err: unknown) {

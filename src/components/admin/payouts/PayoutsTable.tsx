@@ -39,6 +39,7 @@ export const PayoutsTable: React.FC<PayoutsTableProps> = ({ payouts, onRefresh }
         toast.success('Versement remis en attente. Déclenchement de la synchro...');
         // Déclencher le traitement immédiat
         await fetch(`${apiUrl}/process-payouts?force=true`, {
+          method: 'POST',
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         onRefresh();

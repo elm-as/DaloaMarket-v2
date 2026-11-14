@@ -15,12 +15,21 @@ import {
   RefreshCw,
   ArrowRight,
   CheckCircle2,
+  TrendingUp,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { ErrorState } from '../ui/ErrorState';
-import { formatPrice, formatDate } from '../../lib/utils';
+import { cn, formatPrice, formatDate } from '../../lib/utils';
 import { useAdminPendingCounts } from '../../hooks/useAdminPendingCounts';
 import { fetchAdminOrdersFromServer } from './deliveries/adminOrdersApi';
+import { fetchAdminAnalytics } from './analytics/adminAnalyticsApi';
+import {
+  ANALYTICS_PERIOD_OPTIONS,
+  type AdminAnalyticsData,
+  type AnalyticsPeriodDays,
+} from './analytics/adminAnalytics.types';
+import { AdminRevenueTrendChart } from './analytics/AdminRevenueTrendChart';
+import { AdminBreakdownCharts } from './analytics/AdminBreakdownCharts';
 import {
   AdminPageHeader,
   AdminStatGrid,
@@ -58,71 +67,44 @@ const ORDER_STATUS_BADGE: Record<string, { label: string; tone: AdminBadgeTone }
   refunded: { label: 'Remboursée', tone: 'neutral' },
 };
 
+function formatDeltaLabel(deltaPct: number, days: AnalyticsPeriodDays): string {
+  const sign = deltaPct > 0 ? '+' : '';
+  return `${sign}${deltaPct}% vs ${days}j préc.`;
+}
+
 export const AdminKpisTab: React.FC = () => {
   const navigate = useNavigate();
   const { counts } = useAdminPendingCounts(true);
+  const [periodDays, setPeriodDays] = useState<AnalyticsPeriodDays>(30);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [kpis, setKpis] = useState({
-    users: 0,
-    listings: 0,
-    orders: 0,
-    activeOrders: 0,
-    gmvTotal: 0,
-  });
+  const [analytics, setAnalytics] = useState<AdminAnalyticsData | null>(null);
   const [recentOrders, setRecentOrders] = useState<RecentOrderRow[]>([]);
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(async (days: AnalyticsPeriodDays) => {
     setError(null);
     try {
-      // 1. Priorité au serveur API (service_role) qui retourne l'intégralité des commandes
-      const serverPayload = await fetchAdminOrdersFromServer();
-      if (serverPayload?.kpis) {
-        setKpis({
-          users: serverPayload.kpis.users,
-          listings: serverPayload.kpis.listings,
-          orders: serverPayload.kpis.orders,
-          activeOrders: serverPayload.kpis.activeOrders,
-          gmvTotal: serverPayload.kpis.gmvTotal,
-        });
-        setRecentOrders(serverPayload.kpis.recentOrders || []);
+      const [analyticsData, serverPayload] = await Promise.all([
+        fetchAdminAnalytics(days),
+        fetchAdminOrdersFromServer(),
+      ]);
+      setAnalytics(analyticsData);
+
+      if (serverPayload?.kpis?.recentOrders) {
+        setRecentOrders(serverPayload.kpis.recentOrders);
         return;
       }
 
-      // 2. Repli direct Supabase
-      const [usersRes, listingsRes, ordersRes, recentOrdersRes] = await Promise.allSettled([
-        supabase.from('users').select('id', { count: 'exact', head: true }),
-        supabase.from('listings').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('orders').select('id, status, total_amount'),
-        supabase
-          .from('orders')
-          .select('id, status, total_amount, delivery_mode, payment_method, created_at, listing:listings(title, photos)')
-          .order('created_at', { ascending: false })
-          .limit(6),
-      ]);
-
-      const usersCount = usersRes.status === 'fulfilled' ? usersRes.value.count || 0 : 0;
-      const listingsCount = listingsRes.status === 'fulfilled' ? listingsRes.value.count || 0 : 0;
-      const allOrders = ordersRes.status === 'fulfilled' ? (ordersRes.value.data as any[]) || [] : [];
-      const recent = recentOrdersRes.status === 'fulfilled' ? (recentOrdersRes.value.data as any[]) || [] : [];
-
-      const activeStatuses = ['pending', 'paid', 'funded', 'confirmed', 'in_transit'];
-      const validRevenueStatuses = ['paid', 'funded', 'confirmed', 'in_transit', 'delivered', 'completed'];
-
-      const activeOrdersCount = allOrders.filter((o) => activeStatuses.includes(o.status)).length;
-      const gmv = allOrders
-        .filter((o) => validRevenueStatuses.includes(o.status))
-        .reduce((acc, o) => acc + (Number(o.total_amount) || 0), 0);
-
-      setKpis({
-        users: usersCount,
-        listings: listingsCount,
-        orders: allOrders.length,
-        activeOrders: activeOrdersCount,
-        gmvTotal: gmv,
-      });
-      setRecentOrders(recent);
+      const { data: recent, error: recentErr } = await supabase
+        .from('orders')
+        .select('id, status, total_amount, delivery_mode, payment_method, created_at, listing:listings(title, photos)')
+        .order('created_at', { ascending: false })
+        .limit(6);
+      if (recentErr) {
+        console.warn('[AdminKpisTab] Fallback commandes récentes:', recentErr.message);
+      }
+      setRecentOrders((recent as RecentOrderRow[]) || []);
     } catch (err: any) {
       setError(err.message || 'Impossible de charger le tableau de bord');
     } finally {
@@ -132,17 +114,18 @@ export const AdminKpisTab: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    fetchDashboardData(periodDays);
+  }, [fetchDashboardData, periodDays]);
 
   const handleRefresh = () => {
     setRefreshing(true);
-    fetchDashboardData();
+    fetchDashboardData(periodDays);
   };
 
-  if (loading) return <AdminLoading />;
-  if (error) return <ErrorState message={error} onRetry={fetchDashboardData} />;
+  if (loading || !analytics) return <AdminLoading />;
+  if (error) return <ErrorState message={error} onRetry={() => fetchDashboardData(periodDays)} />;
 
+  const { summary } = analytics;
   const alertsCount = (counts.litiges || 0) + (counts.signalements || 0);
 
   const todo = [
@@ -158,9 +141,30 @@ export const AdminKpisTab: React.FC = () => {
     <div className="space-y-6">
       <AdminPageHeader
         title="Tableau de bord"
-        description="Vue d'ensemble de l'activité commerciale, des commandes en cours et des priorités d'exploitation."
+        description="Indicateurs commerciaux, graphiques d'évolution et priorités d'exploitation."
         actions={
           <>
+            <div
+              role="group"
+              aria-label="Période d'analyse"
+              className="flex items-center rounded-lg border border-stone-200 bg-white p-0.5"
+            >
+              {ANALYTICS_PERIOD_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setPeriodDays(opt.value)}
+                  className={cn(
+                    'rounded-md px-2.5 py-1 text-xs font-semibold tabular-nums transition-colors',
+                    periodDays === opt.value
+                      ? 'bg-stone-900 text-white'
+                      : 'text-stone-600 hover:bg-stone-100'
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
             <AdminButton icon={Bell} size="sm" onClick={() => navigate('/admin/notifications')}>
               Nouvelle notification
             </AdminButton>
@@ -173,39 +177,42 @@ export const AdminKpisTab: React.FC = () => {
 
       <AdminStatGrid>
         <AdminStatCard
-          label="Commandes & Courses"
-          icon={Package}
+          label={`Volume validé (${periodDays}j)`}
+          icon={TrendingUp}
           tone="success"
-          value={kpis.orders}
-          hint={`${kpis.activeOrders} en cours · ${formatPrice(kpis.gmvTotal)} validés`}
+          value={formatPrice(summary.gmv)}
+          hint={`${formatDeltaLabel(summary.gmvDeltaPct, periodDays)} · Panier moy. ${formatPrice(summary.avgOrderValue)}`}
+          onClick={() => navigate('/admin/livraisons')}
+        />
+        <AdminStatCard
+          label={`Commandes (${periodDays}j)`}
+          icon={Package}
+          value={summary.ordersCount}
+          hint={`${formatDeltaLabel(summary.ordersDeltaPct, periodDays)} · ${summary.completionRatePct}% livrées`}
           onClick={() => navigate('/admin/livraisons')}
         />
         <AdminStatCard
           label="Annonces en ligne"
           icon={ShoppingBag}
-          value={kpis.listings}
-          hint="Catalogue actif"
+          value={summary.activeListingsCount}
+          hint={`+${summary.newListingsCount} sur ${periodDays}j (${formatDeltaLabel(summary.newListingsDeltaPct, periodDays)})`}
           onClick={() => navigate('/admin/listings')}
         />
         <AdminStatCard
-          label="Membres inscrits"
-          icon={Users}
-          value={kpis.users}
-          hint="Acheteurs et vendeurs"
-          onClick={() => navigate('/admin/users')}
-        />
-        <AdminStatCard
-          label="Litiges & Signalements"
-          icon={AlertTriangle}
+          label={alertsCount > 0 ? 'Membres & Alertes' : 'Membres inscrits'}
+          icon={alertsCount > 0 ? AlertTriangle : Users}
           tone={alertsCount > 0 ? 'danger' : 'neutral'}
-          value={alertsCount}
-          hint={alertsCount > 0 ? `${counts.litiges || 0} litige(s) · ${counts.signalements || 0} signalement(s)` : 'Aucune alerte critique'}
-          onClick={() => navigate(counts.litiges > 0 ? '/admin/litiges' : '/admin/reports')}
+          value={alertsCount > 0 ? `${summary.totalUsersCount} · ${alertsCount} alerte(s)` : summary.totalUsersCount}
+          hint={`+${summary.newUsersCount} inscrits (${formatDeltaLabel(summary.newUsersDeltaPct, periodDays)})`}
+          onClick={() => navigate(alertsCount > 0 ? '/admin/litiges' : '/admin/users')}
         />
       </AdminStatGrid>
 
+      <AdminRevenueTrendChart series={analytics.dailySeries} periodDays={periodDays} />
+
+      <AdminBreakdownCharts analytics={analytics} />
+
       <div className="grid gap-6 lg:grid-cols-[1fr,340px]">
-        {/* Colonne gauche : Dernières commandes */}
         <AdminSection
           icon={Truck}
           title="Dernières commandes & courses"
@@ -276,7 +283,6 @@ export const AdminKpisTab: React.FC = () => {
           )}
         </AdminSection>
 
-        {/* Colonne droite : À traiter maintenant */}
         <AdminSection
           title="Actions prioritaires"
           description="Éléments en attente de validation ou d'arbitrage."
@@ -292,25 +298,22 @@ export const AdminKpisTab: React.FC = () => {
             <ul className="divide-y divide-stone-100">
               {todo.map((t) => {
                 const Icon = t.icon;
+                const toneBadge = t.tone === 'danger' ? 'danger' : t.tone === 'warning' ? 'warning' : 'neutral';
+                const iconBox =
+                  t.tone === 'danger'
+                    ? 'bg-red-50 text-red-600'
+                    : t.tone === 'warning'
+                      ? 'bg-amber-50 text-amber-700'
+                      : 'bg-stone-100 text-stone-600';
                 const inner = (
                   <>
                     <span className="flex items-center gap-2.5 min-w-0">
-                      <span
-                        className={
-                          t.tone === 'danger'
-                            ? 'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600'
-                            : t.tone === 'warning'
-                              ? 'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700'
-                              : 'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-600'
-                        }
-                      >
+                      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${iconBox}`}>
                         <Icon size={15} />
                       </span>
                       <span className="truncate text-xs font-medium text-stone-800">{t.label}</span>
                     </span>
-                    <AdminBadge tone={t.tone === 'danger' ? 'danger' : t.tone === 'warning' ? 'warning' : 'neutral'}>
-                      {t.count}
-                    </AdminBadge>
+                    <AdminBadge tone={toneBadge}>{t.count}</AdminBadge>
                   </>
                 );
                 return (

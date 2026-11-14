@@ -50,6 +50,7 @@ export async function runPayoutProcessing(options: { retryFailed?: boolean } = {
   if (options.retryFailed) params.set('retry_failed', 'true');
 
   const res = await fetch(`${apiUrl}/process-payouts?${params.toString()}`, {
+    method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
   });
   const data = await res.json().catch(() => ({}));

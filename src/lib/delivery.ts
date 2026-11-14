@@ -37,11 +37,28 @@ export function calculateDeliveryFee(distanceKm: number): number {
   return Math.round((baseFee + extraFee) / 50) * 50;
 }
 
-export function calculateOrder(price: number, distanceKm: number, isProSeller: boolean = false, sellerFeeOverride?: number | null) {
+export interface CalculateOrderInput {
+  price: number;
+  distanceKm: number;
+  isProSeller?: boolean;
+  sellerFeeOverride?: number | null;
+}
+
+/**
+ * Calcule les montants complets d'une commande (livraison, frais acheteur/vendeur/livreur, net vendeur).
+ * @param input Paramètres de tarification de la commande.
+ */
+export function calculateOrder(input: CalculateOrderInput) {
+  const { price, distanceKm, isProSeller = false, sellerFeeOverride } = input;
   const delivery = calculateDeliveryFee(distanceKm);
-  
+
   const buyerFee = Math.round(price * BUYER_FEE_RATE);
-  const sellerFeeRate = sellerFeeOverride != null ? sellerFeeOverride : (isProSeller ? PRO_SELLER_FEE_RATE : SELLER_FEE_RATE);
+  const sellerFeeRate =
+    sellerFeeOverride != null
+      ? sellerFeeOverride
+      : isProSeller
+        ? PRO_SELLER_FEE_RATE
+        : SELLER_FEE_RATE;
   const sellerFee = Math.round(price * sellerFeeRate);
   const driverFee = Math.round(delivery * DRIVER_FEE_RATE);
 
