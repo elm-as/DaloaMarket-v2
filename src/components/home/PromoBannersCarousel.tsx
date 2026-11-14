@@ -20,8 +20,8 @@ import {
 
 export type { WebPromoBanner };
 
-const AUTO_GLIDE_MS = 1000;
-const MANUAL_GLIDE_MS = 650;
+const AUTO_GLIDE_MS = 2400;
+const MANUAL_GLIDE_MS = 800;
 
 export const PromoBannersCarousel: React.FC = () => {
   const navigate = useNavigate();
@@ -41,12 +41,23 @@ export const PromoBannersCarousel: React.FC = () => {
   const pendingTargetRef = useRef<number | null>(null);
   const settledIndexRef = useRef(0);
   const isAnimatingRef = useRef(false);
+  const wrappedForwardRef = useRef(false);
   const animRafRef = useRef<number | null>(null);
   const settleFrameRef = useRef<number | null>(null);
   const scrollRafRef = useRef<number | null>(null);
   const fallbackSettleRef = useRef<number | null>(null);
   const isInteractingRef = useRef(false);
   const cooldownUntilRef = useRef(0);
+  const lastSettledAtRef = useRef(Date.now());
+
+  const unparkFirstSlide = useCallback((resetScrollToStart = false) => {
+    const track = trackRef.current;
+    if (!track || !wrappedForwardRef.current) return;
+    const firstSlide = track.firstElementChild as HTMLElement | null;
+    if (firstSlide) firstSlide.style.order = '';
+    if (resetScrollToStart) track.scrollLeft = 0;
+    wrappedForwardRef.current = false;
+  }, []);
 
   const cancelRunningGlide = useCallback(() => {
     if (animRafRef.current) window.cancelAnimationFrame(animRafRef.current);
@@ -55,7 +66,8 @@ export const PromoBannersCarousel: React.FC = () => {
     animRafRef.current = null;
     settleFrameRef.current = null;
     isAnimatingRef.current = false;
-  }, []);
+    unparkFirstSlide(false);
+  }, [unparkFirstSlide]);
 
   const announceSlide = useCallback((idx: number) => {
     if (settledIndexRef.current === idx) return;
@@ -119,13 +131,27 @@ export const PromoBannersCarousel: React.FC = () => {
 
     cancelRunningGlide();
 
+    const prevIndex = activeIndexRef.current;
     const normalized = ((targetIndex % banners.length) + banners.length) % banners.length;
+    const shouldWrapLeftward = !isManual && prevIndex === banners.length - 1 && normalized === 0;
+
     pendingTargetRef.current = normalized;
     activeIndexRef.current = normalized;
     setActiveIndex(normalized);
 
-    const slideEl = track.children[normalized] as HTMLElement | undefined;
-    const targetLeft = slideEl ? slideEl.offsetLeft : normalized * track.clientWidth;
+    let targetLeft = (track.children[normalized] as HTMLElement | undefined)?.offsetLeft ?? normalized * track.clientWidth;
+
+    if (shouldWrapLeftward && track.firstElementChild) {
+      const firstSlide = track.firstElementChild as HTMLElement;
+      track.style.scrollSnapType = 'none';
+      track.style.overflowX = 'hidden';
+      firstSlide.style.order = '1';
+      wrappedForwardRef.current = true;
+      const slideWidth = track.clientWidth;
+      track.scrollLeft = Math.max(0, (banners.length - 2) * slideWidth);
+      targetLeft = (banners.length - 1) * slideWidth;
+    }
+
     isAnimatingRef.current = true;
 
     glideTrackHorizontally({
@@ -134,11 +160,14 @@ export const PromoBannersCarousel: React.FC = () => {
       durationMs: isManual ? MANUAL_GLIDE_MS : AUTO_GLIDE_MS,
       onFrameHandle: (id) => { animRafRef.current = id; },
       onComplete: () => {
+        unparkFirstSlide(true);
         settleFrameRef.current = window.requestAnimationFrame(() => {
           settleFrameRef.current = window.requestAnimationFrame(() => {
             settleFrameRef.current = null;
             isAnimatingRef.current = false;
+            lastSettledAtRef.current = Date.now();
             track.style.scrollSnapType = '';
+            track.style.overflowX = '';
             track.style.scrollBehavior = '';
             pendingTargetRef.current = null;
             announceSlide(normalized);
@@ -146,7 +175,7 @@ export const PromoBannersCarousel: React.FC = () => {
         });
       },
     });
-  }, [announceSlide, banners.length, cancelRunningGlide]);
+  }, [announceSlide, banners.length, cancelRunningGlide, unparkFirstSlide]);
 
   useEffect(() => {
     const track = trackRef.current;
@@ -186,10 +215,12 @@ export const PromoBannersCarousel: React.FC = () => {
   useEffect(() => {
     if (banners.length <= 1) return;
     const timer = window.setInterval(() => {
-      if (isInteractingRef.current || isAnimatingRef.current || Date.now() < cooldownUntilRef.current) return;
+      if (isInteractingRef.current || isAnimatingRef.current) return;
+      if (Date.now() < cooldownUntilRef.current) return;
+      if (Date.now() - lastSettledAtRef.current < AUTO_ADVANCE_MS) return;
       const base = pendingTargetRef.current ?? activeIndexRef.current;
       goToSlide((base + 1) % banners.length, false);
-    }, AUTO_ADVANCE_MS);
+    }, 500);
     return () => window.clearInterval(timer);
   }, [banners.length, goToSlide]);
 

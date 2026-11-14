@@ -42,11 +42,11 @@ export const DEFAULT_BANNERS: WebPromoBanner[] = [
 ];
 
 export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-export const AUTO_ADVANCE_MS = 3000;
+export const AUTO_ADVANCE_MS = 9000;
 
 /**
  * Fait glisser horizontalement un conteneur scrollable sans conflit avec
- * scroll-snap ni scroll-behavior CSS, avec easing doux entrée/sortie.
+ * scroll-snap ni scroll-behavior CSS, avec courbe sinusoïdale progressive.
  */
 export function glideTrackHorizontally(params: {
   track: HTMLElement;
@@ -77,9 +77,7 @@ export function glideTrackHorizontally(params: {
 
   const step = (now: number) => {
     const progress = Math.min(1, (now - startedAt) / durationMs);
-    const eased = progress < 0.5
-      ? 4 * progress * progress * progress
-      : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+    const eased = -(Math.cos(Math.PI * progress) - 1) / 2;
 
     track.scrollLeft = startLeft + distance * eased;
 
