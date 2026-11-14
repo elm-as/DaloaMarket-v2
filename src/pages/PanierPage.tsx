@@ -256,7 +256,7 @@ const PanierPage: React.FC = () => {
 
                         {/* Price & Variant Pill */}
                         <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                          <span className="text-[11px] font-semibold text-gray-500">
+                          <span className="text-[11px] font-semibold text-gray-500 tabular-nums">
                             {formatPrice(item.listing_price)}
                           </span>
                           {item.variant_label && (
@@ -342,7 +342,7 @@ const PanierPage: React.FC = () => {
             <div className="space-y-2.5 text-xs">
               <div className="flex justify-between items-center text-gray-600 font-medium">
                 <span>Total articles ({cartItems.reduce((acc, i) => acc + i.quantity, 0)})</span>
-                <span className="font-extrabold text-gray-900">
+                <span className="font-extrabold text-gray-900 tabular-nums">
                   {formatPrice(cartItems.reduce((sum, item) => sum + item.listing_price * item.quantity, 0))}
                 </span>
               </div>

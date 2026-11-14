@@ -41,6 +41,7 @@ import {
 } from "../lib/pricing";
 import type { LatLng } from "../lib/pricing";
 import {
+  DALOA_DISTRICT_COORDINATES,
   resolveSellerPoint,
   resolveBuyerPoint,
   resolveBillableDistanceKm,
@@ -92,6 +93,7 @@ const CheckoutPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryDistrict, setDeliveryDistrict] = useState<string>((userProfile as { district?: string } | null)?.district || "Tazibouo");
   const [addressError, setAddressError] = useState(false);
   const [deliveryLatitude, setDeliveryLatitude] = useState<number>(6.8774);
   const [deliveryLongitude, setDeliveryLongitude] = useState<number>(-6.4502);
@@ -167,13 +169,17 @@ const CheckoutPage: React.FC = () => {
       toast.error("Veuillez renseigner une adresse de livraison (Quartier, repère, etc.)");
       return;
     }
-    if (deliveryMode === 'delivery' && (deliveryLatitude == null || deliveryLongitude == null || isNaN(deliveryLatitude) || isNaN(deliveryLongitude))) {
-      toast.error("Veuillez positionner votre adresse sur la carte ou activer votre GPS.");
-      return;
-    }
-    if (isOutOfZone) {
-      toast.error(OUT_OF_ZONE_MESSAGE);
-      return;
+    if (deliveryMode === 'delivery') {
+      const hasValidCoords =
+        deliveryLatitude != null &&
+        deliveryLongitude != null &&
+        !isNaN(deliveryLatitude) &&
+        !isNaN(deliveryLongitude);
+      if (!hasValidCoords || isOutOfZone) {
+        const fallbackPoint = resolveBuyerPoint(null, deliveryDistrict);
+        setDeliveryLatitude(fallbackPoint.latitude);
+        setDeliveryLongitude(fallbackPoint.longitude);
+      }
     }
     setStep(3);
   };
@@ -272,13 +278,20 @@ const CheckoutPage: React.FC = () => {
           setCartSellers(sellerMap);
           setIsCartSelfCheckout(hasSelfItem);
 
-          if (data.length > 0 && data[0].user_id) {
-            const s = await affiliatedDeliverersService.getSellerDeliverySettings(data[0].user_id);
+          const uniqueCartSellerIds = Array.from(
+            new Set((data as { user_id?: string }[]).map((item) => item.user_id).filter(Boolean))
+          ) as string[];
+          if (uniqueCartSellerIds.length > 0) {
+            const sellerSettingsList = await Promise.all(
+              uniqueCartSellerIds.map((sid) => affiliatedDeliverersService.getSellerDeliverySettings(sid))
+            );
+            const allHomeDeliveryEnabled = sellerSettingsList.every((s) => s.home_delivery_enabled);
+            const allCashOnDeliveryEnabled = sellerSettingsList.every((s) => s.cash_on_delivery_enabled);
             setSellerSettings({
-              home_delivery_enabled: s.home_delivery_enabled,
-              cash_on_delivery_enabled: s.cash_on_delivery_enabled,
+              home_delivery_enabled: allHomeDeliveryEnabled,
+              cash_on_delivery_enabled: allCashOnDeliveryEnabled,
             });
-            if (!s.home_delivery_enabled) {
+            if (!allHomeDeliveryEnabled) {
               setDeliveryMode('pickup');
               setPaymentMethod('cash_at_shop');
             }
@@ -716,6 +729,7 @@ const CheckoutPage: React.FC = () => {
         if (isCartMode) clearCart();
 
         const orderCount = result.order_ids?.length || 1;
+        const firstOrderId = result.order_ids?.[0];
         toast.success(
           isShopPickup
             ? orderCount > 1
@@ -725,7 +739,7 @@ const CheckoutPage: React.FC = () => {
               ? 'Vos commandes (Paiement à la livraison) ont été enregistrées ! Les vendeurs vont confirmer la disponibilité.'
               : 'Commande enregistrée (Paiement à la livraison) ! Le vendeur va confirmer la disponibilité.'
         );
-        navigate('/mes-commandes');
+        navigate(firstOrderId ? `/commande-confirmee/${firstOrderId}` : '/mes-commandes');
         return;
       }
 
@@ -1214,6 +1228,35 @@ const CheckoutPage: React.FC = () => {
                   )}
                 </div>
               )}
+
+              {/* Sélection manuelle du quartier (repli sans GPS) */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold text-gray-700">
+                  Quartier à Daloa <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={deliveryDistrict}
+                  onChange={(e) => {
+                    const selected = e.target.value;
+                    setDeliveryDistrict(selected);
+                    const coords = DALOA_DISTRICT_COORDINATES[selected];
+                    if (coords) {
+                      setDeliveryLatitude(coords.latitude);
+                      setDeliveryLongitude(coords.longitude);
+                    }
+                  }}
+                  className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-2xl bg-gray-50/50 font-semibold text-gray-900 focus:border-orange-500 focus:outline-none transition-all"
+                >
+                  {Object.keys(DALOA_DISTRICT_COORDINATES).map((districtName) => (
+                    <option key={districtName} value={districtName}>
+                      {districtName}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-gray-500">
+                  Si votre GPS est indisponible, la sélection du quartier suffit pour calculer la livraison.
+                </p>
+              </div>
 
               {/* Textarea */}
               <div className="space-y-1.5">

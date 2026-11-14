@@ -24,9 +24,13 @@ type CategoryFilter = 'all' | 'segmented' | 'custom' | 'growth' | 'delivery';
 function formatAudienceBadgeLabel(audience?: NotificationAudience): string {
   switch (audience) {
     case 'dormant':
-      return '🎯 Inactifs (0 annonce / 0 achat)';
+      return 'Inactifs (0 annonce / 0 achat)';
     case 'active_seller':
-      return '🎯 Vendeurs actifs';
+      return 'Vendeurs actifs';
+    case 'seller_no_promo':
+      return 'Vendeurs sans promo';
+    case 'buyer_cancelled':
+      return 'Acheteurs (relance)';
     case 'delivery':
       return 'Livreurs';
     case 'market':
@@ -147,7 +151,7 @@ export const NotificationTemplateSelector: React.FC<Props> = ({
         <div className="flex items-center gap-1 overflow-x-auto pb-0.5 text-xs">
           {[
             { key: 'all' as const, label: `Tous (${allTemplates.length})` },
-            { key: 'segmented' as const, label: '🎯 Ciblés' },
+            { key: 'segmented' as const, label: 'Ciblés' },
             { key: 'custom' as const, label: `Perso (${customCount})` },
             { key: 'growth' as const, label: 'Croissance' },
             { key: 'delivery' as const, label: 'Livreurs' },
@@ -328,8 +332,8 @@ export const NotificationTemplateSelector: React.FC<Props> = ({
                   >
                     <option value="all">Tout le monde</option>
                     <option value="market">DaloaMarket (Tous)</option>
-                    <option value="dormant">🎯 Inactifs (0 annonce / 0 achat)</option>
-                    <option value="active_seller">🎯 Vendeurs actifs (Annonces en ligne)</option>
+                    <option value="dormant">Inactifs (0 annonce / 0 achat)</option>
+                    <option value="active_seller">Vendeurs actifs (Annonces en ligne)</option>
                     <option value="delivery">DaloaDelivery (Livreurs)</option>
                   </select>
                 </div>

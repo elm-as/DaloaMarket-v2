@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Flame, Eye, Heart, ShieldCheck, Truck, Sparkles } from 'lucide-react';
-import { fetchListingEngagementSignals, type ListingEngagementSignals } from '../../../lib/engagementSignals';
+import React from 'react';
+import { PackageCheck, ShieldCheck, Truck } from 'lucide-react';
 import { formatPrice } from '../../../lib/utils';
 
 interface ListingPsychologicalSignalsProps {
@@ -11,99 +10,67 @@ interface ListingPsychologicalSignalsProps {
 }
 
 /**
- * Bloc de signaux psychologiques basés sur les données réelles :
- * - FOMO (stock limité, visiteurs réels 7j, favoris, économie immédiate)
- * - Confiance (Garantie Satisfait ou Remboursé avec séquestre OTP)
- * - Gratification immédiate (Livraison express le jour même à Daloa)
+ * Indicateurs factuels de disponibilité et garanties transactionnelles
+ * affichés sur la fiche produit.
  */
 export const ListingPsychologicalSignals: React.FC<ListingPsychologicalSignalsProps> = ({
-  listingId,
   stock,
   currentPrice,
   originalPrice,
 }) => {
-  const [signals, setSignals] = useState<ListingEngagementSignals | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    fetchListingEngagementSignals(listingId).then((res) => {
-      if (mounted) setSignals(res);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, [listingId]);
-
   const effectiveStock = Math.max(0, stock);
   const isLowStock = effectiveStock > 0 && effectiveStock <= 3;
   const savingsAmount =
     originalPrice != null && originalPrice > currentPrice
       ? originalPrice - currentPrice
-      : signals?.priceDropAmount || 0;
-  const recentViewers = signals?.recentViewers7d || 0;
-  const favoritesCount = signals?.favoritesCount || 0;
+      : 0;
 
   return (
     <div className="space-y-2.5 pt-2">
-      {/* ── Signaux FOMO dynamiques (100% basés sur les vraies données) ── */}
-      {(isLowStock || savingsAmount > 0 || recentViewers >= 2 || favoritesCount >= 1) && (
-        <div className="flex flex-wrap gap-1.5">
+      {(isLowStock || savingsAmount > 0) && (
+        <div className="flex flex-wrap items-center gap-2">
           {isLowStock && (
-            <span className="inline-flex items-center gap-1.5 rounded-xl bg-red-50 border border-red-200 px-2.5 py-1 text-[11px] font-extrabold text-red-700 tabular-nums">
-              <Flame className="w-3.5 h-3.5 text-red-600 fill-red-500 shrink-0" />
-              Plus que {effectiveStock} en stock à ce prix !
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/70 px-2.5 py-1 text-xs font-semibold text-amber-900 tabular-nums font-mono">
+              <PackageCheck className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+              <span>
+                Stock restant : {effectiveStock} unité{effectiveStock > 1 ? 's' : ''}
+              </span>
             </span>
           )}
 
           {savingsAmount > 0 && (
-            <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[11px] font-extrabold text-emerald-800 tabular-nums">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              Vous économisez {formatPrice(savingsAmount)}
-            </span>
-          )}
-
-          {recentViewers >= 2 && (
-            <span className="inline-flex items-center gap-1.5 rounded-xl bg-orange-50 border border-orange-200/80 px-2.5 py-1 text-[11px] font-bold text-orange-900 tabular-nums">
-              <Eye className="w-3.5 h-3.5 text-orange-600 shrink-0" />
-              {recentViewers} personnes ont regardé cet article cette semaine
-            </span>
-          )}
-
-          {favoritesCount >= 1 && (
-            <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-50 border border-rose-200/80 px-2.5 py-1 text-[11px] font-bold text-rose-800 tabular-nums">
-              <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500 shrink-0" />
-              Dans les favoris de {favoritesCount} acheteur{favoritesCount > 1 ? 's' : ''}
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50/70 px-2.5 py-1 text-xs font-semibold text-emerald-900 tabular-nums font-mono">
+              <span>Remise immédiate : -{formatPrice(savingsAmount)} F</span>
             </span>
           )}
         </div>
       )}
 
-      {/* ── Confiance (Satisfait ou Remboursé) & Gratification immédiate (Rapidité) ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-        <div className="flex items-start gap-2.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/70 p-3">
-          <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+        <div className="flex items-start gap-2.5 rounded-xl border border-gray-200/80 bg-gray-50/70 p-3">
+          <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/70 flex items-center justify-center shrink-0 mt-0.5">
             <ShieldCheck className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-extrabold text-emerald-950 leading-tight">
-              Satisfait ou remboursé
+            <p className="text-xs font-bold text-gray-900 leading-tight">
+              Paiement protégé par code OTP
             </p>
-            <p className="text-[11px] text-emerald-800 leading-snug mt-0.5">
-              Argent protégé par code secret jusqu'à la remise. Remboursé si non livré ou non conforme.
+            <p className="text-[11px] text-gray-600 leading-snug mt-0.5">
+              Fonds conservés jusqu’à la remise de l’article. Remboursement en cas de non-conformité.
             </p>
           </div>
         </div>
 
-        <div className="flex items-start gap-2.5 rounded-2xl bg-amber-50/70 border border-amber-200/70 p-3">
-          <div className="w-7 h-7 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+        <div className="flex items-start gap-2.5 rounded-xl border border-gray-200/80 bg-gray-50/70 p-3">
+          <div className="w-7 h-7 rounded-lg bg-orange-50 text-orange-700 border border-orange-200/70 flex items-center justify-center shrink-0 mt-0.5">
             <Truck className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-extrabold text-gray-900 leading-tight">
-              Livraison express à Daloa
+            <p className="text-xs font-bold text-gray-900 leading-tight">
+              Livraison locale à Daloa
             </p>
             <p className="text-[11px] text-gray-600 leading-snug mt-0.5">
-              Un coursier DaloaDelivery récupère votre colis et vous livre chez vous le jour même.
+              Prise en charge en boutique et livraison à domicile par un coursier DaloaDelivery.
             </p>
           </div>
         </div>
@@ -113,4 +80,3 @@ export const ListingPsychologicalSignals: React.FC<ListingPsychologicalSignalsPr
 };
 
 export default ListingPsychologicalSignals;
-

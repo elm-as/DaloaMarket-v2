@@ -151,13 +151,13 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, index = 0 }) => {
         <div className="p-3 sm:p-3.5 flex-1 flex flex-col justify-between">
           <div className="space-y-1">
             {/* Price Block */}
-            <div className="flex items-baseline gap-1.5 flex-wrap">
-              <span className="text-base sm:text-lg font-black tracking-tight text-orange-600">
+            <div className="flex items-baseline gap-1.5 flex-wrap tabular-nums">
+              <span className="text-base sm:text-lg font-black tracking-tight text-orange-600 tabular-nums">
                 {hasVariants && <span className="text-[10px] font-bold text-orange-400 mr-1">Dès</span>}
                 {formatPrice(displayPrice)}
               </span>
               {hasDiscount && listing.original_price && (
-                <span className="text-[11px] text-gray-400 line-through font-semibold">
+                <span className="text-[11px] text-gray-400 line-through font-semibold tabular-nums">
                   {formatPrice(listing.original_price)}
                 </span>
               )}

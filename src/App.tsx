@@ -66,6 +66,7 @@ const EmailConfirmedPage = React.lazy(() => import('./pages/EmailConfirmedPage')
 const BannedPage = React.lazy(() => import('./pages/BannedPage'));
 const PricingPage = React.lazy(() => import('./pages/PricingPage'));
 const CheckoutPage = React.lazy(() => import('./pages/CheckoutPage'));
+const OrderConfirmedPage = React.lazy(() => import('./pages/OrderConfirmedPage'));
 const OrderTrackingPage = React.lazy(() => import('./pages/OrderTrackingPage'));
 const MesCommandesPage = React.lazy(() => import('./pages/MesCommandesPage'));
 const MesRevenusPage = React.lazy(() => import('./pages/MesRevenusPage'));
@@ -309,6 +310,11 @@ function AppContent() {
           <Route path="/suivi/:orderId" element={
             <PrivateRoute requireProfile={true}>
               <AppLayout><OrderTrackingPage /></AppLayout>
+            </PrivateRoute>
+          } />
+          <Route path="/commande-confirmee/:orderId" element={
+            <PrivateRoute requireProfile={true}>
+              <AppLayout><OrderConfirmedPage /></AppLayout>
             </PrivateRoute>
           } />
           <Route path="/mes-revenus" element={

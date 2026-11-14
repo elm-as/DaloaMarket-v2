@@ -1,304 +1,48 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import {
-  AlertTriangle,
-  ArrowRight,
-  Bike,
-  BookOpen,
-  Car,
-  ChevronRight,
-  Dumbbell,
-  Home,
-  MapPin,
-  Monitor,
-  Plus,
-  Search,
-  Shield,
-  Shirt,
-  Sparkles,
-  UtensilsCrossed,
-  Tag,
-  Zap,
-  Package,
-} from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Package, Plus, Search } from 'lucide-react';
 
-import { useSupabase } from '../hooks/useSupabase';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useSEO } from '../hooks/useSEO';
-import { interleaveBoosted, diversifySellers, CATEGORIES, cn } from '../lib/utils';
+import { useHomeFeed } from '../hooks/useHomeFeed';
+import { CATEGORIES } from '../lib/utils';
 import { getCategoryById, getCategoryPath } from '../lib/categoryCatalog';
 import { Button } from '../components/ui/Button';
 import { ErrorState } from '../components/ui/ErrorState';
-import { useCart } from '../contexts/CartContext';
 import { SectionHeader } from '../components/ui/SectionHeader';
 import ListingCard from '../components/listings/ListingCard';
 import ListingCardSkeleton from '../components/listings/ListingCardSkeleton';
-import { userBehaviorService } from '../services/userBehaviorService';
-import { getTrendingRecommendations } from '../lib/feedCuration';
 import { HomeForYouSection } from '../components/home/HomeForYouSection';
-<<<<<<< HEAD
 import { PromoBannersCarousel } from '../components/home/PromoBannersCarousel';
 import { WebFlashDealsSection } from '../components/home/WebFlashDealsSection';
-=======
 import { CommunityProofStrip } from '../components/home/CommunityProofStrip';
->>>>>>> 43fd096 (feat(market): implement 9 psychological levers, live seller payout simulator, flash promo presets and strict Daloa geofence)
-
-const CATEGORY_STYLE: Record<string, { icon: React.ReactNode; bg: string; border: string; emoji: string }> = {
-  fashion: { icon: <Shirt className="h-4 w-4" />, bg: 'bg-pink-50 text-pink-600', border: 'border-pink-200', emoji: '👗' },
-  electronics: { icon: <Monitor className="h-4 w-4" />, bg: 'bg-blue-50 text-blue-600', border: 'border-blue-200', emoji: '📱' },
-  home: { icon: <Home className="h-4 w-4" />, bg: 'bg-amber-50 text-amber-600', border: 'border-amber-200', emoji: '🛋️' },
-  vehicles: { icon: <Car className="h-4 w-4" />, bg: 'bg-red-50 text-red-600', border: 'border-red-200', emoji: '🚗' },
-  beauty: { icon: <Sparkles className="h-4 w-4" />, bg: 'bg-fuchsia-50 text-fuchsia-600', border: 'border-fuchsia-200', emoji: '💄' },
-  sports: { icon: <Dumbbell className="h-4 w-4" />, bg: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-200', emoji: '⚽' },
-  books: { icon: <BookOpen className="h-4 w-4" />, bg: 'bg-cyan-50 text-cyan-600', border: 'border-cyan-200', emoji: '📚' },
-  food: { icon: <UtensilsCrossed className="h-4 w-4" />, bg: 'bg-orange-50 text-orange-600', border: 'border-orange-200', emoji: '🍲' },
-};
-
-const CATEGORY_SYNONYMS: Record<string, string[]> = {
-  fashion: ['fashion', 'mode', 'Mode & Accessoires', 'vetements', 'chaussures', 'accessoires'],
-  electronics: ['electronics', 'electronique', 'Électronique & High-tech', 'high-tech', 'telephone', 'informatique'],
-  home: ['home', 'maison', 'maison-deco', 'Maison & Jardin', 'meubles', 'electromenager'],
-  vehicles: ['vehicles', 'vehicules', 'Auto & Moto', 'voiture', 'moto'],
-  beauty: ['beauty', 'beaute', 'cosmetiques', 'Beauté & Cosmétiques', 'cosmetique', 'maquillage', 'parfum', 'perruque', 'soins', 'creme'],
-  sports: ['sports', 'sports-loisirs', 'Sports & Loisirs', 'sport'],
-  books: ['books', 'livres', 'Livres & Culture', 'scolaire', 'culture'],
-  food: ['food', 'alimentaire', 'Alimentaire', 'Alimentaire & Produits locaux', 'nourriture', 'produits locaux'],
-};
-
-interface ListingData {
-  id: string;
-  title: string;
-  price: number;
-  photos: string[];
-  created_at: string;
-  district: string;
-  condition: string;
-  category: string;
-  boosted_until: string | null;
-  stock: number;
-  user_id: string;
-  original_price: number | null;
-  users?: { full_name: string; avatar_url: string | null } | null;
-  variants?: { id: string; label: string; price: number | null; stock: number; active?: boolean }[];
-}
-
-interface ListingCardMapped {
-  id: string;
-  title: string;
-  price: number;
-  photos: string[];
-  created_at: string;
-  district: string;
-  condition: string;
-  category: string;
-  boosted_until: string | null;
-  stock: number;
-  listing_user_id: string;
-  seller: { name: string; avatar: string | null };
-  is_favorite: boolean;
-  cart_qty?: number;
-  original_price: number | null;
-  variants?: { id: string; label: string; price: number | null; stock: number; active?: boolean }[];
-}
-
-interface CachedFeed {
-  listings: ListingData[];
-  timestamp: number;
-}
-
-const homeFeedCache = new Map<string, CachedFeed>();
-const CACHE_TTL_MS = 3 * 60 * 1000;
+import {
+  CATEGORY_STYLE,
+  HomeBottomBanners,
+  HomeCategoryStrip,
+  HomeHeroSection,
+} from '../components/home/HomeHeroAndCategories';
+import { usePhase } from '../contexts/PhaseContext';
 
 const HomePage: React.FC = () => {
   useSEO('Accueil', {
     description: "Achetez et vendez à Daloa (Côte d'Ivoire) en toute simplicité sur DaloaMarket. Publiez des annonces gratuitement et trouvez des bonnes affaires locales près de chez vous.",
     keywords: "DaloaMarket, acheter Daloa, vendre Daloa, Côte d'Ivoire, petites annonces, marketplace locale, e-commerce Daloa, Côte d'Ivoire marketplace",
-    canonical: 'https://daloamarket.com'
+    canonical: 'https://daloamarket.com',
   });
+
   const navigate = useNavigate();
-  const { user, userProfile } = useSupabase();
-
+  const { isPhase0 } = usePhase();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [listings, setListings] = useState<ListingData[]>(() => {
-    const cached = homeFeedCache.get('all');
-    return cached?.listings || [];
-  });
-  const [loading, setLoading] = useState(() => !homeFeedCache.has('all'));
-  const [error, setError] = useState<string | null>(null);
-  const [showLocationWarning, setShowLocationWarning] = useState(false);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    (async () => {
-      try {
-        const { data } = await supabase
-          .from('favorites')
-          .select('listing:listing_id(id, title, price, category, district, description)')
-          .eq('user_id', user.id)
-          .limit(50);
-        if (!data?.length) return;
-        const favListings = data.map((row: any) => row.listing).filter(Boolean);
-        if (favListings.length) userBehaviorService.hydrateFavorites(favListings);
-      } catch {
-        /* silencieux */
-      }
-    })();
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (!user || !userProfile) {
-      setShowLocationWarning(false);
-      return;
-    }
-    const hasLocation = (userProfile as any)?.shop_latitude != null && (userProfile as any)?.shop_longitude != null;
-    if (hasLocation) {
-      setShowLocationWarning(false);
-      return;
-    }
-    const checkActiveListings = async () => {
-      try {
-        const { count, error: countErr } = await supabase
-          .from('listings')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .neq('status', 'deleted')
-          .neq('status', 'sold');
-        if (!countErr && count && count > 0) {
-          setShowLocationWarning(true);
-        }
-      } catch (err) {
-        console.error('Error checking active listings for warning:', err);
-      }
-    };
-    checkActiveListings();
-  }, [user, userProfile]);
-
-  const { items: cartItems } = useCart();
-  const cartQtyByListingId = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const item of cartItems) {
-      map[item.listing_id] = (map[item.listing_id] || 0) + item.quantity;
-    }
-    return map;
-  }, [cartItems]);
-
-  const fetchListings = useCallback(async (cat: string) => {
-    if (!isSupabaseConfigured) {
-      setError('Base de données non configurée');
-      setLoading(false);
-      return;
-    }
-
-    const cached = homeFeedCache.get(cat);
-    const isCacheFresh = cached && (Date.now() - cached.timestamp < CACHE_TTL_MS);
-
-    if (cached) {
-      setListings(cached.listings);
-      setLoading(false);
-      if (isCacheFresh) return;
-    } else {
-      setLoading(true);
-    }
-
-    setError(null);
-    try {
-      if (cat === 'all') {
-        const { data: boostedData } = await supabase
-          .from('listings')
-          .select('*, users!listings_user_id_fkey(full_name, avatar_url)')
-          .eq('status', 'active')
-          .gt('boosted_until', new Date().toISOString())
-          .order('boosted_until', { ascending: false })
-          .limit(6);
-
-        const boostedListings = (boostedData || []) as unknown as ListingData[];
-        const boostedIds = new Set(boostedListings.map(b => b.id));
-
-        const { data, error: fetchError } = await supabase
-          .from('listings')
-          .select('*, users!listings_user_id_fkey(full_name, avatar_url)')
-          .eq('status', 'active')
-          .order('sort_at', { ascending: false })
-          .limit(30);
-
-        if (fetchError) throw fetchError;
-
-        const rawListings = (data || []) as unknown as ListingData[];
-        const filteredRaw = rawListings.filter(l => !boostedIds.has(l.id));
-
-        const diversifiedListings = diversifySellers(filteredRaw, 2);
-        const combined = [...boostedListings, ...diversifiedListings].slice(0, 24);
-        const finalList = interleaveBoosted(combined);
-        homeFeedCache.set(cat, { listings: finalList, timestamp: Date.now() });
-        setListings(finalList);
-      } else {
-        const synonyms = CATEGORY_SYNONYMS[cat] || [cat];
-        const { data, error: fetchError } = await supabase
-          .from('listings')
-          .select('*, users!listings_user_id_fkey(full_name, avatar_url)')
-          .eq('status', 'active')
-          .in('category', synonyms)
-          .order('sort_at', { ascending: false })
-          .limit(30);
-
-        if (fetchError) throw fetchError;
-        const finalList = (data || []) as unknown as ListingData[];
-        homeFeedCache.set(cat, { listings: finalList, timestamp: Date.now() });
-        setListings(finalList);
-      }
-    } catch (err: unknown) {
-      console.error('HomePage fetch error:', err);
-      const message = err instanceof Error ? err.message : (isSupabaseConfigured ? 'Impossible de charger les annonces' : 'Base de données non configurée');
-      if (!cached) {
-        setError(message);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchListings(selectedCategory);
-  }, [selectedCategory, fetchListings]);
-
-  const mapToListingCard = (l: ListingData): ListingCardMapped => ({
-    id: l.id,
-    title: l.title,
-    price: l.price,
-    photos: l.photos || [],
-    created_at: l.created_at,
-    district: l.district,
-    condition: l.condition,
-    category: l.category,
-    boosted_until: l.boosted_until,
-    stock: l.stock || 1,
-    listing_user_id: l.user_id,
-    original_price: l.original_price || null,
-    variants: l.variants || [],
-    seller: {
-      name: l.users?.full_name || 'Anonyme',
-      avatar: l.users?.avatar_url || null,
-    },
-    is_favorite: false,
-    cart_qty: cartQtyByListingId[l.id] || 0,
-  });
-
-  const forYouRecommendations = useMemo(() => {
-    if (selectedCategory !== 'all' || listings.length === 0) return [];
-
-    const visibleFeedIds = new Set(listings.slice(0, 8).map((l) => l.id));
-
-    const personalized = userBehaviorService
-      .getPersonalizedRecommendations(listings, { limit: 8, minScore: 20 })
-      .filter((r) => !visibleFeedIds.has(r.item.id));
-
-    if (personalized.length >= 8) return personalized.slice(0, 8);
-
-    const usedIds = new Set([...visibleFeedIds, ...personalized.map((r) => r.item.id)]);
-    const fill = getTrendingRecommendations(listings, 16).filter((r) => !usedIds.has(r.item.id));
-
-    return [...personalized, ...fill].slice(0, 8);
-  }, [listings, selectedCategory]);
+  const {
+    listings,
+    loading,
+    error,
+    showLocationWarning,
+    fetchListings,
+    forYouRecommendations,
+    mapToListingCard,
+  } = useHomeFeed(selectedCategory);
 
   const currentCategoryObj = CATEGORIES.find((cat) => cat.id === selectedCategory);
 
@@ -310,153 +54,18 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50/70">
-      {showLocationWarning && (
-        <div className="mx-4 mt-4 flex items-center justify-between gap-3 rounded-2xl border border-orange-100 bg-white px-4 py-3 shadow-sm shadow-orange-100/60">
-          <div className="flex min-w-0 items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-500" />
-            <div className="min-w-0">
-              <h4 className="text-left text-sm font-bold text-gray-900">Emplacement boutique manquant</h4>
-              <p className="mt-0.5 text-left text-xs text-gray-600">
-                Configurez votre localisation pour calculer les distances et les frais de livraison.
-              </p>
-            </div>
-          </div>
-          <Button
-            size="sm"
-            color="primary"
-            variant="filled"
-            onClick={() => navigate('/settings?tab=boutique')}
-            className="flex-shrink-0 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 text-xs font-extrabold"
-          >
-            Configurer
-          </Button>
-        </div>
-      )}
+      <HomeHeroSection
+        showLocationWarning={showLocationWarning}
+        onConfigureLocation={() => navigate('/settings?tab=boutique')}
+      />
 
-      {/* HERO COMPACT */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary via-orange-600 to-amber-700 px-4 pt-5 pb-7 rounded-b-[32px] shadow-md shadow-orange-500/15 sm:px-6 md:py-8 lg:px-12">
-        <div className="pointer-events-none absolute -top-12 -right-10 w-48 h-48 rounded-full bg-white/15 blur-2xl" />
-
-        <div className="relative z-10 mx-auto max-w-2xl lg:max-w-5xl">
-          <div className="lg:flex lg:items-center lg:justify-between lg:gap-10">
-            <div className="flex-1 text-left">
-              <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md px-3 py-0.5 text-[11px] font-black text-white border border-white/20">
-                <Sparkles className="w-3 h-3 text-amber-200 fill-amber-200" />
-                <span>Marketplace & Livraison · Daloa</span>
-              </div>
-
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white leading-[1.15]">
-                Tout Daloa,{' '}
-                <span className="bg-gradient-to-r from-amber-200 via-amber-100 to-yellow-200 bg-clip-text text-transparent">
-                  au même endroit.
-                </span>
-              </h1>
-
-              <p className="mt-1.5 max-w-md text-xs sm:text-sm font-medium text-orange-100/90 leading-relaxed">
-                Achetez et vendez en toute confiance. Paiement garanti et livraison géolocalisée.
-              </p>
-
-              <div className="mt-3.5 max-w-xl flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <Link
-                  to="/search"
-                  className="flex h-11 flex-1 items-center gap-2.5 rounded-2xl bg-white px-3.5 text-left shadow-lg shadow-orange-950/15 transition-all active:scale-[0.99] border border-orange-100/60 group"
-                  aria-label="Rechercher une annonce"
-                >
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-orange-50 text-orange-600 flex-shrink-0">
-                    <Search className="h-4 w-4" />
-                  </div>
-                  <span className="flex-1 truncate text-xs sm:text-sm font-semibold text-gray-400">
-                    Rechercher un produit, un quartier...
-                  </span>
-                  <ArrowRight className="h-4 w-4 text-orange-600 shrink-0" />
-                </Link>
-
-                <Link
-                  to="/create-listing"
-                  className="inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-2xl bg-gray-900/25 backdrop-blur-md border border-white/30 px-4 text-xs font-black text-white hover:bg-gray-900/35 active:scale-95 transition-all"
-                >
-                  <Plus className="h-4 w-4 stroke-[3]" />
-                  <span>Publier une annonce</span>
-                </Link>
-              </div>
-            </div>
-
-            <div className="hidden w-60 grid-cols-1 gap-2.5 lg:grid">
-              <div className="rounded-2xl border border-white/25 bg-white/15 backdrop-blur-md p-3.5 text-white">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <Shield className="h-4 w-4 text-amber-200" />
-                  <span className="text-xs font-black">Paiement Garanti</span>
-                </div>
-                <p className="text-[11px] text-orange-100 font-medium">Séquestre sécurisé ou paiement à la livraison</p>
-              </div>
-
-              <div className="rounded-2xl border border-white/25 bg-white/15 backdrop-blur-md p-3.5 text-white">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <MapPin className="h-4 w-4 text-amber-200" />
-                  <span className="text-xs font-black">100% Daloa</span>
-                </div>
-                <p className="text-[11px] text-orange-100 font-medium">Commerçants & coursiers de proximité</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FLOATING TRUST & COMMUNITY PROOF STRIP */}
       <CommunityProofStrip isPhase0={isPhase0} />
 
-      {/* CATEGORY SELECTOR STRIP — DIRECTEMENT ACCESSIBLE */}
-      <section className="pt-3 pb-1">
-        <div className="px-4 lg:px-8 max-w-5xl mx-auto">
-          <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 -mx-4 px-4 sm:mx-0 sm:px-0">
-            <button
-              type="button"
-              onClick={() => setSelectedCategory('all')}
-              aria-pressed={selectedCategory === 'all'}
-              className={cn(
-                'flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-bold transition-all active:scale-95 whitespace-nowrap shadow-2xs',
-                selectedCategory === 'all'
-                  ? 'bg-gradient-to-r from-orange-500 via-primary to-amber-600 text-white shadow-xs font-black'
-                  : 'border border-gray-200/80 bg-white text-gray-700 hover:border-orange-300 hover:text-primary'
-              )}
-            >
-              <Search className={cn('h-3.5 w-3.5', selectedCategory === 'all' ? 'text-white' : 'text-primary')} />
-              <span>Toutes</span>
-            </button>
+      <HomeCategoryStrip
+        selectedCategory={selectedCategory}
+        onSelectCategory={setSelectedCategory}
+      />
 
-            {CATEGORIES.map((cat) => {
-              const isSelected = selectedCategory === cat.id;
-              const style = CATEGORY_STYLE[cat.id] || {
-                icon: <Tag className="h-3.5 w-3.5" />,
-                bg: 'text-primary',
-                border: 'border-orange-100',
-              };
-
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat.id)}
-                  aria-pressed={isSelected}
-                  className={cn(
-                    'flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-bold transition-all active:scale-95 whitespace-nowrap shadow-2xs',
-                    isSelected
-                      ? 'bg-gradient-to-r from-orange-500 via-primary to-amber-600 text-white shadow-xs font-black'
-                      : 'border border-gray-200/80 bg-white text-gray-700 hover:border-orange-300 hover:text-primary'
-                  )}
-                >
-                  <span className={cn('flex items-center justify-center', isSelected ? 'text-white' : style.bg)}>
-                    {style.icon}
-                  </span>
-                  <span>{cat.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* CARROUSEL PUBLICITAIRE & VENTES FLASH (Uniquement en vue générale "Toutes") */}
       {selectedCategory === 'all' && (
         <>
           <PromoBannersCarousel />
@@ -464,12 +73,10 @@ const HomePage: React.FC = () => {
         </>
       )}
 
-      {/* RECOMMANDATIONS : personnalisé d'abord, tendance en complément */}
       {selectedCategory === 'all' && forYouRecommendations.length > 0 && !loading && (
         <HomeForYouSection recommendations={forYouRecommendations} />
       )}
 
-      {/* LISTINGS FEED */}
       <section className="pb-6 pt-2">
         <div className="px-4 lg:px-8 max-w-5xl mx-auto">
           <SectionHeader
@@ -498,7 +105,9 @@ const HomePage: React.FC = () => {
           {!loading && !error && listings.length === 0 && (
             <div className="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/40 p-6 sm:p-8 text-center my-2 max-w-md mx-auto">
               <div className="w-12 h-12 rounded-2xl bg-orange-50 text-primary flex items-center justify-center mx-auto mb-3 shadow-inner">
-                {currentCategoryObj ? (CATEGORY_STYLE[currentCategoryObj.id]?.icon || <Package className="w-5 h-5" />) : <Search className="w-5 h-5" />}
+                {currentCategoryObj
+                  ? (CATEGORY_STYLE[currentCategoryObj.id]?.icon || <Package className="w-5 h-5" />)
+                  : <Search className="w-5 h-5" />}
               </div>
               <h3 className="text-sm font-black text-gray-900 mb-1">
                 {selectedCategory === 'all'
@@ -543,63 +152,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* DALOADELIVERY & COURSIER EXPRESS (Sous le flux principal) */}
-      <section className="px-4 pb-6">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <Link
-            to="/express"
-            className="flex items-center justify-between gap-2.5 px-4 py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-2xl shadow-xs no-underline active:scale-[0.99] hover:opacity-95 transition-all group"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-white/20 text-white flex items-center justify-center flex-shrink-0">
-                <Zap className="w-4 h-4" />
-              </div>
-              <p className="text-xs font-extrabold text-white truncate">
-                Coursier Express · <span className="text-amber-100 font-semibold">Colis & Plis dès 500 F</span>
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-white flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
-
-          <a
-            href="https://delivery.daloamarket.com/annuaire"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-between gap-2.5 px-4 py-3 bg-white rounded-2xl shadow-xs border border-orange-100/80 no-underline active:scale-[0.99] hover:bg-orange-50/50 transition-all group"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-orange-50 text-primary flex items-center justify-center flex-shrink-0">
-                <Bike className="w-4 h-4" />
-              </div>
-              <p className="text-xs font-medium text-gray-700 truncate">
-                Annuaire des coursiers · <span className="text-primary font-black">DaloaDelivery</span>
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-primary flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
-          </a>
-        </div>
-      </section>
-
-      {/* BOTTOM CTA BANNER */}
-      <section className="px-4 pb-12">
-        <div className="max-w-5xl mx-auto">
-          <div className="rounded-3xl bg-gradient-to-br from-primary via-orange-600 to-amber-600 p-6 sm:p-8 text-center text-white shadow-xl shadow-orange-500/20">
-            <h2 className="text-lg sm:text-2xl font-black mb-2 tracking-tight">
-              Vous avez un article à vendre ?
-            </h2>
-            <p className="text-xs sm:text-sm text-orange-100 max-w-md mx-auto mb-5 font-medium leading-relaxed">
-              Publiez gratuitement en moins de 2 minutes et trouvez des acheteurs dans toute la ville de Daloa.
-            </p>
-            <Link
-              to="/create-listing"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-white px-6 text-xs font-black text-primary shadow-lg hover:bg-orange-50 active:scale-95 transition-all"
-            >
-              <Plus className="h-4 w-4 stroke-[3]" />
-              <span>Déposer une annonce gratuite</span>
-            </Link>
-          </div>
-        </div>
-      </section>
+      <HomeBottomBanners />
     </div>
   );
 };
