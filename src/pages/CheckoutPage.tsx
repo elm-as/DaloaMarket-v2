@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useCart } from '../contexts/CartContext';
 import { useSupabase } from '../hooks/useSupabase';
@@ -19,16 +19,20 @@ const CheckoutPage: React.FC = () => {
   const { listingId } = useParams<{ listingId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user, userProfile } = useSupabase();
   const { phaseConfig, paymentConfig } = useSystemSettings();
   const { items: cartItems, clearCart, removeFromCart, updateQuantity } = useCart();
   usePageTitle('Commander');
 
   const isCartMode = !listingId || listingId === 'cart';
-  const requestedVariantId =
+  const stateVariantId =
     !isCartMode && location.state && typeof location.state === 'object'
       ? (location.state as { variantId?: string }).variantId
       : undefined;
+  const requestedVariantId = !isCartMode
+    ? stateVariantId || searchParams.get('variant') || undefined
+    : undefined;
 
   const data = useCheckoutData({
     listingId,

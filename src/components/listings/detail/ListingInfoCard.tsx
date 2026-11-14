@@ -13,10 +13,16 @@ import ListingPsychologicalSignals from './ListingPsychologicalSignals';
 interface ListingInfoCardProps {
   listing: ListingFull;
   selectedVariant?: ListingVariant;
+  highlightVariantRequired?: boolean;
   onVariantChange?: (variant: ListingVariant) => void;
 }
 
-const ListingInfoCard: React.FC<ListingInfoCardProps> = ({ listing, selectedVariant, onVariantChange }) => {
+const ListingInfoCard: React.FC<ListingInfoCardProps> = ({
+  listing,
+  selectedVariant,
+  highlightVariantRequired = false,
+  onVariantChange,
+}) => {
   const [descExpanded, setDescExpanded] = useState(false);
 
   const timeAgo = formatDistanceToNow(new Date(listing.created_at), { addSuffix: true, locale: fr });
@@ -56,8 +62,10 @@ const ListingInfoCard: React.FC<ListingInfoCardProps> = ({ listing, selectedVari
       {listing.variants && listing.variants.length > 0 && onVariantChange && (
         <div className="pt-1">
           <ListingVariantSelector
+            id="variant-selector"
             variants={listing.variants}
             selectedVariantId={selectedVariant?.id}
+            highlightRequired={highlightVariantRequired}
             onChange={onVariantChange}
           />
         </div>

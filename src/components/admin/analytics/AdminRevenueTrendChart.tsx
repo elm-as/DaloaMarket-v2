@@ -151,53 +151,55 @@ export const AdminRevenueTrendChart: React.FC<AdminRevenueTrendChartProps> = ({
             </div>
 
             {/* Barres SVG / Flex réactives */}
-            <div className="relative flex-1 min-w-0">
-              <div className="pointer-events-none absolute inset-x-0 top-0 bottom-6 flex flex-col justify-between">
-                <div className="border-t border-dashed border-stone-200/80" />
-                <div className="border-t border-dashed border-stone-200/80" />
-                <div className="border-t border-stone-200" />
-              </div>
+            <div className="relative flex-1 min-w-0 overflow-x-auto pb-1 scrollbar-none">
+              <div className={cn('relative', series.length > 18 && 'min-w-[440px]')}>
+                <div className="pointer-events-none absolute inset-x-0 top-0 bottom-6 flex flex-col justify-between">
+                  <div className="border-t border-dashed border-stone-200/80" />
+                  <div className="border-t border-dashed border-stone-200/80" />
+                  <div className="border-t border-stone-200" />
+                </div>
 
-              <div
-                className="relative flex h-44 items-end gap-[2px] pb-6"
-                onMouseLeave={() => setHoveredIdx(null)}
-              >
-                {series.map((point, idx) => {
-                  const val = point[metric];
-                  const pct = val > 0 ? Math.max(4, Math.round((val / maxVal) * 100)) : 0;
-                  const isActive = idx === activeIdx;
-                  const showLabel = idx % tickStep === 0 || idx === series.length - 1;
+                <div
+                  className="relative flex h-44 items-end gap-[2px] pb-6"
+                  onMouseLeave={() => setHoveredIdx(null)}
+                >
+                  {series.map((point, idx) => {
+                    const val = point[metric];
+                    const pct = val > 0 ? Math.max(4, Math.round((val / maxVal) * 100)) : 0;
+                    const isActive = idx === activeIdx;
+                    const showLabel = idx % tickStep === 0 || idx === series.length - 1;
 
-                  return (
-                    <div
-                      key={point.date}
-                      className="group relative flex h-full flex-1 flex-col items-center justify-end"
-                      onMouseEnter={() => setHoveredIdx(idx)}
-                    >
-                      <button
-                        type="button"
-                        aria-label={`${point.date} : ${meta.format(val)}`}
-                        onFocus={() => setHoveredIdx(idx)}
-                        onClick={() => setHoveredIdx(idx)}
-                        className="flex h-full w-full items-end justify-center px-[1px] focus:outline-none"
+                    return (
+                      <div
+                        key={point.date}
+                        className="group relative flex h-full flex-1 flex-col items-center justify-end"
+                        onMouseEnter={() => setHoveredIdx(idx)}
                       >
-                        <span
-                          style={{ height: `${pct}%`, backgroundColor: val > 0 ? meta.fillHex : '#e7e5e4' }}
-                          className={cn(
-                            'w-full rounded-t-xs transition-all',
-                            val === 0 && 'h-[2px]!',
-                            isActive ? 'opacity-100 ring-1 ring-stone-900/20' : 'opacity-75 group-hover:opacity-100'
-                          )}
-                        />
-                      </button>
-                      {showLabel && (
-                        <span className="pointer-events-none absolute -bottom-5 text-[10px] font-medium text-stone-400 tabular-nums whitespace-nowrap">
-                          {point.label}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+                        <button
+                          type="button"
+                          aria-label={`${point.date} : ${meta.format(val)}`}
+                          onFocus={() => setHoveredIdx(idx)}
+                          onClick={() => setHoveredIdx(idx)}
+                          className="flex h-full w-full items-end justify-center px-[1px] focus:outline-none"
+                        >
+                          <span
+                            style={{ height: `${pct}%`, backgroundColor: val > 0 ? meta.fillHex : '#e7e5e4' }}
+                            className={cn(
+                              'w-full rounded-t-xs transition-all',
+                              val === 0 && 'h-[2px]!',
+                              isActive ? 'opacity-100 ring-1 ring-stone-900/20' : 'opacity-75 group-hover:opacity-100'
+                            )}
+                          />
+                        </button>
+                        {showLabel && (
+                          <span className="pointer-events-none absolute -bottom-5 text-[10px] font-medium text-stone-400 tabular-nums whitespace-nowrap">
+                            {point.label}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>

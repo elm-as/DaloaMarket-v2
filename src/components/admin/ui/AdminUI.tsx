@@ -38,7 +38,7 @@ export const AdminSection: React.FC<{
 }> = ({ title, description, icon: Icon, aside, footer, className, bodyClassName, children }) => (
   <section className={cn('rounded-xl border border-stone-200/90 bg-white shadow-2xs', className)}>
     {(title || aside) && (
-      <header className="flex items-center justify-between gap-3 border-b border-stone-100 px-5 py-3.5">
+      <header className="flex flex-col gap-2.5 border-b border-stone-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5 sm:py-3.5">
         <div className="flex min-w-0 items-center gap-2.5">
           {Icon && (
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-600">
@@ -52,10 +52,10 @@ export const AdminSection: React.FC<{
             )}
           </div>
         </div>
-        {aside && <div className="shrink-0">{aside}</div>}
+        {aside && <div className="flex flex-wrap items-center gap-2 shrink-0">{aside}</div>}
       </header>
     )}
-    <div className={cn('px-5 py-4', bodyClassName)}>{children}</div>
+    <div className={cn('px-4 py-3.5 sm:px-5 sm:py-4', bodyClassName)}>{children}</div>
     {footer && (
       <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-stone-100 bg-stone-50/50 px-5 py-3 rounded-b-xl">
         {footer}
@@ -101,8 +101,8 @@ export const AdminStatCard: React.FC<{
           </span>
         )}
       </div>
-      <div>
-        <p className="text-2xl font-bold tracking-tight text-stone-900 tabular-nums">{value}</p>
+      <div className="min-w-0">
+        <p className="truncate font-bold tracking-tight text-stone-900 tabular-nums text-[clamp(1.125rem,1rem+0.9vw,1.5rem)]">{value}</p>
         {hint && <p className="mt-1 text-xs text-stone-500 truncate">{hint}</p>}
       </div>
     </Tag>
@@ -110,7 +110,7 @@ export const AdminStatCard: React.FC<{
 };
 
 export const AdminStatGrid: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">{children}</div>
+  <div className="mb-6 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">{children}</div>
 );
 
 export const AdminToggleRow: React.FC<{
@@ -233,22 +233,30 @@ export function AdminTabs<T extends string>({
   tabs,
   value,
   onChange,
+  label = 'Onglets de section',
 }: {
   tabs: { key: T; label: string; count?: number }[];
   value: T;
   onChange: (key: T) => void;
+  label?: string;
 }) {
   return (
-    <div className="mb-4 flex gap-1 overflow-x-auto border-b border-stone-200">
+    <div
+      role="tablist"
+      aria-label={label}
+      className="mb-4 flex flex-nowrap gap-1 overflow-x-auto border-b border-stone-200 scrollbar-none"
+    >
       {tabs.map((tab) => {
         const active = tab.key === value;
         return (
           <button
             key={tab.key}
             type="button"
+            role="tab"
+            aria-selected={active}
             onClick={() => onChange(tab.key)}
             className={cn(
-              '-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-semibold transition-colors',
+              '-mb-px flex min-h-[42px] shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-xs font-semibold transition-colors',
               active
                 ? 'border-[var(--color-primary)] text-stone-900'
                 : 'border-transparent text-stone-500 hover:text-stone-800'
@@ -271,6 +279,28 @@ export function AdminTabs<T extends string>({
     </div>
   );
 }
+
+/**
+ * Conteneur accessible pour les tableaux larges sur bureau/tablette :
+ * expose role="region" et tabIndex={0} pour le défilement au clavier.
+ */
+export const AdminScrollTableContainer: React.FC<{
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}> = ({ label, children, className }) => (
+  <div
+    role="region"
+    aria-label={label}
+    tabIndex={0}
+    className={cn(
+      'overflow-x-auto rounded-xl border border-stone-200 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-100)]',
+      className
+    )}
+  >
+    {children}
+  </div>
+);
 
 export const AdminEmpty: React.FC<{ icon?: LucideIcon; title: string; description?: string }> = ({
   icon: Icon,

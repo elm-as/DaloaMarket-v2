@@ -145,7 +145,7 @@ export const AdminBreakdownCharts: React.FC<AdminBreakdownChartsProps> = ({ anal
         title="Revenus plateforme & Trésorerie"
         description="Commissions, monétisation et suivi des reversements vendeurs/livreurs."
       >
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 mb-4">
           <div className="rounded-lg border border-stone-200/80 bg-stone-50/70 p-3">
             <p className="text-[11px] font-medium text-stone-500">Revenus période</p>
             <p className="mt-0.5 text-lg font-bold text-stone-900 tabular-nums">
@@ -179,7 +179,7 @@ export const AdminBreakdownCharts: React.FC<AdminBreakdownChartsProps> = ({ anal
               style={{ width: `${paidPayoutsPct}%` }}
             />
           </div>
-          <div className="flex items-center justify-between text-[11px] text-stone-500 tabular-nums">
+          <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] text-stone-500 tabular-nums">
             <span>En attente : {formatPrice(financials.pendingPayoutsAmount)} ({financials.pendingPayoutsCount})</span>
             <span>Boutiques Pro actives : {summary.activeProUsers}</span>
           </div>

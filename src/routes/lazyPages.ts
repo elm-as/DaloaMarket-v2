@@ -58,6 +58,8 @@ export const SELLER_PROFILE_PATHS = [
 export const ADMIN_ROUTE_PATHS = [
   '/admin',
   '/admin/kpis',
+  '/admin/bannieres',
+  '/admin/banners',
   '/admin/ambassadeurs',
   '/admin/feedbacks',
   '/admin/features',

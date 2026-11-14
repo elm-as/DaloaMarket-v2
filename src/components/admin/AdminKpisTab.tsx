@@ -212,7 +212,7 @@ export const AdminKpisTab: React.FC = () => {
 
       <AdminBreakdownCharts analytics={analytics} />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr,340px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <AdminSection
           icon={Truck}
           title="Dernières commandes & courses"

@@ -200,8 +200,12 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Navigation rapide Mobile */}
-        <div className="border-t border-stone-100 bg-stone-50/70 px-4 py-2 lg:hidden">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+        <div className="space-y-2 border-t border-stone-100 bg-stone-50/70 px-3 py-2 sm:px-4 lg:hidden">
+          <div
+            role="tablist"
+            aria-label="Rubriques rapides administration"
+            className="flex flex-nowrap items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5"
+          >
             {quickPages.map((p) => {
               const active = current?.key === p.key;
               const Icon = p.icon;
@@ -210,9 +214,11 @@ export default function AdminDashboardPage() {
                 <button
                   key={p.key}
                   type="button"
+                  role="tab"
+                  aria-selected={active}
                   onClick={() => go(p)}
                   className={cn(
-                    'inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors',
+                    'inline-flex min-h-[38px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors',
                     active
                       ? 'bg-stone-900 text-white'
                       : 'bg-white text-stone-600 border border-stone-200/80 hover:bg-stone-100'
@@ -231,33 +237,33 @@ export default function AdminDashboardPage() {
                 </button>
               );
             })}
-            <select
-              aria-label="Toutes les rubriques d'administration"
-              value={current?.key}
-              onChange={(e) => {
-                const page = pages.find((p) => p.key === e.target.value);
-                if (page) go(page);
-              }}
-              className="ml-auto h-7 shrink-0 rounded-lg border border-stone-200 bg-white px-2 text-xs font-medium text-stone-700 outline-none"
-            >
-              {groups.map((g) => (
-                <optgroup key={g.label} label={g.label}>
-                  {g.pages.map((p) => {
-                    const n = byTab[p.key] || 0;
-                    return (
-                      <option key={p.key} value={p.key}>
-                        {n > 0 ? `${p.label} (${n})` : p.label}
-                      </option>
-                    );
-                  })}
-                </optgroup>
-              ))}
-            </select>
           </div>
+          <select
+            aria-label="Toutes les rubriques d'administration"
+            value={current?.key}
+            onChange={(e) => {
+              const page = pages.find((p) => p.key === e.target.value);
+              if (page) go(page);
+            }}
+            className="h-9 w-full rounded-lg border border-stone-200 bg-white px-2.5 text-xs font-medium text-stone-700 outline-none"
+          >
+            {groups.map((g) => (
+              <optgroup key={g.label} label={g.label}>
+                {g.pages.map((p) => {
+                  const n = byTab[p.key] || 0;
+                  return (
+                    <option key={p.key} value={p.key}>
+                      {n > 0 ? `${p.label} (${n})` : p.label}
+                    </option>
+                  );
+                })}
+              </optgroup>
+            ))}
+          </select>
         </div>
       </header>
 
-      <div className="mx-auto mt-6 max-w-7xl px-4 lg:flex lg:items-start lg:gap-7 lg:px-6">
+      <div className="mx-auto mt-4 max-w-7xl px-3 sm:mt-6 sm:px-4 lg:flex lg:items-start lg:gap-7 lg:px-6">
         {/* Barre latérale Bureau */}
         <nav
           aria-label="Navigation administration"
@@ -304,7 +310,7 @@ export default function AdminDashboardPage() {
           ))}
         </nav>
 
-        <main className="min-w-0 flex-1">{current?.render()}</main>
+        <main className="min-w-0 flex-1 overflow-x-hidden">{current?.render()}</main>
       </div>
     </div>
   );

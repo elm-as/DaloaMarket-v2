@@ -1,63 +1,56 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ChevronLeft, ChevronRight, Zap, Sparkles } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
+import { getBoostDestination } from '../../lib/boostNavigation';
+import { useSupabase } from '../../hooks/useSupabase';
+import { PromoSideShortcuts } from './PromoSideShortcuts';
+import {
+  AUTO_ADVANCE_MS,
+  DEFAULT_BANNERS,
+  isBannerWithinSchedule,
+  resolveActiveBanners,
+  resolveBannerAction,
+  UUID_REGEX,
+  type WebPromoBanner,
+} from './promoBannerConfig';
 
-export interface WebPromoBanner {
-  id: string;
-  title: string;
-  subtitle: string | null;
-  image_url: string;
-  badge_text: string | null;
-  badge_color: string | null;
-  sponsor_name?: string | null;
-  link_type: 'express' | 'referral' | 'listing' | 'seller' | 'external' | 'none';
-  link_target: string | null;
-  is_active: boolean;
-  priority: number;
-}
-
-const DEFAULT_BANNERS: WebPromoBanner[] = [
-  {
-    id: 'default-express',
-    title: 'Coursier Express Daloa',
-    subtitle: 'Envoi direct de colis, plis et repas entre quartiers dès 500 FCFA',
-    image_url: 'https://images.unsplash.com/photo-1526367790999-0150786686a2?auto=format&fit=crop&w=900&q=80',
-    badge_text: 'EXPRESS · DÈS 500 F',
-    badge_color: '#EA580C',
-    sponsor_name: 'DaloaDelivery',
-    link_type: 'express',
-    link_target: null,
-    is_active: true,
-    priority: 10,
-  },
-  {
-    id: 'default-boost',
-    title: 'Vendez 3x plus vite à Daloa',
-    subtitle: 'Placez vos articles en tête des recherches ou passez Vendeur Pro vérifié',
-    image_url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=900&q=80',
-    badge_text: 'VISIBILITÉ N°1',
-    badge_color: '#D97706',
-    sponsor_name: 'DaloaMarket Pro',
-    link_type: 'none',
-    link_target: '/acheter-pack',
-    is_active: true,
-    priority: 5,
-  },
-];
-
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export type { WebPromoBanner };
 
 export const PromoBannersCarousel: React.FC = () => {
   const navigate = useNavigate();
+  const { user, userProfile } = useSupabase();
+  const boostDestination = getBoostDestination(Boolean(user), userProfile, {
+    login: '/login',
+    myListings: '/profile?tab=listings',
+    packs: '/acheter-pack',
+  });
+
   const [banners, setBanners] = useState<WebPromoBanner[]>(DEFAULT_BANNERS);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isUserPaused, setIsUserPaused] = useState(false);
+  const [isHoverPaused, setIsHoverPaused] = useState(false);
+  const [statusAnnouncement, setStatusAnnouncement] = useState('');
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  const trackRef = useRef<HTMLDivElement>(null);
+  const pendingTargetRef = useRef<number | null>(null);
+  const settledIndexRef = useRef(0);
+  const scrollRafRef = useRef<number | null>(null);
+  const fallbackSettleRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    mq.addEventListener?.('change', onChange);
+    return () => mq.removeEventListener?.('change', onChange);
+  }, []);
 
   const fetchBanners = useCallback(async () => {
     try {
-      const now = new Date().toISOString();
       const { data, error } = await (supabase.from('promo_banners' as any) as any)
         .select('id, title, subtitle, image_url, badge_text, badge_color, sponsor_name, link_type, link_target, is_active, priority, starts_at, ends_at')
         .eq('is_active', true)
@@ -67,17 +60,13 @@ export const PromoBannersCarousel: React.FC = () => {
 
       if (error || !data) return;
 
-      const validBanners = (data as any[]).filter((banner) => {
-        if (banner.starts_at && banner.starts_at > now) return false;
-        if (banner.ends_at && banner.ends_at < now) return false;
-        return true;
-      }) as WebPromoBanner[];
+      const valid = (data as any[]).filter((b) =>
+        isBannerWithinSchedule(b.starts_at, b.ends_at),
+      ) as WebPromoBanner[];
 
-      if (validBanners.length > 0) {
-        setBanners(validBanners);
-      }
+      setBanners(resolveActiveBanners(valid));
     } catch {
-      // Repli sur DEFAULT_BANNERS
+      // Conservation de DEFAULT_BANNERS
     }
   }, []);
 
@@ -85,172 +74,247 @@ export const PromoBannersCarousel: React.FC = () => {
     fetchBanners();
   }, [fetchBanners]);
 
+  const computeNearestSlide = useCallback((track: HTMLDivElement): number => {
+    const width = track.clientWidth || 1;
+    const idx = Math.round(track.scrollLeft / width);
+    return Math.max(0, Math.min(idx, banners.length - 1));
+  }, [banners.length]);
+
+  const goToSlide = useCallback((targetIndex: number) => {
+    const track = trackRef.current;
+    if (!track || banners.length <= 1) return;
+    const normalized = ((targetIndex % banners.length) + banners.length) % banners.length;
+    pendingTargetRef.current = normalized;
+    setActiveIndex(normalized);
+    track.scrollTo({
+      left: normalized * track.clientWidth,
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+    });
+  }, [banners.length, prefersReducedMotion]);
+
+  const handleTrackSettle = useCallback(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const current = computeNearestSlide(track);
+    pendingTargetRef.current = null;
+    setActiveIndex(current);
+    if (settledIndexRef.current !== current) {
+      settledIndexRef.current = current;
+      const slide = banners[current];
+      if (slide) {
+        setStatusAnnouncement(`Affiche ${current + 1} sur ${banners.length} : ${slide.title}`);
+      }
+    }
+  }, [banners, computeNearestSlide]);
+
   useEffect(() => {
-    if (banners.length <= 1 || isPaused) return;
-    const timer = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % banners.length);
-    }, 4500);
-    return () => clearInterval(timer);
-  }, [banners.length, isPaused]);
+    const track = trackRef.current;
+    if (!track) return;
+    const supportsScrollEnd = 'onscrollend' in window;
+
+    const onScroll = () => {
+      if (pendingTargetRef.current === null && scrollRafRef.current === null) {
+        scrollRafRef.current = window.requestAnimationFrame(() => {
+          scrollRafRef.current = null;
+          if (!trackRef.current || pendingTargetRef.current !== null) return;
+          const nearest = computeNearestSlide(trackRef.current);
+          setActiveIndex((prev) => (prev === nearest ? prev : nearest));
+        });
+      }
+      if (!supportsScrollEnd) {
+        if (fallbackSettleRef.current) window.clearTimeout(fallbackSettleRef.current);
+        fallbackSettleRef.current = window.setTimeout(handleTrackSettle, 140);
+      }
+    };
+
+    track.addEventListener('scroll', onScroll, { passive: true });
+    if (supportsScrollEnd) {
+      track.addEventListener('scrollend', handleTrackSettle);
+    }
+
+    return () => {
+      track.removeEventListener('scroll', onScroll);
+      if (supportsScrollEnd) track.removeEventListener('scrollend', handleTrackSettle);
+      if (scrollRafRef.current) window.cancelAnimationFrame(scrollRafRef.current);
+      if (fallbackSettleRef.current) window.clearTimeout(fallbackSettleRef.current);
+    };
+  }, [computeNearestSlide, handleTrackSettle]);
+
+  useEffect(() => {
+    if (banners.length <= 1 || isUserPaused || isHoverPaused || prefersReducedMotion) return;
+    const timer = window.setInterval(() => {
+      const base = pendingTargetRef.current ?? activeIndex;
+      goToSlide((base + 1) % banners.length);
+    }, AUTO_ADVANCE_MS);
+    return () => window.clearInterval(timer);
+  }, [banners.length, isUserPaused, isHoverPaused, prefersReducedMotion, activeIndex, goToSlide]);
 
   const handleBannerClick = (banner: WebPromoBanner) => {
     if (UUID_REGEX.test(banner.id)) {
       (supabase as any).rpc('increment_banner_click', { p_banner_id: banner.id }).then(() => {});
     }
-
-    switch (banner.link_type) {
-      case 'express':
-        navigate('/express');
-        return;
-      case 'listing':
-        if (banner.link_target) navigate(`/listings/${banner.link_target}`);
-        return;
-      case 'seller':
-        if (banner.link_target) navigate(`/boutique/${banner.link_target}`);
-        return;
-      case 'external':
-        if (banner.link_target) window.open(banner.link_target, '_blank', 'noopener,noreferrer');
-        return;
-      default:
-        if (banner.link_target) navigate(banner.link_target);
-        return;
+    const action = resolveBannerAction(banner, boostDestination);
+    if (action.externalUrl) {
+      window.open(action.externalUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (action.internalRoute) {
+      navigate(action.internalRoute);
     }
   };
 
   if (banners.length === 0) return null;
 
-  const currentBanner = banners[activeIndex] || banners[0];
-
   return (
-    <section className="px-4 pt-3 pb-1">
+    <section
+      className="px-4 pt-3 pb-1"
+      aria-roledescription="carousel"
+      aria-label="Affiches et offres DaloaMarket"
+    >
       <div className="mx-auto max-w-2xl lg:max-w-5xl">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
           <div
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-            className="lg:col-span-8 relative overflow-hidden rounded-3xl border border-orange-100/80 bg-slate-950 shadow-sm group"
+            onPointerEnter={(e) => { if (e.pointerType === 'mouse') setIsHoverPaused(true); }}
+            onPointerLeave={() => setIsHoverPaused(false)}
+            className="lg:col-span-8 relative"
           >
-            <button
-              type="button"
-              onClick={() => handleBannerClick(currentBanner)}
-              className="relative flex h-36 sm:h-44 lg:h-[200px] w-full flex-col justify-between p-3.5 sm:p-5 text-left transition-transform active:scale-[0.995]"
-            >
-              <img
-                src={currentBanner.image_url}
-                alt={currentBanner.title}
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/45 to-slate-950/10" />
-
-              <div className="relative z-10 flex items-center justify-between gap-2 w-full">
-                {currentBanner.badge_text ? (
-                  <span
-                    className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[9.5px] font-black tracking-wider text-white uppercase shadow-sm"
-                    style={{ backgroundColor: currentBanner.badge_color || '#EA580C' }}
-                  >
-                    {currentBanner.badge_text}
-                  </span>
-                ) : (
-                  <span />
-                )}
-
-                <div className="flex items-center gap-1.5">
-                  {currentBanner.sponsor_name && (
-                    <span className="rounded-full bg-slate-900/70 border border-white/20 px-2.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs truncate max-w-[140px]">
-                      {currentBanner.sponsor_name}
-                    </span>
-                  )}
-                  {banners.length > 1 && (
-                    <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-bold text-white/90 backdrop-blur-xs tabular-nums">
-                      {activeIndex + 1}/{banners.length}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="relative z-10 flex items-end justify-between gap-3 w-full">
-                <div className="min-w-0 flex-1 space-y-0.5">
-                  <h3 className="text-sm sm:text-lg font-black text-white leading-tight line-clamp-1">
-                    {currentBanner.title}
-                  </h3>
-                  {currentBanner.subtitle && (
-                    <p className="max-w-lg text-[11px] sm:text-xs text-white/90 font-medium line-clamp-1 sm:line-clamp-2">
-                      {currentBanner.subtitle}
-                    </p>
-                  )}
-                </div>
-
-                <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-orange-600 px-3 py-1.5 text-[11px] font-extrabold text-white shadow-sm group-hover:bg-orange-500 transition-colors">
-                  <span>Découvrir</span>
-                  <ArrowRight className="h-3 w-3" />
-                </span>
-              </div>
-            </button>
-
             {banners.length > 1 && (
-              <>
+              <div className="pointer-events-none absolute inset-x-2.5 top-1/2 -translate-y-1/2 z-20 flex items-center justify-between">
                 <button
                   type="button"
                   aria-label="Affiche précédente"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveIndex((prev) => (prev - 1 + banners.length) % banners.length);
-                  }}
-                  className="hidden sm:flex absolute left-2.5 top-1/2 -translate-y-1/2 z-20 h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white hover:bg-black/70 backdrop-blur-xs"
+                  onClick={() => goToSlide((pendingTargetRef.current ?? activeIndex) - 1)}
+                  style={{ touchAction: 'manipulation' }}
+                  className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-slate-950/60 text-white hover:bg-slate-950/85 focus-visible:outline-2 focus-visible:outline-white"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
                   aria-label="Affiche suivante"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveIndex((prev) => (prev + 1) % banners.length);
-                  }}
-                  className="hidden sm:flex absolute right-2.5 top-1/2 -translate-y-1/2 z-20 h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white hover:bg-black/70 backdrop-blur-xs"
+                  onClick={() => goToSlide((pendingTargetRef.current ?? activeIndex) + 1)}
+                  style={{ touchAction: 'manipulation' }}
+                  className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-slate-950/60 text-white hover:bg-slate-950/85 focus-visible:outline-2 focus-visible:outline-white"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
-              </>
+              </div>
+            )}
+
+            <div
+              ref={trackRef}
+              tabIndex={0}
+              role="group"
+              aria-label="Affiches"
+              style={{ touchAction: 'manipulation' }}
+              className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none rounded-3xl border border-slate-200 bg-slate-950 shadow-xs focus-visible:outline-2 focus-visible:outline-orange-600"
+            >
+              {banners.map((banner, idx) => (
+                <div
+                  key={banner.id}
+                  role="group"
+                  aria-roledescription="slide"
+                  aria-label={`${idx + 1} sur ${banners.length}`}
+                  className="w-full shrink-0 snap-center"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleBannerClick(banner)}
+                    className="group relative flex h-40 sm:h-44 lg:h-[200px] w-full flex-col justify-between p-4 sm:p-5 text-left"
+                  >
+                    <img
+                      src={banner.image_url}
+                      alt={banner.title}
+                      loading={idx === 0 ? 'eager' : 'lazy'}
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/45 to-slate-950/15" />
+
+                    <div className="relative z-10 flex items-center justify-between gap-2 w-full">
+                      {banner.badge_text ? (
+                        <span
+                          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase"
+                          style={{ backgroundColor: banner.badge_color || '#EA580C' }}
+                        >
+                          {banner.badge_text}
+                        </span>
+                      ) : <span />}
+
+                      <div className="flex items-center gap-1.5">
+                        {banner.sponsor_name && (
+                          <span className="rounded-full bg-slate-900/75 border border-white/20 px-2.5 py-0.5 text-[10px] font-semibold text-white truncate max-w-[140px]">
+                            {banner.sponsor_name}
+                          </span>
+                        )}
+                        {banners.length > 1 && (
+                          <span className="rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white tabular-nums">
+                            {idx + 1}/{banners.length}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="relative z-10 flex items-end justify-between gap-3 w-full">
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <h3 className="text-sm sm:text-lg font-black text-white leading-tight line-clamp-1">
+                          {banner.title}
+                        </h3>
+                        {banner.subtitle && (
+                          <p className="max-w-lg text-[11px] sm:text-xs text-white/90 font-medium line-clamp-1 sm:line-clamp-2">
+                            {banner.subtitle}
+                          </p>
+                        )}
+                      </div>
+                      <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-orange-600 px-3 py-1.5 text-[11px] font-bold text-white group-hover:bg-orange-500 transition-colors">
+                        <span>Découvrir</span>
+                        <ArrowRight className="h-3 w-3" />
+                      </span>
+                    </div>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <p className="sr-only" role="status" aria-live="polite">
+              {statusAnnouncement}
+            </p>
+
+            {banners.length > 1 && (
+              <div className="mt-2 flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsUserPaused((prev) => !prev)}
+                  aria-label={isUserPaused ? 'Reprendre le défilement' : 'Mettre en pause le défilement'}
+                  className="inline-flex h-6 items-center gap-1 rounded-full border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-orange-600"
+                >
+                  {isUserPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
+                  <span>{isUserPaused ? 'Lire' : 'Pause'}</span>
+                </button>
+
+                <nav aria-label="Choisir une affiche" className="flex items-center gap-1.5">
+                  {banners.map((banner, idx) => (
+                    <button
+                      key={`marker-${banner.id}`}
+                      type="button"
+                      aria-label={`Afficher : ${banner.title}`}
+                      aria-current={idx === activeIndex ? 'true' : undefined}
+                      onClick={() => goToSlide(idx)}
+                      style={{ touchAction: 'manipulation' }}
+                      className={cn(
+                        'h-2 rounded-full transition-all focus-visible:outline-2 focus-visible:outline-orange-600',
+                        idx === activeIndex ? 'w-5 bg-orange-600' : 'w-2 bg-slate-300 hover:bg-slate-400',
+                      )}
+                    />
+                  ))}
+                </nav>
+              </div>
             )}
           </div>
 
-          <div className="hidden lg:flex lg:col-span-4 flex-col gap-3 h-[200px]">
-            <button
-              type="button"
-              onClick={() => navigate('/express')}
-              className="flex-1 flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 p-3.5 text-left text-white shadow-sm hover:opacity-95 transition-opacity"
-            >
-              <div className="min-w-0 space-y-0.5">
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-black uppercase">
-                  <Zap className="h-3 w-3" /> Express 30 min
-                </span>
-                <p className="text-sm font-black leading-tight">Coursier Hors-Market</p>
-                <p className="text-[11px] text-orange-100 font-semibold tabular-nums">Colis & repas dès 500 FCFA</p>
-              </div>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20">
-                <ArrowRight className="h-4 w-4" />
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate('/acheter-pack')}
-              className="flex-1 flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-3.5 text-left text-white shadow-sm hover:opacity-95 transition-opacity"
-            >
-              <div className="min-w-0 space-y-0.5">
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-black uppercase text-amber-300">
-                  <Sparkles className="h-3 w-3" /> Visibilité Vendeur
-                </span>
-                <p className="text-sm font-black leading-tight">Booster mes annonces</p>
-                <p className="text-[11px] text-slate-300 font-semibold tabular-nums">En tête de liste dès 100 FCFA</p>
-              </div>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10">
-                <ArrowRight className="h-4 w-4" />
-              </span>
-            </button>
-          </div>
+          <PromoSideShortcuts
+            onOpenExpress={() => navigate('/express')}
+            onOpenBoost={() => navigate(boostDestination)}
+          />
         </div>
       </div>
     </section>

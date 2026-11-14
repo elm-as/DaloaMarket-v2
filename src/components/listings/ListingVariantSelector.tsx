@@ -4,14 +4,18 @@ import { cn, formatPrice } from '../../lib/utils';
 import type { ListingVariant } from '../../types/listing';
 
 interface ListingVariantSelectorProps {
+  id?: string;
   variants?: ListingVariant[];
   selectedVariantId?: string;
+  highlightRequired?: boolean;
   onChange: (variant: ListingVariant) => void;
 }
 
 export const ListingVariantSelector: React.FC<ListingVariantSelectorProps> = ({
+  id = 'variant-selector',
   variants = [],
   selectedVariantId,
+  highlightRequired = false,
   onChange,
 }) => {
   const availableVariants = variants.filter((variant) => variant.active !== false && variant.stock > 0);
@@ -21,7 +25,16 @@ export const ListingVariantSelector: React.FC<ListingVariantSelectorProps> = ({
   const hasColors = availableVariants.some((v) => !!v.color || !!v.color_code);
 
   return (
-    <div className="rounded-3xl border border-orange-100 bg-orange-50/40 p-4 space-y-3 shadow-sm">
+    <div
+      id={id}
+      tabIndex={-1}
+      className={cn(
+        'rounded-3xl border bg-orange-50/40 p-4 space-y-3 shadow-sm transition-all',
+        highlightRequired && !selectedVariantId
+          ? 'border-orange-500 ring-2 ring-orange-500/40 animate-pulse'
+          : 'border-orange-100'
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-xs font-extrabold text-gray-800">
           {hasColors ? (
@@ -29,7 +42,7 @@ export const ListingVariantSelector: React.FC<ListingVariantSelectorProps> = ({
           ) : (
             <Ruler className="h-4 w-4 text-orange-500" />
           )}
-          <span>{hasColors ? 'Choisissez une couleur / taille' : 'Choisissez une taille'}</span>
+          <span>{hasColors ? 'Choisissez une couleur / option' : 'Choisissez une option'}</span>
         </span>
         {!selectedVariantId ? (
           <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">

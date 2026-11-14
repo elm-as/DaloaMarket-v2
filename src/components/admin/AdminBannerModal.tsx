@@ -4,77 +4,28 @@ import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { AdminButton, AdminField, adminInputClass } from './ui/AdminUI';
 import { AdminBannerPreviewAndPicker } from './AdminBannerPreviewAndPicker';
+import {
+  BANNER_COLOR_PRESETS,
+  BANNER_DURATION_PACKS,
+  BANNER_LINK_TYPES,
+  buildInitialBannerForm,
+  toLocalDateInput,
+  type BannerFormData,
+} from './adminBannerTypes';
 
-export interface BannerFormData {
-  id?: string;
-  title: string;
-  subtitle: string | null;
-  image_url: string;
-  badge_text: string | null;
-  badge_color: string | null;
-  link_type: 'express' | 'referral' | 'listing' | 'seller' | 'external' | string;
-  link_target: string | null;
-  seller_id?: string | null;
-  sponsor_name: string | null;
-  price_paid: number;
-  priority: number;
-  starts_at: string | null;
-  ends_at: string | null;
-  is_active: boolean;
-}
-
-const COLOR_PRESETS = [
-  { label: 'Orange', value: '#EA580C' },
-  { label: 'Rouge Flash', value: '#DC2626' },
-  { label: 'Vert', value: '#16A34A' },
-  { label: 'Bleu', value: '#2563EB' },
-  { label: 'Violet Pro', value: '#7C3AED' },
-];
-
-const LINK_TYPES: { value: BannerFormData['link_type']; label: string; placeholder: string }[] = [
-  { value: 'express', label: 'Coursier Express (Course interne)', placeholder: 'Automatique (/express)' },
-  { value: 'referral', label: 'Parrainage Daloa Cash', placeholder: 'Automatique (/profile/referral)' },
-  { value: 'listing', label: 'Annonce spécifique (ID)', placeholder: 'Ex: e2b4f981-...' },
-  { value: 'seller', label: 'Boutique vendeur (ID)', placeholder: 'Ex: 9c011bfa-...' },
-  { value: 'external', label: 'Lien Web externe', placeholder: 'Ex: https://...' },
-];
+export type { BannerFormData };
 
 export const AdminBannerModal: React.FC<{
   banner?: BannerFormData | null;
   onClose: () => void;
   onSaved: () => void;
 }> = ({ banner, onClose, onSaved }) => {
-  const [formData, setFormData] = useState<BannerFormData>({
-    title: '',
-    subtitle: '',
-    image_url: '',
-    badge_text: '🔥 VENTE FLASH',
-    badge_color: '#DC2626',
-    link_type: 'listing',
-    link_target: '',
-    sponsor_name: '',
-    price_paid: 0,
-    priority: 5,
-    starts_at: new Date().toISOString(),
-    ends_at: null,
-    is_active: true,
-  });
+  const [formData, setFormData] = useState<BannerFormData>(() => buildInitialBannerForm(banner));
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    if (banner) {
-      setFormData({
-        ...banner,
-        subtitle: banner.subtitle || '',
-        badge_text: banner.badge_text || '',
-        badge_color: banner.badge_color || '#EA580C',
-        link_target: banner.link_target || '',
-        sponsor_name: banner.sponsor_name || '',
-        starts_at: banner.starts_at || new Date().toISOString(),
-        ends_at: banner.ends_at || null,
-      });
-    }
+    setFormData(buildInitialBannerForm(banner));
   }, [banner]);
 
   const patchForm = (changes: Partial<BannerFormData>) => {
@@ -151,12 +102,10 @@ export const AdminBannerModal: React.FC<{
     }
   };
 
-  const toLocalDateInput = (iso?: string | null) => (iso ? iso.slice(0, 10) : '');
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="flex max-h-[92vh] w-full max-w-xl flex-col rounded-3xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4">
+      <div className="flex max-h-[90dvh] w-full max-w-xl flex-col rounded-2xl sm:rounded-3xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3.5 sm:px-6 sm:py-4">
           <div className="flex items-center gap-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
               <ImageIcon size={18} />
@@ -170,7 +119,7 @@ export const AdminBannerModal: React.FC<{
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
+        <form onSubmit={handleSubmit} className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
           {/* Raccourcis Setup Auto / Boost Supérieur */}
           <div className="rounded-2xl border border-orange-200 bg-orange-50/70 p-3">
             <div className="flex items-center gap-1.5 mb-2">
@@ -180,11 +129,7 @@ export const AdminBannerModal: React.FC<{
               </p>
             </div>
             <div className="grid grid-cols-3 gap-2 tabular-nums">
-              {[
-                { days: 7, price: 3000, label: 'Pack 7J' },
-                { days: 14, price: 5000, label: 'Pack 14J' },
-                { days: 30, price: 10000, label: 'Pack 30J' },
-              ].map((p) => (
+              {BANNER_DURATION_PACKS.map((p) => (
                 <button
                   key={p.days}
                   type="button"
@@ -224,7 +169,7 @@ export const AdminBannerModal: React.FC<{
           </AdminField>
 
           <AdminField label="Visuel de l'affiche (format 16:9 recommandé) *">
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <input
                 type="url"
                 value={formData.image_url}
@@ -232,7 +177,7 @@ export const AdminBannerModal: React.FC<{
                 placeholder="https://..."
                 className={adminInputClass}
               />
-              <label className="flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100">
+              <label className="flex min-h-[40px] shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100">
                 {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
                 <span>Upload</span>
                 <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
@@ -241,24 +186,25 @@ export const AdminBannerModal: React.FC<{
           </AdminField>
 
           {/* Badge & Couleur */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <AdminField label="Badge promo">
               <input
                 type="text"
                 value={formData.badge_text || ''}
                 onChange={(e) => patchForm({ badge_text: e.target.value.toUpperCase() })}
-                placeholder="🔥 VENTE FLASH"
+                placeholder="VENTE FLASH"
                 className={adminInputClass}
               />
             </AdminField>
 
             <AdminField label="Couleur du badge">
-              <div className="flex items-center gap-2 pt-1">
-                {COLOR_PRESETS.map((c) => (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {BANNER_COLOR_PRESETS.map((c) => (
                   <button
                     key={c.value}
                     type="button"
                     onClick={() => patchForm({ badge_color: c.value })}
+                    aria-label={c.label}
                     style={{ backgroundColor: c.value }}
                     className={`h-7 w-7 rounded-full transition-transform ${
                       formData.badge_color === c.value ? 'scale-125 ring-2 ring-gray-900 ring-offset-2' : 'opacity-60'
@@ -270,12 +216,16 @@ export const AdminBannerModal: React.FC<{
           </div>
 
           {/* Dates de diffusion */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <AdminField label="Date de début">
               <input
                 type="date"
                 value={toLocalDateInput(formData.starts_at)}
-                onChange={(e) => patchForm({ starts_at: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                onChange={(e) =>
+                  patchForm({
+                    starts_at: e.target.value ? new Date(`${e.target.value}T00:00:00.000Z`).toISOString() : null,
+                  })
+                }
                 className={adminInputClass}
               />
             </AdminField>
@@ -283,7 +233,11 @@ export const AdminBannerModal: React.FC<{
               <input
                 type="date"
                 value={toLocalDateInput(formData.ends_at)}
-                onChange={(e) => patchForm({ ends_at: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                onChange={(e) =>
+                  patchForm({
+                    ends_at: e.target.value ? new Date(`${e.target.value}T23:59:59.999Z`).toISOString() : null,
+                  })
+                }
                 className={adminInputClass}
               />
             </AdminField>
@@ -297,7 +251,7 @@ export const AdminBannerModal: React.FC<{
                 onChange={(e) => patchForm({ link_type: e.target.value })}
                 className={adminInputClass}
               >
-                {LINK_TYPES.map((lt) => (
+                {BANNER_LINK_TYPES.map((lt) => (
                   <option key={lt.value} value={lt.value}>{lt.label}</option>
                 ))}
               </select>
@@ -308,7 +262,7 @@ export const AdminBannerModal: React.FC<{
                   type="text"
                   value={formData.link_target || ''}
                   onChange={(e) => patchForm({ link_target: e.target.value })}
-                  placeholder={LINK_TYPES.find((t) => t.value === formData.link_type)?.placeholder || 'ID ou URL'}
+                  placeholder={BANNER_LINK_TYPES.find((t) => t.value === formData.link_type)?.placeholder || 'ID ou URL'}
                   className={adminInputClass}
                 />
               </AdminField>

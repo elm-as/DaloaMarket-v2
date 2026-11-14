@@ -10,6 +10,7 @@ interface ListingPricingSectionProps {
   register: UseFormRegister<ListingFormValues>;
   errors: FieldErrors<ListingFormValues>;
   setValue?: UseFormSetValue<ListingFormValues>;
+  category?: string;
   priceNum: number;
   discountPercent: number;
   sellerFee: number;
@@ -31,6 +32,7 @@ export const ListingPricingSection: React.FC<ListingPricingSectionProps> = ({
   register,
   errors,
   setValue,
+  category,
   priceNum,
   discountPercent,
   sellerFee,
@@ -210,7 +212,7 @@ export const ListingPricingSection: React.FC<ListingPricingSectionProps> = ({
       )}
 
       {/* ── VARIANTS COMPONENT (COULEURS, TAILLES, POINTURES) ── */}
-      <ListingVariantsSection variants={variants} onChange={onVariantsChange} />
+      <ListingVariantsSection variants={variants} category={category} onChange={onVariantsChange} />
     </div>
   );
 };

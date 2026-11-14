@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { PackageX } from 'lucide-react';
@@ -52,11 +52,30 @@ const ListingDetailPage: React.FC = () => {
   const [reportOpen, setReportOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>();
+  const [variantRequiredHint, setVariantRequiredHint] = useState(false);
+  const variantHintTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (variantHintTimerRef.current) window.clearTimeout(variantHintTimerRef.current);
+    };
+  }, []);
 
   const selectedVariant: ListingVariant | undefined = listing?.variants?.find(
     (variant) => variant.id === selectedVariantId
   );
-  const handleVariantChange = (variant: ListingVariant) => setSelectedVariantId(variant.id);
+  const handleVariantChange = (variant: ListingVariant) => {
+    setSelectedVariantId(variant.id);
+    setVariantRequiredHint(false);
+  };
+  const handleRequireVariantSelect = () => {
+    setVariantRequiredHint(true);
+    if (variantHintTimerRef.current) window.clearTimeout(variantHintTimerRef.current);
+    variantHintTimerRef.current = window.setTimeout(() => setVariantRequiredHint(false), 2400);
+    const el = document.getElementById('variant-selector');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el?.focus({ preventScroll: true });
+  };
 
   const isOwner = user?.id === listing?.user_id;
   const isPro = !!(listing?.users?.pro_until && new Date(listing.users.pro_until) > new Date());
@@ -180,6 +199,7 @@ const ListingDetailPage: React.FC = () => {
           <ListingInfoCard
             listing={listing}
             selectedVariant={selectedVariant}
+            highlightVariantRequired={variantRequiredHint}
             onVariantChange={handleVariantChange}
           />
 
@@ -189,6 +209,7 @@ const ListingDetailPage: React.FC = () => {
               <AddToCartSection
                 listing={listing}
                 selectedVariant={selectedVariant}
+                onRequireVariantSelect={handleRequireVariantSelect}
               />
             </div>
           )}
@@ -229,6 +250,7 @@ const ListingDetailPage: React.FC = () => {
         <StickyBuyBar
           listing={listing}
           selectedVariant={selectedVariant}
+          onRequireVariantSelect={handleRequireVariantSelect}
         />
       )}
 

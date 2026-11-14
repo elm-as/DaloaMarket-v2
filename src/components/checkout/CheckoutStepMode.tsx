@@ -68,7 +68,7 @@ export const CheckoutStepMode: React.FC<CheckoutStepModeProps> = ({ context, ite
                 </p>
                 {item.variant_label && (
                   <span className="mt-1 inline-block rounded border border-stone-200 bg-stone-50 px-2 py-0.5 text-[10px] font-semibold text-stone-700">
-                    Taille : {item.variant_label}
+                    Option : {item.variant_label}
                   </span>
                 )}
               </div>
@@ -103,7 +103,7 @@ export const CheckoutStepMode: React.FC<CheckoutStepModeProps> = ({ context, ite
             </p>
             {directSelectedVariant && (
               <span className="mt-1 inline-block rounded border border-stone-200 bg-stone-50 px-2 py-0.5 text-[10px] font-semibold text-stone-700">
-                Taille : {directSelectedVariant.label}
+                Option : {directSelectedVariant.label}
               </span>
             )}
           </div>

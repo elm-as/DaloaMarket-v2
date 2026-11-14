@@ -10,29 +10,41 @@ import type { ListingFull, ListingVariant } from '../../types/listing';
 interface AddToCartSectionProps {
   listing: ListingFull;
   selectedVariant?: ListingVariant;
+  onRequireVariantSelect?: () => void;
 }
 
-export const AddToCartSection: React.FC<AddToCartSectionProps> = ({ listing, selectedVariant }) => {
+export const AddToCartSection: React.FC<AddToCartSectionProps> = ({
+  listing,
+  selectedVariant,
+  onRequireVariantSelect,
+}) => {
   const navigate = useNavigate();
   const { addToCart, updateQuantity, removeFromCart, items, itemCount } = useCart();
   const [qty, setQty] = useState(1);
   const [adding, setAdding] = useState(false);
   const variants = listing.variants || [];
   const hasVariants = variants.length > 0;
+  const hasAvailableVariant = variants.some((variant) => variant.active !== false && variant.stock > 0);
 
   const existingItem = items.find(
     (item) => item.listing_id === listing.id && (item.variant_id || null) === (selectedVariant?.id || null)
   );
   const currentCartQty = existingItem?.quantity || 0;
   const maxQty = selectedVariant ? selectedVariant.stock : (hasVariants ? 0 : listing.stock ?? 0);
+  const isOutOfStock = hasVariants ? (selectedVariant ? selectedVariant.stock <= 0 : !hasAvailableVariant) : maxQty <= 0;
+
+  const promptOptionSelection = () => {
+    onRequireVariantSelect?.();
+    toast.error('Choisissez d’abord une option (taille, pointure, couleur...)');
+  };
 
   const handleAddToCart = async () => {
+    if (hasVariants && !selectedVariant) {
+      promptOptionSelection();
+      return;
+    }
     setAdding(true);
     try {
-      if (hasVariants && !selectedVariant) {
-        toast.error('Choisissez une taille avant de continuer');
-        return;
-      }
       if (maxQty <= 0) {
         toast.error('Rupture de stock');
         return;
@@ -131,11 +143,11 @@ export const AddToCartSection: React.FC<AddToCartSectionProps> = ({ listing, sel
             size="sm"
             icon={<Plus className="h-4 w-4" />}
             loading={adding}
-            disabled={maxQty <= 0 || (hasVariants && !selectedVariant)}
+            disabled={isOutOfStock}
             onClick={handleAddToCart}
             className="flex-1 h-11 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 font-extrabold shadow-lg shadow-orange-200/60"
           >
-            {hasVariants && !selectedVariant ? 'Choisir une taille' : 'Ajouter au panier'}
+            {hasVariants && !selectedVariant ? 'Choisir une option' : 'Ajouter au panier'}
           </Button>
         </div>
       )}
@@ -143,16 +155,20 @@ export const AddToCartSection: React.FC<AddToCartSectionProps> = ({ listing, sel
       {listing.accepts_delivery && (
         <button
           type="button"
+          disabled={isOutOfStock}
           onClick={() => {
             if (hasVariants && !selectedVariant) {
-              toast.error('Choisissez une taille avant de commander');
+              promptOptionSelection();
               return;
             }
-            navigate(`/checkout/${listing.id}`, {
+            const variantQuery = selectedVariant?.id
+              ? `?variant=${encodeURIComponent(selectedVariant.id)}`
+              : '';
+            navigate(`/checkout/${listing.id}${variantQuery}`, {
               state: { variantId: selectedVariant?.id },
             });
           }}
-          className="w-full h-11 rounded-2xl border-2 border-orange-500 bg-white hover:bg-orange-50/50 text-orange-600 font-extrabold text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-xs"
+          className="w-full h-11 rounded-2xl border-2 border-orange-500 bg-white hover:bg-orange-50/50 disabled:opacity-50 text-orange-600 font-extrabold text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-xs"
         >
           <CreditCard className="h-4 w-4" />
           <span>Commander directement (Paiement sécurisé)</span>

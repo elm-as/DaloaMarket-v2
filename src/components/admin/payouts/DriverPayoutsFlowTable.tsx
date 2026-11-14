@@ -5,7 +5,8 @@ import { cn, formatPrice, formatDate } from '../../../lib/utils';
 import { triggerDriverPayout } from '../../../lib/adminPayouts';
 import { type AdminDeliveryItem, isDriverDelivery } from '../deliveries/types';
 import type { PayoutItem } from './types';
-import { AdminStatGrid, AdminStatCard } from '../ui/AdminUI';
+import { AdminStatGrid, AdminStatCard, AdminScrollTableContainer } from '../ui/AdminUI';
+import { DriverPayoutsMobileList } from './DriverPayoutsMobileList';
 
 /** Paiement à la livraison : le livreur encaisse sa course en espèces, aucun virement attendu. */
 const isCash = (d: AdminDeliveryItem) => d.order?.payment_method === 'cod';
@@ -159,8 +160,15 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
             Aucune course livreur ne correspond à ces critères.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <>
+            <DriverPayoutsMobileList
+              items={filteredItems}
+              processingId={processingId}
+              isCash={isCash}
+              onTriggerPayout={handleTriggerDriverPayout}
+            />
+            <AdminScrollTableContainer label="Courses et versements livreurs" className="hidden md:block">
+              <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-[10px]">
                 <tr>
                   <th className="py-3 px-4">Course / Date</th>
@@ -264,7 +272,8 @@ export const DriverPayoutsFlowTable: React.FC<DriverPayoutsFlowTableProps> = ({
                 })}
               </tbody>
             </table>
-          </div>
+            </AdminScrollTableContainer>
+          </>
         )}
       </div>
     </div>

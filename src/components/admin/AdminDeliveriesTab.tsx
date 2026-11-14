@@ -12,6 +12,7 @@ import {
   cancelAdminOrderViaServer,
 } from './deliveries/adminOrdersApi';
 import { isDriverDelivery, type AdminDeliveryItem, type DeliveryTabFilter } from './deliveries/types';
+import { ACTIVE_DELIVERY_STATUSES, DELIVERED_DELIVERY_STATUSES } from './deliveries/status';
 import type { PayoutItem } from './payouts/types';
 import {
   AdminPageHeader,
@@ -23,20 +24,6 @@ import {
   AdminLoading,
   adminInputClass,
 } from './ui/AdminUI';
-
-const ACTIVE_STATUSES = [
-  'pending',
-  'paid',
-  'funded',
-  'confirmed',
-  'pending_seller_confirmation',
-  'awaiting_pickup',
-  'accepted',
-  'picked_up',
-  'in_transit',
-];
-
-const DELIVERED_STATUSES = ['delivered', 'completed', 'auto_released'];
 
 export const AdminDeliveriesTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -215,8 +202,8 @@ export const AdminDeliveriesTab: React.FC = () => {
     }
   };
 
-  const activeItems = deliveries.filter((d) => ACTIVE_STATUSES.includes(d.status));
-  const deliveredItems = deliveries.filter((d) => DELIVERED_STATUSES.includes(d.status));
+  const activeItems = deliveries.filter((d) => ACTIVE_DELIVERY_STATUSES.includes(d.status));
+  const deliveredItems = deliveries.filter((d) => DELIVERED_DELIVERY_STATUSES.includes(d.status));
   const pickupItems = deliveries.filter((d) => !isDriverDelivery(d));
   const cancelledItems = deliveries.filter((d) => d.status === 'cancelled' || d.order?.status === 'cancelled');
   const disputedCount = deliveries.filter((d) => d.status === 'disputed').length;
@@ -227,8 +214,8 @@ export const AdminDeliveriesTab: React.FC = () => {
   );
 
   const filteredDeliveries = deliveries.filter((item) => {
-    if (filter === 'active' && !ACTIVE_STATUSES.includes(item.status)) return false;
-    if (filter === 'delivered' && !DELIVERED_STATUSES.includes(item.status)) return false;
+    if (filter === 'active' && !ACTIVE_DELIVERY_STATUSES.includes(item.status)) return false;
+    if (filter === 'delivered' && !DELIVERED_DELIVERY_STATUSES.includes(item.status)) return false;
     if (filter === 'pickup' && isDriverDelivery(item)) return false;
     if (filter === 'cancelled' && item.status !== 'cancelled' && item.order?.status !== 'cancelled') return false;
 

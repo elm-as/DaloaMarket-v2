@@ -1,5 +1,6 @@
 import React from 'react';
-import { MapPin, User, Phone } from 'lucide-react';
+import { MapPin } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 interface ExpressRouteContactsSectionProps {
   districts: string[];
@@ -7,10 +8,10 @@ interface ExpressRouteContactsSectionProps {
   setPickupDistrict: (v: string) => void;
   pickupAddress: string;
   setPickupAddress: (v: string) => void;
-  senderName: string;
-  setSenderName: (v: string) => void;
   senderPhone: string;
-  setSenderPhone: (v: string) => void;
+  onSenderPhoneChange: (v: string) => void;
+  senderPhoneInvalid?: boolean;
+  senderPhoneRef: React.RefObject<HTMLInputElement>;
   dropoffDistrict: string;
   setDropoffDistrict: (v: string) => void;
   dropoffAddress: string;
@@ -18,8 +19,13 @@ interface ExpressRouteContactsSectionProps {
   recipientName: string;
   setRecipientName: (v: string) => void;
   recipientPhone: string;
-  setRecipientPhone: (v: string) => void;
+  onRecipientPhoneChange: (v: string) => void;
+  recipientPhoneInvalid?: boolean;
+  recipientPhoneRef: React.RefObject<HTMLInputElement>;
 }
+
+const fieldClass =
+  'w-full min-h-[48px] rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 focus:border-orange-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-600/20';
 
 export const ExpressRouteContactsSection: React.FC<ExpressRouteContactsSectionProps> = ({
   districts,
@@ -27,10 +33,10 @@ export const ExpressRouteContactsSection: React.FC<ExpressRouteContactsSectionPr
   setPickupDistrict,
   pickupAddress,
   setPickupAddress,
-  senderName,
-  setSenderName,
   senderPhone,
-  setSenderPhone,
+  onSenderPhoneChange,
+  senderPhoneInvalid,
+  senderPhoneRef,
   dropoffDistrict,
   setDropoffDistrict,
   dropoffAddress,
@@ -38,105 +44,162 @@ export const ExpressRouteContactsSection: React.FC<ExpressRouteContactsSectionPr
   recipientName,
   setRecipientName,
   recipientPhone,
-  setRecipientPhone,
-}) => {
-  return (
-    <section className="rounded-3xl border border-gray-100 bg-white p-5 shadow-xs space-y-4">
-      <div className="flex items-center gap-2 text-sm font-black text-gray-900">
-        <MapPin className="h-4 w-4 text-orange-600" />
-        <span>2. Trajet & Contacts à Daloa</span>
-      </div>
+  onRecipientPhoneChange,
+  recipientPhoneInvalid,
+  recipientPhoneRef,
+}) => (
+  <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 space-y-4">
+    <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+      <MapPin className="h-4 w-4 text-orange-600 shrink-0" />
+      <h2>1. Trajet & contacts</h2>
+    </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="rounded-2xl bg-orange-50/40 border border-orange-100 p-3.5 space-y-3">
-          <p className="text-xs font-black uppercase text-orange-700">Ramassage (Expéditeur)</p>
-          <div>
-            <label className="block text-[11px] font-bold text-gray-600 mb-1">Quartier de départ</label>
-            <select
-              value={pickupDistrict}
-              onChange={(e) => setPickupDistrict(e.target.value)}
-              className="w-full h-10 rounded-xl border border-gray-200 bg-white px-3 text-xs font-bold"
-            >
-              {districts.map((d) => (
-                <option key={`p-${d}`} value={d}>{d}</option>
-              ))}
-            </select>
-          </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <fieldset className="rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 space-y-3">
+        <legend className="px-1 text-xs font-bold text-slate-800 flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-orange-600 inline-block" aria-hidden="true" />
+          Départ (Ramassage)
+        </legend>
+
+        <div className="space-y-1">
+          <label htmlFor="express-pickup-district" className="block text-xs font-semibold text-slate-700">
+            Quartier de départ
+          </label>
+          <select
+            id="express-pickup-district"
+            name="pickup_district"
+            value={pickupDistrict}
+            onChange={(e) => setPickupDistrict(e.target.value)}
+            className={fieldClass}
+          >
+            {districts.map((d) => (
+              <option key={`p-${d}`} value={d}>{d}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1">
+          <label htmlFor="express-pickup-address" className="block text-xs font-semibold text-slate-700">
+            Repère exact (optionnel)
+          </label>
           <input
+            id="express-pickup-address"
+            name="pickup_address"
             type="text"
+            autoComplete="street-address"
             value={pickupAddress}
             onChange={(e) => setPickupAddress(e.target.value)}
-            placeholder="Repère précis (ex: Pharmacie, carrefour...)"
-            className="w-full h-10 rounded-xl border border-gray-200 bg-white px-3 text-xs"
+            placeholder="Ex : Face pharmacie, carrefour..."
+            className={fieldClass}
           />
-          <div className="flex items-center gap-2">
-            <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-            <input
-              type="text"
-              value={senderName}
-              onChange={(e) => setSenderName(e.target.value)}
-              placeholder="Nom expéditeur"
-              className="w-full h-9 rounded-lg border border-gray-200 bg-white px-2.5 text-xs"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Phone className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-            <input
-              type="tel"
-              required
-              value={senderPhone}
-              onChange={(e) => setSenderPhone(e.target.value)}
-              placeholder="Téléphone expéditeur *"
-              className="w-full h-9 rounded-lg border border-gray-200 bg-white px-2.5 text-xs font-mono tabular-nums"
-            />
-          </div>
         </div>
 
-        <div className="rounded-2xl bg-emerald-50/40 border border-emerald-100 p-3.5 space-y-3">
-          <p className="text-xs font-black uppercase text-emerald-700">Livraison (Destinataire)</p>
-          <div>
-            <label className="block text-[11px] font-bold text-gray-600 mb-1">Quartier d'arrivée</label>
-            <select
-              value={dropoffDistrict}
-              onChange={(e) => setDropoffDistrict(e.target.value)}
-              className="w-full h-10 rounded-xl border border-gray-200 bg-white px-3 text-xs font-bold"
-            >
-              {districts.map((d) => (
-                <option key={`d-${d}`} value={d}>{d}</option>
-              ))}
-            </select>
-          </div>
+        <div className="space-y-1">
+          <label htmlFor="express-sender-phone" className="block text-xs font-semibold text-slate-700">
+            Téléphone expéditeur <span className="text-red-600" aria-hidden="true">*</span>
+          </label>
           <input
+            ref={senderPhoneRef}
+            id="express-sender-phone"
+            name="sender_phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            required
+            aria-required="true"
+            aria-invalid={senderPhoneInvalid || undefined}
+            value={senderPhone}
+            onChange={(e) => onSenderPhoneChange(e.target.value)}
+            placeholder="Ex : 07 00 00 00 00"
+            className={cn(
+              fieldClass,
+              'tabular-nums font-medium',
+              senderPhoneInvalid && 'border-red-500 focus:border-red-600',
+            )}
+          />
+        </div>
+      </fieldset>
+
+      <fieldset className="rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 space-y-3">
+        <legend className="px-1 text-xs font-bold text-slate-800 flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-emerald-600 inline-block" aria-hidden="true" />
+          Arrivée (Destinataire)
+        </legend>
+
+        <div className="space-y-1">
+          <label htmlFor="express-dropoff-district" className="block text-xs font-semibold text-slate-700">
+            Quartier d&apos;arrivée
+          </label>
+          <select
+            id="express-dropoff-district"
+            name="dropoff_district"
+            value={dropoffDistrict}
+            onChange={(e) => setDropoffDistrict(e.target.value)}
+            className={fieldClass}
+          >
+            {districts.map((d) => (
+              <option key={`d-${d}`} value={d}>{d}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1">
+          <label htmlFor="express-dropoff-address" className="block text-xs font-semibold text-slate-700">
+            Repère exact (optionnel)
+          </label>
+          <input
+            id="express-dropoff-address"
+            name="dropoff_address"
             type="text"
+            autoComplete="street-address"
             value={dropoffAddress}
             onChange={(e) => setDropoffAddress(e.target.value)}
-            placeholder="Repère précis du destinataire"
-            className="w-full h-10 rounded-xl border border-gray-200 bg-white px-3 text-xs"
+            placeholder="Ex : Portail bleu, école..."
+            className={fieldClass}
           />
-          <div className="flex items-center gap-2">
-            <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-            <input
-              type="text"
-              value={recipientName}
-              onChange={(e) => setRecipientName(e.target.value)}
-              placeholder="Nom destinataire"
-              className="w-full h-9 rounded-lg border border-gray-200 bg-white px-2.5 text-xs"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Phone className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-            <input
-              type="tel"
-              required
-              value={recipientPhone}
-              onChange={(e) => setRecipientPhone(e.target.value)}
-              placeholder="Téléphone destinataire *"
-              className="w-full h-9 rounded-lg border border-gray-200 bg-white px-2.5 text-xs font-mono tabular-nums"
-            />
-          </div>
         </div>
-      </div>
-    </section>
-  );
-};
 
+        <div className="space-y-1">
+          <label htmlFor="express-recipient-phone" className="block text-xs font-semibold text-slate-700">
+            Téléphone destinataire <span className="text-red-600" aria-hidden="true">*</span>
+          </label>
+          <input
+            ref={recipientPhoneRef}
+            id="express-recipient-phone"
+            name="recipient_phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            required
+            aria-required="true"
+            aria-invalid={recipientPhoneInvalid || undefined}
+            value={recipientPhone}
+            onChange={(e) => onRecipientPhoneChange(e.target.value)}
+            placeholder="Ex : 05 00 00 00 00"
+            className={cn(
+              fieldClass,
+              'tabular-nums font-medium',
+              recipientPhoneInvalid && 'border-red-500 focus:border-red-600',
+            )}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label htmlFor="express-recipient-name" className="block text-xs font-semibold text-slate-700">
+            Nom du destinataire (optionnel)
+          </label>
+          <input
+            id="express-recipient-name"
+            name="recipient_name"
+            type="text"
+            autoComplete="name"
+            value={recipientName}
+            onChange={(e) => setRecipientName(e.target.value)}
+            placeholder="Ex : Koffi Aya"
+            className={fieldClass}
+          />
+        </div>
+      </fieldset>
+    </div>
+  </section>
+);

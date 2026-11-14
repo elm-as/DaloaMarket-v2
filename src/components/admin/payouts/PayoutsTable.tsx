@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 import { cn, formatPrice, formatDate } from '../../../lib/utils';
 import type { PayoutItem, PayoutStatus, PayoutType } from './types';
 import { supabase } from '../../../lib/supabase';
+import { AdminScrollTableContainer } from '../ui/AdminUI';
+import { PayoutsMobileList } from './PayoutsMobileList';
 
 interface PayoutsTableProps {
   payouts: PayoutItem[];
@@ -145,8 +147,15 @@ export const PayoutsTable: React.FC<PayoutsTableProps> = ({ payouts, onRefresh }
             Aucun versement ne correspond aux critères sélectionnés.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <>
+            <PayoutsMobileList
+              payouts={filteredPayouts}
+              retryingId={retryingId}
+              onCopy={handleCopy}
+              onRetry={handleRetrySinglePayout}
+            />
+            <AdminScrollTableContainer label="Versements" className="hidden md:block">
+              <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-[10px]">
                 <tr>
                   <th className="py-3 px-4">Date / Réf</th>
@@ -274,7 +283,8 @@ export const PayoutsTable: React.FC<PayoutsTableProps> = ({ payouts, onRefresh }
                 })}
               </tbody>
             </table>
-          </div>
+            </AdminScrollTableContainer>
+          </>
         )}
       </div>
     </div>

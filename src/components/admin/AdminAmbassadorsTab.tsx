@@ -13,20 +13,11 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AdminPageHeader } from './ui/AdminUI';
-
-interface AmbassadorRow {
-  id: string;
-  user_id: string;
-  full_name: string;
-  phone: string;
-  referral_code: string;
-  balance_available: number;
-  total_earnings: number;
-  payout_network: string;
-  payout_number: string;
-  created_at: string;
-  ambassador_referrals?: { count: number }[];
-}
+import {
+  AdminAmbassadorList,
+  getAmbassadorSellerCount,
+  type AmbassadorRow,
+} from './ambassadors/AdminAmbassadorList';
 
 interface PayoutRow {
   id: string;
@@ -137,14 +128,7 @@ export const AdminAmbassadorsTab: React.FC = () => {
     .filter((p) => p.status === 'completed')
     .reduce((sum, p) => sum + p.amount, 0);
 
-  const getSellerCount = (amb: AmbassadorRow) => {
-    if (amb.ambassador_referrals && amb.ambassador_referrals[0]) {
-      return amb.ambassador_referrals[0].count || 0;
-    }
-    return 0;
-  };
-
-  const totalReferredSellers = ambassadors.reduce((sum, a) => sum + getSellerCount(a), 0);
+  const totalReferredSellers = ambassadors.reduce((sum, a) => sum + getAmbassadorSellerCount(a), 0);
 
   const filteredAmbassadors = ambassadors.filter((a) => 
     a.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -159,7 +143,7 @@ export const AdminAmbassadorsTab: React.FC = () => {
         description="Réseau de parrainage des vendeurs, commissions et demandes de retrait."
       />
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
           <div className="flex items-center gap-2 text-orange-600 mb-1">
             <Award className="w-4 h-4" />
@@ -301,59 +285,7 @@ export const AdminAmbassadorsTab: React.FC = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-gray-100 text-[11px] font-bold text-gray-400">
-                <th className="py-3 px-3">Ambassadeur</th>
-                <th className="py-3 px-3">Code Parrain</th>
-                <th className="py-3 px-3 text-center">Vendeurs</th>
-                <th className="py-3 px-3 text-right">Solde Actuel</th>
-                <th className="py-3 px-3 text-right">Total Gagné</th>
-                <th className="py-3 px-3">Paiement par défaut</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50 text-xs">
-              {filteredAmbassadors.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-gray-400">
-                    Aucun ambassadeur trouvé.
-                  </td>
-                </tr>
-              ) : (
-                filteredAmbassadors.map((amb) => (
-                  <tr key={amb.id} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="py-3 px-3">
-                      <p className="font-bold text-gray-900">{amb.full_name}</p>
-                      <p className="text-[11px] text-gray-500 flex items-center gap-1 mt-0.5">
-                        <Phone className="w-3 h-3" /> {amb.phone}
-                      </p>
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className="font-mono font-semibold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-md text-xs">
-                        {amb.referral_code}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-center font-bold text-gray-800 tabular-nums">
-                      {getSellerCount(amb)}
-                    </td>
-                    <td className="py-3 px-3 text-right font-bold text-emerald-600 tabular-nums">
-                      {(Number(amb.balance_available) || 0).toLocaleString('fr-FR')} F
-                    </td>
-                    <td className="py-3 px-3 text-right font-medium text-gray-700 tabular-nums">
-                      {(Number(amb.total_earnings) || 0).toLocaleString('fr-FR')} F
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className="text-[11px] text-gray-600">
-                        <strong className="">{amb.payout_network}</strong> : {amb.payout_number}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <AdminAmbassadorList ambassadors={filteredAmbassadors} />
       </div>
     </div>
   );

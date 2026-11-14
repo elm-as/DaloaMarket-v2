@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Tag, Rocket, MapPin } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { formatPrice } from '../../lib/utils';
+import { getBoostDestination } from '../../lib/boostNavigation';
 import { usePhase } from '../../contexts/PhaseContext';
+import { useSupabase } from '../../hooks/useSupabase';
 
 interface FlashDealItem {
   id: string;
@@ -19,6 +21,12 @@ interface FlashDealItem {
 export const WebFlashDealsSection: React.FC = () => {
   const navigate = useNavigate();
   const { enableBoost } = usePhase();
+  const { user, userProfile } = useSupabase();
+  const boostDestination = getBoostDestination(Boolean(user), userProfile, {
+    login: '/login',
+    myListings: '/profile?tab=listings',
+    packs: '/acheter-pack',
+  });
   const [deals, setDeals] = useState<FlashDealItem[]>([]);
 
   const fetchFlashDeals = useCallback(async () => {
@@ -74,7 +82,7 @@ export const WebFlashDealsSection: React.FC = () => {
           {enableBoost && (
             <button
               type="button"
-              onClick={() => navigate('/acheter-pack')}
+              onClick={() => navigate(boostDestination)}
               className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700 hover:bg-orange-100 transition-colors"
             >
               <Rocket className="h-3.5 w-3.5" />
@@ -124,13 +132,13 @@ export const WebFlashDealsSection: React.FC = () => {
                     <p className="line-clamp-1 text-xs font-semibold text-gray-900 group-hover:text-orange-600">
                       {item.title}
                     </p>
-                    <div className="mt-1 flex items-baseline gap-1.5 tabular-nums font-mono">
-                      <span className="text-sm font-bold text-gray-900">
-                        {formatPrice(item.price)} F
+                    <div className="mt-1 flex items-baseline gap-1.5 tabular-nums font-mono flex-wrap">
+                      <span className="text-sm font-bold text-gray-900 whitespace-nowrap">
+                        {formatPrice(item.price)}
                       </span>
                       {hasDiscount && (
-                        <span className="text-[10px] font-medium text-gray-400 line-through">
-                          {formatPrice(item.original_price!)} F
+                        <span className="text-[10px] font-medium text-gray-400 line-through whitespace-nowrap">
+                          {formatPrice(item.original_price!)}
                         </span>
                       )}
                     </div>

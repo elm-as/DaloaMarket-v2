@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Search, ShieldAlert, User, Clock, FileText, Phone, ArrowUpRight } from 'lucide-react';
 import { cn, formatPrice, formatDate } from '../../../lib/utils';
 import type { FinancialAuditLogItem } from './types';
+import { AdminScrollTableContainer } from '../ui/AdminUI';
+import { FinancialAuditMobileList } from './FinancialAuditMobileList';
 
 interface FinancialAuditLogsTableProps {
   logs: FinancialAuditLogItem[];
@@ -111,8 +113,14 @@ export const FinancialAuditLogsTable: React.FC<FinancialAuditLogsTableProps> = (
             Aucune opération financière enregistrée pour ces critères.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <>
+            <FinancialAuditMobileList
+              logs={filteredLogs}
+              getActionLabel={getActionLabel}
+              onSelectDetail={setActiveDetailLog}
+            />
+            <AdminScrollTableContainer label="Journal d'audit financier" className="hidden md:block">
+              <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-[10px]">
                 <tr>
                   <th className="py-3 px-4">Date & Heure</th>
@@ -199,7 +207,8 @@ export const FinancialAuditLogsTable: React.FC<FinancialAuditLogsTableProps> = (
                 })}
               </tbody>
             </table>
-          </div>
+            </AdminScrollTableContainer>
+          </>
         )}
       </div>
 

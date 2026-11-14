@@ -267,33 +267,38 @@ GRANT EXECUTE ON FUNCTION public.report_cod_delivery_refusal(uuid, text, text, t
 -- 5. Mise à jour de create_cod_order pour bloquer les acheteurs sous sanction
 DO $$
 DECLARE
+  v_proc regprocedure;
   v_def text;
   v_new text;
 BEGIN
-  v_def := pg_get_functiondef('public.create_cod_order(jsonb,text,text,text,double precision,double precision,text,jsonb,uuid)'::regprocedure);
+  v_proc := to_regprocedure('public.create_cod_order(jsonb,text,text,text,double precision,double precision,text,jsonb,uuid)');
 
-  IF v_def NOT LIKE '%cod_blocked_until%' THEN
-    v_new := replace(
-      v_def,
-      E'  IF v_buyer IS NULL THEN\n    RETURN json_build_object(''success'', false, ''reason'', ''unauthenticated'');\n  END IF;',
-      E'  IF v_buyer IS NULL THEN\n    RETURN json_build_object(''success'', false, ''reason'', ''unauthenticated'');\n  END IF;\n\n'
-      || E'  -- Contrôle Anti-Lapin : Vérifier si l''acheteur est bloqué pour le paiement à la livraison\n'
-      || E'  IF EXISTS (\n'
-      || E'    SELECT 1 FROM public.users\n'
-      || E'     WHERE id = v_buyer\n'
-      || E'       AND cod_blocked_until IS NOT NULL\n'
-      || E'       AND cod_blocked_until > now()\n'
-      || E'  ) THEN\n'
-      || E'    RETURN json_build_object(\n'
-      || E'      ''success'', false,\n'
-      || E'      ''reason'', ''cod_blocked'',\n'
-      || E'      ''message'', ''Le paiement à la livraison est temporairement indisponible suite à des commandes non réceptionnées. Veuillez régler par Mobile Money sécurisé.''\n'
-      || E'    );\n'
-      || E'  END IF;'
-    );
+  IF v_proc IS NOT NULL THEN
+    v_def := pg_get_functiondef(v_proc);
 
-    IF v_new <> v_def THEN
-      EXECUTE v_new;
+    IF v_def NOT LIKE '%cod_blocked_until%' THEN
+      v_new := replace(
+        v_def,
+        E'  IF v_buyer IS NULL THEN\n    RETURN json_build_object(''success'', false, ''reason'', ''unauthenticated'');\n  END IF;',
+        E'  IF v_buyer IS NULL THEN\n    RETURN json_build_object(''success'', false, ''reason'', ''unauthenticated'');\n  END IF;\n\n'
+        || E'  -- Contrôle Anti-Lapin : Vérifier si l''acheteur est bloqué pour le paiement à la livraison\n'
+        || E'  IF EXISTS (\n'
+        || E'    SELECT 1 FROM public.users\n'
+        || E'     WHERE id = v_buyer\n'
+        || E'       AND cod_blocked_until IS NOT NULL\n'
+        || E'       AND cod_blocked_until > now()\n'
+        || E'  ) THEN\n'
+        || E'    RETURN json_build_object(\n'
+        || E'      ''success'', false,\n'
+        || E'      ''reason'', ''cod_blocked'',\n'
+        || E'      ''message'', ''Le paiement à la livraison est temporairement indisponible suite à des commandes non réceptionnées. Veuillez régler par Mobile Money sécurisé.''\n'
+        || E'    );\n'
+        || E'  END IF;'
+      );
+
+      IF v_new <> v_def THEN
+        EXECUTE v_new;
+      END IF;
     END IF;
   END IF;
 END $$;

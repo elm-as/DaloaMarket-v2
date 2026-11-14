@@ -21,3 +21,17 @@ export const DELIVERY_STATUS: Record<string, { label: string; tone: AdminBadgeTo
 
 export const deliveryStatus = (status: string) =>
   DELIVERY_STATUS[status] || { label: status, tone: 'neutral' as const };
+
+export const ACTIVE_DELIVERY_STATUSES = [
+  'pending',
+  'paid',
+  'funded',
+  'confirmed',
+  'pending_seller_confirmation',
+  'awaiting_pickup',
+  'accepted',
+  'picked_up',
+  'in_transit',
+];
+
+export const DELIVERED_DELIVERY_STATUSES = ['delivered', 'completed', 'auto_released'];

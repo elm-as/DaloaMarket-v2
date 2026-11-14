@@ -8,7 +8,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorState } from '../ui/ErrorState';
 import { cn, formatDate } from '../../lib/utils';
-import { AdminPageHeader } from './ui/AdminUI';
+import { AdminPageHeader, AdminScrollTableContainer } from './ui/AdminUI';
 
 export const AdminReportsTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -59,70 +59,145 @@ export const AdminReportsTab: React.FC = () => {
       {reports.length === 0 ? (
         <EmptyState title="Aucun signalement" icon={<Flag size={48} />} />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--color-outline)] text-left">
-                <th className="p-3 font-medium text-[var(--color-on-surface-variant)]">Type</th>
-                <th className="p-3 font-medium text-[var(--color-on-surface-variant)]">Detail</th>
-                <th className="p-3 font-medium text-[var(--color-on-surface-variant)]">Signaleur</th>
-                <th className="p-3 font-medium text-[var(--color-on-surface-variant)]">Annonce</th>
-                <th className="p-3 font-medium text-[var(--color-on-surface-variant)]">Statut</th>
-                <th className="p-3 font-medium text-[var(--color-on-surface-variant)]">Date</th>
-                <th className="p-3 font-medium text-[var(--color-on-surface-variant)]">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reports.map((r) => (
-                <tr key={r.id} className="border-b border-[var(--color-outline)]">
-                  <td className="p-3">
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-[var(--color-surface-variant)]">
+        <>
+          <ul className="space-y-3 md:hidden" aria-label="Liste des signalements">
+            {reports.map((r) => (
+              <li
+                key={r.id}
+                className="rounded-xl border border-stone-200 bg-white p-3.5 space-y-2.5 text-sm"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-stone-700">
                       {r.type || 'N/A'}
                     </span>
-                  </td>
-                  <td className="p-3 max-w-[200px] truncate">{r.detail || '-'}</td>
-                  <td className="p-3">{r.reporter?.full_name || 'N/A'}</td>
-                  <td className="p-3">
-                    {r.listing ? (
-                      <Link to={`/listings/${r.listing.id}`} className="text-[var(--color-primary)] underline">
-                        Voir
-                      </Link>
-                    ) : '-'}
-                  </td>
-                  <td className="p-3">
-                    <span className={cn(
-                      'px-2 py-0.5 rounded-full text-xs',
-                      r.status === 'resolved' ? 'bg-green-100 text-green-700' :
-                      r.status === 'dismissed' ? 'bg-gray-100 text-gray-700' :
-                      'bg-yellow-100 text-yellow-700'
-                    )}>
+                    <span
+                      className={cn(
+                        'px-2 py-0.5 rounded-full text-xs font-medium',
+                        r.status === 'resolved'
+                          ? 'bg-green-100 text-green-700'
+                          : r.status === 'dismissed'
+                          ? 'bg-gray-100 text-gray-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                      )}
+                    >
                       {r.status || 'pending'}
                     </span>
-                  </td>
-                  <td className="p-3 whitespace-nowrap">{formatDate(r.created_at)}</td>
-                  <td className="p-3">
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => resolveReport(r.id)}
-                        className="p-1.5 rounded-lg text-green-500 hover:bg-green-50 active:scale-[0.97]"
-                        title="Resoudre"
-                      >
-                        <CheckCircle size={16} />
-                      </button>
-                      <button
-                        onClick={() => dismissReport(r.id)}
-                        className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 active:scale-[0.97]"
-                        title="Rejeter"
-                      >
-                        <XCircle size={16} />
-                      </button>
-                    </div>
-                  </td>
+                  </div>
+                  <span className="text-xs text-stone-500 whitespace-nowrap tabular-nums">
+                    {formatDate(r.created_at)}
+                  </span>
+                </div>
+
+                {r.detail && (
+                  <p className="text-xs text-stone-700 line-clamp-2">{r.detail}</p>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-stone-600 pt-1 border-t border-stone-100">
+                  <span>
+                    Signaleur : <strong className="text-stone-900">{r.reporter?.full_name || 'N/A'}</strong>
+                  </span>
+                  {r.listing && (
+                    <Link
+                      to={`/listings/${r.listing.id}`}
+                      className="font-semibold text-[var(--color-primary)] underline"
+                    >
+                      Voir l'annonce
+                    </Link>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => resolveReport(r.id)}
+                    className="flex-1 min-h-[40px] inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 active:scale-[0.98]"
+                  >
+                    <CheckCircle size={15} />
+                    Résoudre
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => dismissReport(r.id)}
+                    className="flex-1 min-h-[40px] inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 active:scale-[0.98]"
+                  >
+                    <XCircle size={15} />
+                    Rejeter
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <AdminScrollTableContainer label="Signalements" className="hidden md:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--color-outline)] text-left">
+                  <th className="p-3 font-medium text-[var(--color-on-surface-variant)]">Type</th>
+                  <th className="p-3 font-medium text-[var(--color-on-surface-variant)]">Detail</th>
+                  <th className="p-3 font-medium text-[var(--color-on-surface-variant)]">Signaleur</th>
+                  <th className="p-3 font-medium text-[var(--color-on-surface-variant)]">Annonce</th>
+                  <th className="p-3 font-medium text-[var(--color-on-surface-variant)]">Statut</th>
+                  <th className="p-3 font-medium text-[var(--color-on-surface-variant)]">Date</th>
+                  <th className="p-3 font-medium text-[var(--color-on-surface-variant)]">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {reports.map((r) => (
+                  <tr key={r.id} className="border-b border-[var(--color-outline)]">
+                    <td className="p-3">
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-[var(--color-surface-variant)]">
+                        {r.type || 'N/A'}
+                      </span>
+                    </td>
+                    <td className="p-3 max-w-[200px] truncate">{r.detail || '-'}</td>
+                    <td className="p-3">{r.reporter?.full_name || 'N/A'}</td>
+                    <td className="p-3">
+                      {r.listing ? (
+                        <Link to={`/listings/${r.listing.id}`} className="text-[var(--color-primary)] underline">
+                          Voir
+                        </Link>
+                      ) : '-'}
+                    </td>
+                    <td className="p-3">
+                      <span className={cn(
+                        'px-2 py-0.5 rounded-full text-xs',
+                        r.status === 'resolved' ? 'bg-green-100 text-green-700' :
+                        r.status === 'dismissed' ? 'bg-gray-100 text-gray-700' :
+                        'bg-yellow-100 text-yellow-700'
+                      )}>
+                        {r.status || 'pending'}
+                      </span>
+                    </td>
+                    <td className="p-3 whitespace-nowrap tabular-nums">{formatDate(r.created_at)}</td>
+                    <td className="p-3">
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => resolveReport(r.id)}
+                          className="p-1.5 rounded-lg text-green-500 hover:bg-green-50 active:scale-[0.97]"
+                          title="Résoudre"
+                          aria-label="Résoudre le signalement"
+                        >
+                          <CheckCircle size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => dismissReport(r.id)}
+                          className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 active:scale-[0.97]"
+                          title="Rejeter"
+                          aria-label="Rejeter le signalement"
+                        >
+                          <XCircle size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </AdminScrollTableContainer>
+        </>
       )}
     </motion.div>
   );

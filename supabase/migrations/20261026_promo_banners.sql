@@ -139,13 +139,13 @@ VALUES
     10
   ),
   (
-    'Programme Daloa Cash',
-    'Gagnez 500 FCFA pour chaque ami invité sur l''application',
-    'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1200&q=80',
-    'BON PLAN',
-    '#16A34A',
-    'referral',
-    NULL,
+    'Vendez 3x plus vite à Daloa',
+    'Mettez vos articles en tête des recherches ou passez Vendeur Pro vérifié',
+    'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=80',
+    'VISIBILITÉ N°1',
+    '#D97706',
+    'none',
+    '/acheter-pack',
     5
   )
 ON CONFLICT DO NOTHING;

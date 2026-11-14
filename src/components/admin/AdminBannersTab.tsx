@@ -144,7 +144,7 @@ export const AdminBannersTab: React.FC = () => {
       {/* En-tête */}
       <AdminPageHeader
         title="Affiches & Carrousel d'accueil"
-        description="Gérez les bannières HD de l'application mobile, monétisez les affiches sponsorisées et suivez les performances."
+        description="Gérez les bannières HD affichées sur le carrousel du site web et de l'application mobile."
         actions={
           <AdminButton variant="primary" icon={Plus} onClick={handleOpenCreate}>
             Nouvelle affiche
@@ -212,8 +212,8 @@ export const AdminBannersTab: React.FC = () => {
                   className="flex flex-col gap-4 p-5 transition-colors hover:bg-gray-50/80 md:flex-row md:items-center md:justify-between"
                 >
                   {/* Visuel et infos de l'affiche */}
-                  <div className="flex items-start gap-4 min-w-0">
-                    <div className="relative h-20 w-36 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
+                  <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+                    <div className="relative h-32 w-full sm:h-20 sm:w-36 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
                       <img
                         src={banner.image_url}
                         alt={banner.title}
@@ -268,7 +268,7 @@ export const AdminBannersTab: React.FC = () => {
                   </div>
 
                   {/* Compteurs & Actions */}
-                  <div className="flex items-center justify-between gap-6 border-t border-gray-100 pt-3 md:border-t-0 md:pt-0">
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 pt-3 md:border-t-0 md:pt-0">
                     <div className="flex items-center gap-4 text-xs tabular-nums text-gray-600">
                       <div className="text-center">
                         <p className="font-bold text-gray-900">{banner.views_count}</p>

@@ -632,6 +632,7 @@ const ListingCreatePage: React.FC = () => {
                       register={register}
                       errors={errors}
                       setValue={setValue}
+                      category={watchCategory}
                       priceNum={priceNum}
                       sellerFee={sellerFee}
                       discountPercent={discountPercent}

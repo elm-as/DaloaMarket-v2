@@ -21,6 +21,7 @@ $$;
 ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS is_test_user boolean DEFAULT false,
   ADD COLUMN IF NOT EXISTS is_test_users boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS referred_by_code text,
   ADD COLUMN IF NOT EXISTS cod_orders_count integer NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS cod_delivered_count integer NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS cod_refused_count integer NOT NULL DEFAULT 0,

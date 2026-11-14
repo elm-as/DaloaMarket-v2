@@ -44,6 +44,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const isChatPage = /^\/messages\/[^/]+\/[^/]+/.test(location.pathname);
   const isListingDetailPage = /^\/(listings|l)\/[^/]+/.test(location.pathname);
+  const isAdminPage = location.pathname.startsWith('/admin');
 
   const hideBottomNav =
     location.pathname === '/login' ||
@@ -58,6 +59,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     location.pathname.startsWith('/auth/') ||
     location.pathname.startsWith('/payment/') ||
     location.pathname.startsWith('/checkout') ||
+    isAdminPage ||
     isChatPage ||
     isListingDetailPage;
 
@@ -93,7 +95,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </div>
         </main>
 
-        {!isChatPage && <Footer />}
+        {!isChatPage && !isAdminPage && <Footer />}
       </div>
 
       {!hideBottomNav && <BottomNavBar />}

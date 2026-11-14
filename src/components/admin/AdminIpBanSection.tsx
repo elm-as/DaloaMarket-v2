@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { cn, formatDate } from '../../lib/utils';
+import { AdminScrollTableContainer } from './ui/AdminUI';
 
 interface BannedIpRecord {
   id: string;
@@ -196,56 +197,106 @@ export const AdminIpBanSection: React.FC = () => {
             <p className="text-xs text-gray-500 font-medium">Aucune adresse IP n'est actuellement bannie du système.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-gray-200/80 shadow-2xs">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-gray-50/80 text-gray-500 font-semibold border-b border-gray-200/80">
-                <tr>
-                  <th className="px-4 py-3">Adresse IP</th>
-                  <th className="px-4 py-3">Motif du Bannissement</th>
-                  <th className="px-4 py-3">Date du Ban</th>
-                  <th className="px-4 py-3">Durée / Expiration</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 bg-white font-medium text-gray-800">
-                {bannedIps.map((item) => (
-                  <tr key={item.id} className="hover:bg-red-50/20 transition-colors">
-                    <td className="px-4 py-3 font-mono font-bold text-red-600">
+          <>
+            <ul className="space-y-3 md:hidden" aria-label="Adresses IP bannies">
+              {bannedIps.map((item) => (
+                <li
+                  key={item.id}
+                  className="rounded-xl border border-gray-200/80 bg-white p-3.5 space-y-2.5 text-xs"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-mono font-bold text-red-600 break-all">
                       {item.ip_address}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {item.reason || 'Bannie manuellement par administrateur'}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 font-mono text-[11px]">
-                      {formatDate(item.created_at)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {item.expires_at ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                          <Clock size={11} />
-                          {formatDate(item.expires_at)}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-md border border-red-200">
-                          Permanente
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => handleUnbanIp(item.ip_address)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold text-xs transition-colors border border-emerald-200 active:scale-95"
-                        title="Débannir l'adresse IP"
-                      >
-                        <Trash2 size={12} />
-                        <span>Débannir</span>
-                      </button>
-                    </td>
+                    </span>
+                    {item.expires_at ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 tabular-nums">
+                        <Clock size={11} />
+                        {formatDate(item.expires_at)}
+                      </span>
+                    ) : (
+                      <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-md border border-red-200">
+                        Permanente
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-gray-700">
+                    {item.reason || 'Bannie manuellement par administrateur'}
+                  </p>
+
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-100">
+                    <span className="text-gray-500 font-mono text-[11px] tabular-nums">
+                      Ban le {formatDate(item.created_at)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleUnbanIp(item.ip_address)}
+                      className="min-h-[40px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold text-xs transition-colors border border-emerald-200 active:scale-95"
+                      title="Débannir l'adresse IP"
+                    >
+                      <Trash2 size={13} />
+                      <span>Débannir</span>
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            <AdminScrollTableContainer
+              label="Adresses IP bannies"
+              className="hidden md:block rounded-2xl border border-gray-200/80 shadow-2xs"
+            >
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50/80 text-gray-500 font-semibold border-b border-gray-200/80">
+                  <tr>
+                    <th className="px-4 py-3">Adresse IP</th>
+                    <th className="px-4 py-3">Motif du Bannissement</th>
+                    <th className="px-4 py-3">Date du Ban</th>
+                    <th className="px-4 py-3">Durée / Expiration</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white font-medium text-gray-800">
+                  {bannedIps.map((item) => (
+                    <tr key={item.id} className="hover:bg-red-50/20 transition-colors">
+                      <td className="px-4 py-3 font-mono font-bold text-red-600 whitespace-nowrap">
+                        {item.ip_address}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">
+                        {item.reason || 'Bannie manuellement par administrateur'}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 font-mono text-[11px] whitespace-nowrap tabular-nums">
+                        {formatDate(item.created_at)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {item.expires_at ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 tabular-nums">
+                            <Clock size={11} />
+                            {formatDate(item.expires_at)}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-md border border-red-200">
+                            Permanente
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleUnbanIp(item.ip_address)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold text-xs transition-colors border border-emerald-200 active:scale-95"
+                          title="Débannir l'adresse IP"
+                        >
+                          <Trash2 size={12} />
+                          <span>Débannir</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </AdminScrollTableContainer>
+          </>
         )}
       </div>
     </Card>
