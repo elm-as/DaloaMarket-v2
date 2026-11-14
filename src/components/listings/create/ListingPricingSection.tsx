@@ -1,5 +1,5 @@
 import React from 'react';
-import { Percent, Sparkles, CheckCircle2, Flame, ShieldCheck, Crown } from 'lucide-react';
+import { Percent, ShieldCheck, Crown } from 'lucide-react';
 import type { UseFormRegister, FieldErrors, UseFormSetValue } from 'react-hook-form';
 import type { ListingFormValues } from '../../../pages/ListingCreatePage';
 import { formatPrice } from '../../../lib/utils';
@@ -21,17 +21,9 @@ interface ListingPricingSectionProps {
   onVariantsChange: (variants: ListingVariant[]) => void;
 }
 
-const FLASH_PROMO_PRESETS = [
-  { label: 'Promo -10%', pct: 0.1 },
-  { label: 'Promo -15%', pct: 0.15 },
-  { label: 'Promo -20%', pct: 0.2 },
-  { label: 'Promo -30%', pct: 0.3 },
-];
-
 export const ListingPricingSection: React.FC<ListingPricingSectionProps> = ({
   register,
   errors,
-  setValue,
   category,
   priceNum,
   discountPercent,
@@ -42,12 +34,6 @@ export const ListingPricingSection: React.FC<ListingPricingSectionProps> = ({
   variants,
   onVariantsChange,
 }) => {
-  const applyFlashPromoPreset = (pct: number) => {
-    if (!setValue || isNaN(priceNum) || priceNum < 300) return;
-    const rawOriginal = Math.round(priceNum / (1 - pct));
-    const roundedOriginal = Math.ceil(rawOriginal / 50) * 50;
-    setValue('original_price', String(roundedOriginal), { shouldDirty: true, shouldValidate: true });
-  };
   return (
     <div className="space-y-4">
       {/* ── 2-COLUMN PRICE GRID ── */}
@@ -150,45 +136,6 @@ export const ListingPricingSection: React.FC<ListingPricingSectionProps> = ({
               <strong className="tabular-nums">{formatPrice(priceNum - Math.round(priceNum * 0.025))}</strong> sur cette vente.
             </p>
           )}
-        </div>
-      )}
-
-      {/* ── BOUTONS PROMO TEMPORAIRE / FLASH FOMO (1 CLIC) ── */}
-      {!isNaN(priceNum) && priceNum >= 300 && setValue && (
-        <div className="p-3 rounded-2xl bg-orange-50/50 border border-orange-200/60 space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-orange-950">
-              <Flame className="w-3.5 h-3.5 text-orange-600 fill-orange-500" />
-              Activer une Promo Flash (FOMO)
-            </span>
-            <span className="text-[10px] font-bold text-orange-700">
-              Vend jusqu'à 3× plus vite
-            </span>
-          </div>
-          <p className="text-[11px] text-gray-600 leading-snug">
-            Cliquez sur un badge pour afficher un prix barré et le tag <strong>« 🔥 Offre Flash »</strong> sur votre annonce :
-          </p>
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            {FLASH_PROMO_PRESETS.map((preset) => (
-              <button
-                key={preset.label}
-                type="button"
-                onClick={() => applyFlashPromoPreset(preset.pct)}
-                className="px-2.5 py-1 rounded-xl bg-white hover:bg-orange-600 hover:text-white text-orange-700 border border-orange-200 text-[11px] font-extrabold transition-all active:scale-95 shadow-2xs cursor-pointer"
-              >
-                ⚡ {preset.label}
-              </button>
-            ))}
-            {discountPercent > 0 && (
-              <button
-                type="button"
-                onClick={() => setValue('original_price', '', { shouldDirty: true })}
-                className="px-2.5 py-1 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 text-[11px] font-bold transition-all cursor-pointer"
-              >
-                Retirer la promo
-              </button>
-            )}
-          </div>
         </div>
       )}
 

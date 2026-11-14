@@ -46,7 +46,7 @@ export const ListingDetailsSection: React.FC<ListingDetailsSectionProps> = ({
           Catégorie de l'article <span className="text-red-500">*</span>
         </label>
         <input type="hidden" {...register('category', { required: 'Choisissez une catégorie' })} />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="flex flex-wrap gap-2">
           {CATEGORIES.map((cat) => {
             const isSelected = watchCategory === cat.id;
             return (
@@ -55,16 +55,16 @@ export const ListingDetailsSection: React.FC<ListingDetailsSectionProps> = ({
                 type="button"
                 onClick={() => setValue('category', cat.id, { shouldValidate: true })}
                 className={cn(
-                  'flex items-center gap-2 p-2.5 rounded-2xl border text-left transition-all cursor-pointer active:scale-95 shadow-2xs',
+                  'inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all cursor-pointer active:scale-95',
                   isSelected
-                    ? 'border-orange-500 bg-orange-50/80 text-orange-950 font-black shadow-xs ring-2 ring-orange-500/20'
-                    : 'border-gray-200/80 bg-gray-50/60 text-gray-700 hover:border-gray-300 hover:bg-white'
+                    ? 'border-orange-500 bg-orange-50 text-orange-950 font-bold ring-1 ring-orange-500/20'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50 font-medium'
                 )}
               >
-                <div className={cn('p-1.5 rounded-xl transition-colors', isSelected ? 'bg-orange-500 text-white' : 'bg-white text-gray-500')}>
+                <span className={cn('shrink-0', isSelected ? 'text-orange-600' : 'text-gray-500')}>
                   {CATEGORY_ICONS[cat.id]}
-                </div>
-                <span className="text-xs truncate">{cat.label}</span>
+                </span>
+                <span className="text-xs leading-tight">{cat.label}</span>
               </button>
             );
           })}

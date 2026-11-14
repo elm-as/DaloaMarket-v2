@@ -157,31 +157,59 @@ const ListingCreatePage: React.FC = () => {
     toast.success('Brouillon effacé.');
   };
 
-  const handleNextStep = async () => {
-    if (currentStep === 1) {
-      if (!isEditing && photos.length === 0 && existingPhotos.length === 0) {
+  const validateWizardStep = async (step: number): Promise<boolean> => {
+    if (step === 1) {
+      if (photos.length + existingPhotos.length === 0) {
         toast.error('Ajoutez au moins une photo de votre article.');
-        return;
+        return false;
       }
-      if (await trigger(['title', 'category', 'condition'])) {
-        setCurrentStep(2);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (!watchTitle.trim() || watchTitle.trim().length < 3) {
+        await trigger(['title']);
+        toast.error('Saisissez un titre d’au moins 3 caractères.');
+        return false;
       }
-      return;
+      return trigger(['title', 'category', 'condition']);
     }
-    if (currentStep === 2 && (await trigger(['price', 'stock']))) {
+    if (step === 2) {
+      if (currentStep === 2 && !(await trigger(['price', 'stock']))) return false;
       if (Number.isNaN(priceNum) || priceNum < 300) {
         toast.error("Le montant minimum d'une annonce est de 300 FCFA.");
-        return;
+        return false;
+      }
+      if (variants.length === 0 && (Number.isNaN(Number(watchStock)) || Number(watchStock) < 1)) {
+        toast.error('Indiquez une quantité en stock valide (minimum 1).');
+        return false;
       }
       const { errorMessage } = normalizeCreateVariants(variants);
       if (errorMessage) {
         toast.error(errorMessage);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleNextStep = async () => {
+    if (!(await validateWizardStep(currentStep))) return;
+    setCurrentStep((s) => Math.min(3, s + 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleStepSelect = async (targetStep: number) => {
+    if (targetStep === currentStep) return;
+    if (targetStep < currentStep) {
+      setCurrentStep(targetStep);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    for (let step = currentStep; step < targetStep; step += 1) {
+      if (!(await validateWizardStep(step))) {
+        if (step !== currentStep) setCurrentStep(step);
         return;
       }
-      setCurrentStep(3);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+    setCurrentStep(targetStep);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const onSubmit = async (values: ListingFormValues) => {
@@ -254,7 +282,7 @@ const ListingCreatePage: React.FC = () => {
         isEditing={isEditing}
         isDraftRestored={isDraftRestored}
         onBack={() => (currentStep > 1 ? setCurrentStep((s) => s - 1) : navigate(-1))}
-        onStepSelect={(step) => setCurrentStep(step)}
+        onStepSelect={handleStepSelect}
         onResetDraft={handleResetDraft}
       />
 
