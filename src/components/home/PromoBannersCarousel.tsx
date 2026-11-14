@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
 import { getBoostDestination } from '../../lib/boostNavigation';
@@ -18,6 +18,8 @@ import {
 
 export type { WebPromoBanner };
 
+const SLIDE_ANIMATION_MS = 420;
+
 export const PromoBannersCarousel: React.FC = () => {
   const navigate = useNavigate();
   const { user, userProfile } = useSupabase();
@@ -29,25 +31,17 @@ export const PromoBannersCarousel: React.FC = () => {
 
   const [banners, setBanners] = useState<WebPromoBanner[]>(DEFAULT_BANNERS);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isUserPaused, setIsUserPaused] = useState(false);
-  const [isHoverPaused, setIsHoverPaused] = useState(false);
   const [statusAnnouncement, setStatusAnnouncement] = useState('');
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   const trackRef = useRef<HTMLDivElement>(null);
+  const activeIndexRef = useRef(0);
   const pendingTargetRef = useRef<number | null>(null);
   const settledIndexRef = useRef(0);
+  const animRafRef = useRef<number | null>(null);
   const scrollRafRef = useRef<number | null>(null);
   const fallbackSettleRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setPrefersReducedMotion(mq.matches);
-    const onChange = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
-    mq.addEventListener?.('change', onChange);
-    return () => mq.removeEventListener?.('change', onChange);
-  }, []);
+  const isInteractingRef = useRef(false);
+  const cooldownUntilRef = useRef(0);
 
   const fetchBanners = useCallback(async () => {
     try {
@@ -80,23 +74,13 @@ export const PromoBannersCarousel: React.FC = () => {
     return Math.max(0, Math.min(idx, banners.length - 1));
   }, [banners.length]);
 
-  const goToSlide = useCallback((targetIndex: number) => {
-    const track = trackRef.current;
-    if (!track || banners.length <= 1) return;
-    const normalized = ((targetIndex % banners.length) + banners.length) % banners.length;
-    pendingTargetRef.current = normalized;
-    setActiveIndex(normalized);
-    track.scrollTo({
-      left: normalized * track.clientWidth,
-      behavior: prefersReducedMotion ? 'auto' : 'smooth',
-    });
-  }, [banners.length, prefersReducedMotion]);
-
   const handleTrackSettle = useCallback(() => {
     const track = trackRef.current;
     if (!track) return;
+    track.style.scrollSnapType = 'x mandatory';
     const current = computeNearestSlide(track);
     pendingTargetRef.current = null;
+    activeIndexRef.current = current;
     setActiveIndex(current);
     if (settledIndexRef.current !== current) {
       settledIndexRef.current = current;
@@ -106,6 +90,45 @@ export const PromoBannersCarousel: React.FC = () => {
       }
     }
   }, [banners, computeNearestSlide]);
+
+  const goToSlide = useCallback((targetIndex: number, isManual = false) => {
+    const track = trackRef.current;
+    if (!track || banners.length <= 1) return;
+    if (isManual) cooldownUntilRef.current = Date.now() + 6000;
+
+    const normalized = ((targetIndex % banners.length) + banners.length) % banners.length;
+    pendingTargetRef.current = normalized;
+    activeIndexRef.current = normalized;
+    setActiveIndex(normalized);
+
+    if (animRafRef.current) window.cancelAnimationFrame(animRafRef.current);
+
+    const startLeft = track.scrollLeft;
+    const targetLeft = normalized * track.clientWidth;
+    const distance = targetLeft - startLeft;
+    if (Math.abs(distance) < 2) {
+      handleTrackSettle();
+      return;
+    }
+
+    // Désactive temporairement scroll-snap pendant le glissement JS pour éviter
+    // que Chromium n'interrompe la transition horizontale en milieu de course.
+    track.style.scrollSnapType = 'none';
+    const startedAt = performance.now();
+
+    const step = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / SLIDE_ANIMATION_MS);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      track.scrollLeft = startLeft + distance * eased;
+      if (progress < 1) {
+        animRafRef.current = window.requestAnimationFrame(step);
+        return;
+      }
+      animRafRef.current = null;
+      handleTrackSettle();
+    };
+    animRafRef.current = window.requestAnimationFrame(step);
+  }, [banners.length, handleTrackSettle]);
 
   useEffect(() => {
     const track = trackRef.current;
@@ -118,10 +141,11 @@ export const PromoBannersCarousel: React.FC = () => {
           scrollRafRef.current = null;
           if (!trackRef.current || pendingTargetRef.current !== null) return;
           const nearest = computeNearestSlide(trackRef.current);
+          activeIndexRef.current = nearest;
           setActiveIndex((prev) => (prev === nearest ? prev : nearest));
         });
       }
-      if (!supportsScrollEnd) {
+      if (!supportsScrollEnd && pendingTargetRef.current === null) {
         if (fallbackSettleRef.current) window.clearTimeout(fallbackSettleRef.current);
         fallbackSettleRef.current = window.setTimeout(handleTrackSettle, 140);
       }
@@ -135,19 +159,21 @@ export const PromoBannersCarousel: React.FC = () => {
     return () => {
       track.removeEventListener('scroll', onScroll);
       if (supportsScrollEnd) track.removeEventListener('scrollend', handleTrackSettle);
+      if (animRafRef.current) window.cancelAnimationFrame(animRafRef.current);
       if (scrollRafRef.current) window.cancelAnimationFrame(scrollRafRef.current);
       if (fallbackSettleRef.current) window.clearTimeout(fallbackSettleRef.current);
     };
   }, [computeNearestSlide, handleTrackSettle]);
 
   useEffect(() => {
-    if (banners.length <= 1 || isUserPaused || isHoverPaused || prefersReducedMotion) return;
+    if (banners.length <= 1) return;
     const timer = window.setInterval(() => {
-      const base = pendingTargetRef.current ?? activeIndex;
-      goToSlide((base + 1) % banners.length);
+      if (isInteractingRef.current || Date.now() < cooldownUntilRef.current) return;
+      const base = pendingTargetRef.current ?? activeIndexRef.current;
+      goToSlide((base + 1) % banners.length, false);
     }, AUTO_ADVANCE_MS);
     return () => window.clearInterval(timer);
-  }, [banners.length, isUserPaused, isHoverPaused, prefersReducedMotion, activeIndex, goToSlide]);
+  }, [banners.length, goToSlide]);
 
   const handleBannerClick = (banner: WebPromoBanner) => {
     if (UUID_REGEX.test(banner.id)) {
@@ -173,17 +199,13 @@ export const PromoBannersCarousel: React.FC = () => {
     >
       <div className="mx-auto max-w-2xl lg:max-w-5xl">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-          <div
-            onPointerEnter={(e) => { if (e.pointerType === 'mouse') setIsHoverPaused(true); }}
-            onPointerLeave={() => setIsHoverPaused(false)}
-            className="lg:col-span-8 relative"
-          >
+          <div className="lg:col-span-8 relative">
             {banners.length > 1 && (
               <div className="pointer-events-none absolute inset-x-2.5 top-1/2 -translate-y-1/2 z-20 flex items-center justify-between">
                 <button
                   type="button"
                   aria-label="Affiche précédente"
-                  onClick={() => goToSlide((pendingTargetRef.current ?? activeIndex) - 1)}
+                  onClick={() => goToSlide((pendingTargetRef.current ?? activeIndexRef.current) - 1, true)}
                   style={{ touchAction: 'manipulation' }}
                   className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-slate-950/60 text-white hover:bg-slate-950/85 focus-visible:outline-2 focus-visible:outline-white"
                 >
@@ -192,7 +214,7 @@ export const PromoBannersCarousel: React.FC = () => {
                 <button
                   type="button"
                   aria-label="Affiche suivante"
-                  onClick={() => goToSlide((pendingTargetRef.current ?? activeIndex) + 1)}
+                  onClick={() => goToSlide((pendingTargetRef.current ?? activeIndexRef.current) + 1, true)}
                   style={{ touchAction: 'manipulation' }}
                   className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-slate-950/60 text-white hover:bg-slate-950/85 focus-visible:outline-2 focus-visible:outline-white"
                 >
@@ -206,6 +228,12 @@ export const PromoBannersCarousel: React.FC = () => {
               tabIndex={0}
               role="group"
               aria-label="Affiches"
+              onPointerDown={() => {
+                isInteractingRef.current = true;
+                cooldownUntilRef.current = Date.now() + 6000;
+              }}
+              onPointerUp={() => { isInteractingRef.current = false; }}
+              onPointerCancel={() => { isInteractingRef.current = false; }}
               style={{ touchAction: 'manipulation' }}
               className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none rounded-3xl border border-slate-200 bg-slate-950 shadow-xs focus-visible:outline-2 focus-visible:outline-orange-600"
             >
@@ -220,7 +248,7 @@ export const PromoBannersCarousel: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleBannerClick(banner)}
-                    className="group relative flex h-40 sm:h-44 lg:h-[200px] w-full flex-col justify-between p-4 sm:p-5 text-left"
+                    className="group relative flex h-48 sm:h-56 lg:h-[252px] w-full flex-col justify-between p-4 sm:p-6 text-left"
                   >
                     <img
                       src={banner.image_url}
@@ -280,34 +308,22 @@ export const PromoBannersCarousel: React.FC = () => {
             </p>
 
             {banners.length > 1 && (
-              <div className="mt-2 flex items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsUserPaused((prev) => !prev)}
-                  aria-label={isUserPaused ? 'Reprendre le défilement' : 'Mettre en pause le défilement'}
-                  className="inline-flex h-6 items-center gap-1 rounded-full border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-orange-600"
-                >
-                  {isUserPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
-                  <span>{isUserPaused ? 'Lire' : 'Pause'}</span>
-                </button>
-
-                <nav aria-label="Choisir une affiche" className="flex items-center gap-1.5">
-                  {banners.map((banner, idx) => (
-                    <button
-                      key={`marker-${banner.id}`}
-                      type="button"
-                      aria-label={`Afficher : ${banner.title}`}
-                      aria-current={idx === activeIndex ? 'true' : undefined}
-                      onClick={() => goToSlide(idx)}
-                      style={{ touchAction: 'manipulation' }}
-                      className={cn(
-                        'h-2 rounded-full transition-all focus-visible:outline-2 focus-visible:outline-orange-600',
-                        idx === activeIndex ? 'w-5 bg-orange-600' : 'w-2 bg-slate-300 hover:bg-slate-400',
-                      )}
-                    />
-                  ))}
-                </nav>
-              </div>
+              <nav aria-label="Choisir une affiche" className="mt-2.5 flex items-center justify-center gap-1.5">
+                {banners.map((banner, idx) => (
+                  <button
+                    key={`marker-${banner.id}`}
+                    type="button"
+                    aria-label={`Afficher : ${banner.title}`}
+                    aria-current={idx === activeIndex ? 'true' : undefined}
+                    onClick={() => goToSlide(idx, true)}
+                    style={{ touchAction: 'manipulation' }}
+                    className={cn(
+                      'h-2 rounded-full transition-all focus-visible:outline-2 focus-visible:outline-orange-600',
+                      idx === activeIndex ? 'w-5 bg-orange-600' : 'w-2 bg-slate-300 hover:bg-slate-400',
+                    )}
+                  />
+                ))}
+              </nav>
             )}
           </div>
 

@@ -1,4 +1,4 @@
-import type { ListingFormValues } from '../pages/ListingCreatePage';
+import type { ListingFormValues } from '../components/listings/create/listingCreatePayload';
 import type { ListingVariant } from '../types/listing';
 
 const DRAFT_STORAGE_KEY = 'daloamarket_listing_draft_v2';

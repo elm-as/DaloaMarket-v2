@@ -10,7 +10,7 @@ export const PromoSideShortcuts: React.FC<PromoSideShortcutsProps> = ({
   onOpenExpress,
   onOpenBoost,
 }) => (
-  <div className="hidden lg:flex lg:col-span-4 flex-col gap-3 h-[200px]">
+  <div className="hidden lg:flex lg:col-span-4 flex-col gap-3 h-[252px]">
     <button
       type="button"
       onClick={onOpenExpress}

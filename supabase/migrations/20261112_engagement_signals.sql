@@ -82,7 +82,7 @@ AS $$
       FROM public.listing_views v
       WHERE v.listing_id = l.id
         AND v.last_viewed_at > now() - interval '7 days'
-        AND v.viewer_id IS DISTINCT FROM l.user_id
+        AND v.viewer_id::text IS DISTINCT FROM l.user_id::text
     ) AS recent_viewers_7d,
     (
       SELECT count(*)::integer
@@ -158,7 +158,7 @@ AS $$
       FROM public.listing_views v
       JOIN public.listings l ON l.id = v.listing_id
       WHERE l.user_id = auth.uid()
-        AND v.viewer_id IS DISTINCT FROM l.user_id
+        AND v.viewer_id::text IS DISTINCT FROM l.user_id::text
         AND v.last_viewed_at > now() - interval '7 days'
     ) AS visitors_this_week,
     (
@@ -166,7 +166,7 @@ AS $$
       FROM public.listing_views v
       JOIN public.listings l ON l.id = v.listing_id
       WHERE l.user_id = auth.uid()
-        AND v.viewer_id IS DISTINCT FROM l.user_id
+        AND v.viewer_id::text IS DISTINCT FROM l.user_id::text
         AND v.last_viewed_at <= now() - interval '7 days'
         AND v.last_viewed_at > now() - interval '14 days'
     ) AS visitors_prev_week,
