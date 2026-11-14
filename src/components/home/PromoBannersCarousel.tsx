@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
 import { getBoostDestination } from '../../lib/boostNavigation';
 import { useSupabase } from '../../hooks/useSupabase';
 import { PromoSideShortcuts } from './PromoSideShortcuts';
+import { PromoBannerSlide } from './PromoBannerSlide';
 import {
   AUTO_ADVANCE_MS,
   DEFAULT_BANNERS,
+  glideTrackHorizontally,
   isBannerWithinSchedule,
   resolveActiveBanners,
   resolveBannerAction,
@@ -18,7 +20,8 @@ import {
 
 export type { WebPromoBanner };
 
-const SLIDE_ANIMATION_MS = 420;
+const AUTO_GLIDE_MS = 1000;
+const MANUAL_GLIDE_MS = 650;
 
 export const PromoBannersCarousel: React.FC = () => {
   const navigate = useNavigate();
@@ -37,11 +40,31 @@ export const PromoBannersCarousel: React.FC = () => {
   const activeIndexRef = useRef(0);
   const pendingTargetRef = useRef<number | null>(null);
   const settledIndexRef = useRef(0);
+  const isAnimatingRef = useRef(false);
   const animRafRef = useRef<number | null>(null);
+  const settleFrameRef = useRef<number | null>(null);
   const scrollRafRef = useRef<number | null>(null);
   const fallbackSettleRef = useRef<number | null>(null);
   const isInteractingRef = useRef(false);
   const cooldownUntilRef = useRef(0);
+
+  const cancelRunningGlide = useCallback(() => {
+    if (animRafRef.current) window.cancelAnimationFrame(animRafRef.current);
+    if (settleFrameRef.current) window.cancelAnimationFrame(settleFrameRef.current);
+    if (fallbackSettleRef.current) window.clearTimeout(fallbackSettleRef.current);
+    animRafRef.current = null;
+    settleFrameRef.current = null;
+    isAnimatingRef.current = false;
+  }, []);
+
+  const announceSlide = useCallback((idx: number) => {
+    if (settledIndexRef.current === idx) return;
+    settledIndexRef.current = idx;
+    const slide = banners[idx];
+    if (slide) {
+      setStatusAnnouncement(`Affiche ${idx + 1} sur ${banners.length} : ${slide.title}`);
+    }
+  }, [banners]);
 
   const fetchBanners = useCallback(async () => {
     try {
@@ -75,60 +98,55 @@ export const PromoBannersCarousel: React.FC = () => {
   }, [banners.length]);
 
   const handleTrackSettle = useCallback(() => {
+    // Ne jamais réactiver scroll-snap pendant qu'un glissement JS est en cours,
+    // sinon Chrome scrollend déclenche un snap brutal et fait trembler la piste.
+    if (isAnimatingRef.current) return;
     const track = trackRef.current;
     if (!track) return;
-    track.style.scrollSnapType = 'x mandatory';
+    track.style.scrollSnapType = '';
+    track.style.scrollBehavior = '';
     const current = computeNearestSlide(track);
     pendingTargetRef.current = null;
     activeIndexRef.current = current;
     setActiveIndex(current);
-    if (settledIndexRef.current !== current) {
-      settledIndexRef.current = current;
-      const slide = banners[current];
-      if (slide) {
-        setStatusAnnouncement(`Affiche ${current + 1} sur ${banners.length} : ${slide.title}`);
-      }
-    }
-  }, [banners, computeNearestSlide]);
+    announceSlide(current);
+  }, [announceSlide, computeNearestSlide]);
 
   const goToSlide = useCallback((targetIndex: number, isManual = false) => {
     const track = trackRef.current;
     if (!track || banners.length <= 1) return;
-    if (isManual) cooldownUntilRef.current = Date.now() + 6000;
+    if (isManual) cooldownUntilRef.current = Date.now() + 5500;
+
+    cancelRunningGlide();
 
     const normalized = ((targetIndex % banners.length) + banners.length) % banners.length;
     pendingTargetRef.current = normalized;
     activeIndexRef.current = normalized;
     setActiveIndex(normalized);
 
-    if (animRafRef.current) window.cancelAnimationFrame(animRafRef.current);
+    const slideEl = track.children[normalized] as HTMLElement | undefined;
+    const targetLeft = slideEl ? slideEl.offsetLeft : normalized * track.clientWidth;
+    isAnimatingRef.current = true;
 
-    const startLeft = track.scrollLeft;
-    const targetLeft = normalized * track.clientWidth;
-    const distance = targetLeft - startLeft;
-    if (Math.abs(distance) < 2) {
-      handleTrackSettle();
-      return;
-    }
-
-    // Désactive temporairement scroll-snap pendant le glissement JS pour éviter
-    // que Chromium n'interrompe la transition horizontale en milieu de course.
-    track.style.scrollSnapType = 'none';
-    const startedAt = performance.now();
-
-    const step = (now: number) => {
-      const progress = Math.min(1, (now - startedAt) / SLIDE_ANIMATION_MS);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      track.scrollLeft = startLeft + distance * eased;
-      if (progress < 1) {
-        animRafRef.current = window.requestAnimationFrame(step);
-        return;
-      }
-      animRafRef.current = null;
-      handleTrackSettle();
-    };
-    animRafRef.current = window.requestAnimationFrame(step);
-  }, [banners.length, handleTrackSettle]);
+    glideTrackHorizontally({
+      track,
+      targetLeft,
+      durationMs: isManual ? MANUAL_GLIDE_MS : AUTO_GLIDE_MS,
+      onFrameHandle: (id) => { animRafRef.current = id; },
+      onComplete: () => {
+        settleFrameRef.current = window.requestAnimationFrame(() => {
+          settleFrameRef.current = window.requestAnimationFrame(() => {
+            settleFrameRef.current = null;
+            isAnimatingRef.current = false;
+            track.style.scrollSnapType = '';
+            track.style.scrollBehavior = '';
+            pendingTargetRef.current = null;
+            announceSlide(normalized);
+          });
+        });
+      },
+    });
+  }, [announceSlide, banners.length, cancelRunningGlide]);
 
   useEffect(() => {
     const track = trackRef.current;
@@ -136,16 +154,17 @@ export const PromoBannersCarousel: React.FC = () => {
     const supportsScrollEnd = 'onscrollend' in window;
 
     const onScroll = () => {
-      if (pendingTargetRef.current === null && scrollRafRef.current === null) {
+      if (isAnimatingRef.current || pendingTargetRef.current !== null) return;
+      if (scrollRafRef.current === null) {
         scrollRafRef.current = window.requestAnimationFrame(() => {
           scrollRafRef.current = null;
-          if (!trackRef.current || pendingTargetRef.current !== null) return;
+          if (!trackRef.current || isAnimatingRef.current || pendingTargetRef.current !== null) return;
           const nearest = computeNearestSlide(trackRef.current);
           activeIndexRef.current = nearest;
           setActiveIndex((prev) => (prev === nearest ? prev : nearest));
         });
       }
-      if (!supportsScrollEnd && pendingTargetRef.current === null) {
+      if (!supportsScrollEnd) {
         if (fallbackSettleRef.current) window.clearTimeout(fallbackSettleRef.current);
         fallbackSettleRef.current = window.setTimeout(handleTrackSettle, 140);
       }
@@ -159,16 +178,15 @@ export const PromoBannersCarousel: React.FC = () => {
     return () => {
       track.removeEventListener('scroll', onScroll);
       if (supportsScrollEnd) track.removeEventListener('scrollend', handleTrackSettle);
-      if (animRafRef.current) window.cancelAnimationFrame(animRafRef.current);
+      cancelRunningGlide();
       if (scrollRafRef.current) window.cancelAnimationFrame(scrollRafRef.current);
-      if (fallbackSettleRef.current) window.clearTimeout(fallbackSettleRef.current);
     };
-  }, [computeNearestSlide, handleTrackSettle]);
+  }, [cancelRunningGlide, computeNearestSlide, handleTrackSettle]);
 
   useEffect(() => {
     if (banners.length <= 1) return;
     const timer = window.setInterval(() => {
-      if (isInteractingRef.current || Date.now() < cooldownUntilRef.current) return;
+      if (isInteractingRef.current || isAnimatingRef.current || Date.now() < cooldownUntilRef.current) return;
       const base = pendingTargetRef.current ?? activeIndexRef.current;
       goToSlide((base + 1) % banners.length, false);
     }, AUTO_ADVANCE_MS);
@@ -230,76 +248,28 @@ export const PromoBannersCarousel: React.FC = () => {
               aria-label="Affiches"
               onPointerDown={() => {
                 isInteractingRef.current = true;
-                cooldownUntilRef.current = Date.now() + 6000;
+                cooldownUntilRef.current = Date.now() + 5500;
+                if (isAnimatingRef.current && trackRef.current) {
+                  cancelRunningGlide();
+                  pendingTargetRef.current = null;
+                  trackRef.current.style.scrollSnapType = '';
+                  trackRef.current.style.scrollBehavior = '';
+                }
               }}
               onPointerUp={() => { isInteractingRef.current = false; }}
               onPointerCancel={() => { isInteractingRef.current = false; }}
+              onPointerLeave={() => { isInteractingRef.current = false; }}
               style={{ touchAction: 'manipulation' }}
-              className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none rounded-3xl border border-slate-200 bg-slate-950 shadow-xs focus-visible:outline-2 focus-visible:outline-orange-600"
+              className="relative flex overflow-x-auto snap-x snap-mandatory scrollbar-none rounded-3xl border border-slate-200 bg-slate-950 shadow-xs focus-visible:outline-2 focus-visible:outline-orange-600"
             >
               {banners.map((banner, idx) => (
-                <div
+                <PromoBannerSlide
                   key={banner.id}
-                  role="group"
-                  aria-roledescription="slide"
-                  aria-label={`${idx + 1} sur ${banners.length}`}
-                  className="w-full shrink-0 snap-center"
-                >
-                  <button
-                    type="button"
-                    onClick={() => handleBannerClick(banner)}
-                    className="group relative flex h-48 sm:h-56 lg:h-[252px] w-full flex-col justify-between p-4 sm:p-6 text-left"
-                  >
-                    <img
-                      src={banner.image_url}
-                      alt={banner.title}
-                      loading={idx === 0 ? 'eager' : 'lazy'}
-                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/45 to-slate-950/15" />
-
-                    <div className="relative z-10 flex items-center justify-between gap-2 w-full">
-                      {banner.badge_text ? (
-                        <span
-                          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase"
-                          style={{ backgroundColor: banner.badge_color || '#EA580C' }}
-                        >
-                          {banner.badge_text}
-                        </span>
-                      ) : <span />}
-
-                      <div className="flex items-center gap-1.5">
-                        {banner.sponsor_name && (
-                          <span className="rounded-full bg-slate-900/75 border border-white/20 px-2.5 py-0.5 text-[10px] font-semibold text-white truncate max-w-[140px]">
-                            {banner.sponsor_name}
-                          </span>
-                        )}
-                        {banners.length > 1 && (
-                          <span className="rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white tabular-nums">
-                            {idx + 1}/{banners.length}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="relative z-10 flex items-end justify-between gap-3 w-full">
-                      <div className="min-w-0 flex-1 space-y-0.5">
-                        <h3 className="text-sm sm:text-lg font-black text-white leading-tight line-clamp-1">
-                          {banner.title}
-                        </h3>
-                        {banner.subtitle && (
-                          <p className="max-w-lg text-[11px] sm:text-xs text-white/90 font-medium line-clamp-1 sm:line-clamp-2">
-                            {banner.subtitle}
-                          </p>
-                        )}
-                      </div>
-                      <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-orange-600 px-3 py-1.5 text-[11px] font-bold text-white group-hover:bg-orange-500 transition-colors">
-                        <span>Découvrir</span>
-                        <ArrowRight className="h-3 w-3" />
-                      </span>
-                    </div>
-                  </button>
-                </div>
+                  banner={banner}
+                  index={idx}
+                  total={banners.length}
+                  onSelect={handleBannerClick}
+                />
               ))}
             </div>
 
