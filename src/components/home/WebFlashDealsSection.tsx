@@ -1,11 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Tag, Rocket, MapPin } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { formatPrice } from '../../lib/utils';
-import { getBoostDestination } from '../../lib/boostNavigation';
-import { usePhase } from '../../contexts/PhaseContext';
-import { useSupabase } from '../../hooks/useSupabase';
 
 interface FlashDealItem {
   id: string;
@@ -18,15 +15,11 @@ interface FlashDealItem {
   boosted_until: string | null;
 }
 
+/**
+ * Bandeau horizontal d'offres promotionnelles et articles mis en avant.
+ */
 export const WebFlashDealsSection: React.FC = () => {
   const navigate = useNavigate();
-  const { enableBoost } = usePhase();
-  const { user, userProfile } = useSupabase();
-  const boostDestination = getBoostDestination(Boolean(user), userProfile, {
-    login: '/login',
-    myListings: '/profile?tab=listings',
-    packs: '/acheter-pack',
-  });
   const [deals, setDeals] = useState<FlashDealItem[]>([]);
 
   const fetchFlashDeals = useCallback(async () => {
@@ -62,36 +55,9 @@ export const WebFlashDealsSection: React.FC = () => {
   if (deals.length === 0) return null;
 
   return (
-    <section id="flash-deals-section" className="px-4 pt-3 pb-1">
-      <div className="mx-auto max-w-2xl lg:max-w-5xl rounded-2xl border border-gray-200/80 bg-white overflow-hidden shadow-xs">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 bg-gray-50/70 px-4 py-2.5">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50 text-orange-600 border border-orange-100">
-              <Tag className="h-3.5 w-3.5" />
-            </span>
-            <div>
-              <h2 className="text-xs sm:text-sm font-bold text-gray-900 leading-tight">
-                Promotions & Articles en vedette
-              </h2>
-              <p className="text-[11px] font-medium text-gray-500">
-                Sélection d’offres actives proposées par les vendeurs de Daloa
-              </p>
-            </div>
-          </div>
-
-          {enableBoost && (
-            <button
-              type="button"
-              onClick={() => navigate(boostDestination)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700 hover:bg-orange-100 transition-colors"
-            >
-              <Rocket className="h-3.5 w-3.5" />
-              <span>Mettre en avant</span>
-            </button>
-          )}
-        </div>
-
-        <div className="no-scrollbar flex items-stretch gap-3 overflow-x-auto p-3.5">
+    <section id="flash-deals-section" aria-label="Offres promotionnelles" className="px-4 pt-3 pb-1">
+      <div className="mx-auto max-w-2xl lg:max-w-5xl">
+        <div className="no-scrollbar flex items-stretch gap-3 overflow-x-auto pb-1">
           {deals.map((item) => {
             const photo = item.photos?.[0] || '';
             const hasDiscount = item.original_price != null && item.original_price > item.price;
