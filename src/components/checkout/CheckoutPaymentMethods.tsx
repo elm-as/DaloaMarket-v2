@@ -1,7 +1,7 @@
 import React from 'react';
-import { Truck, ShieldCheck, CreditCard, Banknote, Store } from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { PaymentNetworkStatus } from '../payment/PaymentNetworkStatus';
+import { Truck, CreditCard, Banknote, Store } from 'lucide-react';
+import { cn, formatPrice } from '../../lib/utils';
+import { BUYER_FEE_RATE } from '../../lib/pricing';
 import type { CheckoutPaymentMethod } from './checkout.types';
 
 interface CheckoutPaymentMethodsProps {
@@ -14,10 +14,15 @@ interface CheckoutPaymentMethodsProps {
     isCodAllowed: boolean;
     isCodBlocked: boolean;
     codBlockedFormattedDate: string;
+    estimatedOnlineFee?: number;
   };
   onSelect: (method: CheckoutPaymentMethod) => void;
 }
 
+/**
+ * Sélecteur de mode de règlement au checkout Web.
+ * Annonce les frais éventuels directement sur chaque carte afin d'éviter toute hausse surprise.
+ */
 export const CheckoutPaymentMethods: React.FC<CheckoutPaymentMethodsProps> = ({
   config,
   onSelect,
@@ -31,18 +36,24 @@ export const CheckoutPaymentMethods: React.FC<CheckoutPaymentMethodsProps> = ({
     isCodAllowed,
     isCodBlocked,
     codBlockedFormattedDate,
+    estimatedOnlineFee = 0,
   } = config;
 
   const isDeliveryMode = !isPickup;
   const hasMultipleChoices = isPickupAllowed || isCodAllowed || isCodBlocked;
+  const feePercentLabel = `${Math.round(BUYER_FEE_RATE * 100)} %`;
+  const onlineFeeHint =
+    estimatedOnlineFee > 0
+      ? `Frais de service en ligne : +${formatPrice(estimatedOnlineFee)} (${feePercentLabel})`
+      : `Frais de service en ligne : ${feePercentLabel}`;
 
   return (
-    <div className="space-y-4 rounded-xl border border-stone-200 bg-white p-4 sm:p-5">
-      <div className="flex items-center gap-2 text-sm font-bold text-stone-900">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50 text-[var(--color-primary)]">
-          <CreditCard size={16} />
+    <div className="space-y-3.5 rounded-xl border border-stone-200 bg-white p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-2 text-sm font-bold text-stone-900">
+        <div className="flex items-center gap-2">
+          <CreditCard size={16} className="text-[var(--color-primary)]" />
+          <span>Mode de paiement</span>
         </div>
-        <span>Mode de paiement</span>
       </div>
 
       <div className={cn('grid gap-3', hasMultipleChoices ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1')}>
@@ -58,8 +69,7 @@ export const CheckoutPaymentMethods: React.FC<CheckoutPaymentMethodsProps> = ({
               </span>
             </div>
             <p className="mt-2 text-[11px] font-medium leading-relaxed text-red-700">
-              Suspendu jusqu'au {codBlockedFormattedDate} suite à des commandes non réceptionnées.
-              Veuillez régler par Mobile Money sécurisé.
+              Suspendu jusqu&apos;au {codBlockedFormattedDate} suite à des commandes non réceptionnées.
             </p>
           </div>
         )}
@@ -75,14 +85,14 @@ export const CheckoutPaymentMethods: React.FC<CheckoutPaymentMethodsProps> = ({
                 : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
             )}
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-1.5 text-xs font-bold">
                 <Banknote className="h-4 w-4 shrink-0 text-emerald-600" />
                 <span>Paiement à la livraison</span>
               </span>
               <div
                 className={cn(
-                  'flex h-4 w-4 items-center justify-center rounded-full border-2',
+                  'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2',
                   paymentMethod === 'cod'
                     ? 'border-[var(--color-primary)] bg-[var(--color-primary)]'
                     : 'border-stone-300'
@@ -91,8 +101,11 @@ export const CheckoutPaymentMethods: React.FC<CheckoutPaymentMethodsProps> = ({
                 {paymentMethod === 'cod' && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
               </div>
             </div>
-            <span className="mt-2 text-[11px] font-semibold text-emerald-700">
+            <span className="mt-2 text-[11px] font-medium text-stone-600">
               Espèces ou Mobile Money au livreur
+            </span>
+            <span className="mt-1 text-[11px] font-semibold text-emerald-700">
+              0 FCFA de frais en ligne
             </span>
           </button>
         )}
@@ -108,14 +121,14 @@ export const CheckoutPaymentMethods: React.FC<CheckoutPaymentMethodsProps> = ({
                 : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
             )}
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-1.5 text-xs font-bold">
                 <Store className="h-4 w-4 shrink-0 text-amber-600" />
                 <span>Espèces au magasin</span>
               </span>
               <div
                 className={cn(
-                  'flex h-4 w-4 items-center justify-center rounded-full border-2',
+                  'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2',
                   paymentMethod === 'cash_at_shop'
                     ? 'border-[var(--color-primary)] bg-[var(--color-primary)]'
                     : 'border-stone-300'
@@ -124,8 +137,11 @@ export const CheckoutPaymentMethods: React.FC<CheckoutPaymentMethodsProps> = ({
                 {paymentMethod === 'cash_at_shop' && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
               </div>
             </div>
-            <span className="mt-2 text-[11px] font-semibold text-amber-700">
+            <span className="mt-2 text-[11px] font-medium text-stone-600">
               Payer directement au vendeur sur place
+            </span>
+            <span className="mt-1 text-[11px] font-semibold text-emerald-700">
+              0 FCFA de frais en ligne
             </span>
           </button>
         )}
@@ -143,7 +159,7 @@ export const CheckoutPaymentMethods: React.FC<CheckoutPaymentMethodsProps> = ({
                 : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
           )}
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-1.5 text-xs font-bold">
               <CreditCard
                 className={cn(
@@ -151,7 +167,7 @@ export const CheckoutPaymentMethods: React.FC<CheckoutPaymentMethodsProps> = ({
                   onlineDisabled ? 'text-stone-400' : 'text-[var(--color-primary)]'
                 )}
               />
-              <span>Paiement Mobile Money Sécurisé</span>
+              <span>Mobile Money en ligne</span>
               {onlineDisabled && (
                 <span className="ml-1 rounded bg-stone-200 px-1.5 py-0.5 text-[10px] font-bold uppercase text-stone-700">
                   Indisponible
@@ -160,7 +176,7 @@ export const CheckoutPaymentMethods: React.FC<CheckoutPaymentMethodsProps> = ({
             </span>
             <div
               className={cn(
-                'flex h-4 w-4 items-center justify-center rounded-full border-2',
+                'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2',
                 paymentMethod === 'online' && !onlineDisabled
                   ? 'border-[var(--color-primary)] bg-[var(--color-primary)]'
                   : 'border-stone-300'
@@ -174,43 +190,33 @@ export const CheckoutPaymentMethods: React.FC<CheckoutPaymentMethodsProps> = ({
           <span className="mt-2 text-[11px] font-medium text-stone-500">
             {onlineDisabled && paymentNotice
               ? paymentNotice
-              : 'Wave, Orange Money, MTN MoMo, Moov, Djamo'}
+              : 'Wave, Orange Money, MTN MoMo, Moov'}
           </span>
+          {!onlineDisabled && (
+            <span className="mt-1 text-[11px] font-semibold tabular-nums text-stone-700">
+              {onlineFeeHint}
+            </span>
+          )}
         </button>
       </div>
 
-      <div className="rounded-xl border border-stone-200 bg-stone-50 p-3.5 text-xs font-medium leading-relaxed text-stone-700">
-        {paymentMethod === 'online' && (
-          <>
-            <p className="flex items-start gap-1.5">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-              <span>
-                <strong>Paiement protégé :</strong> Votre argent est sécurisé sous séquestre et vous est{' '}
-                <strong>remboursé à 100%</strong> en cas d'annulation ou de non-livraison.
-              </span>
-            </p>
-            <PaymentNetworkStatus className="mt-2.5" />
-          </>
-        )}
-        {paymentMethod === 'cod' && (
+      {paymentMethod === 'cod' && (
+        <div className="rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs font-medium leading-relaxed text-stone-700">
           <p className="flex items-start gap-1.5">
             <Truck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-primary)]" />
-            <span>
-              <strong>Livreur affilié :</strong> Livraison assurée par le livreur du vendeur. Remettez
-              le montant après vérification du colis.
-            </span>
+            <span>Remettez le montant au livreur après vérification de votre colis.</span>
           </p>
-        )}
-        {paymentMethod === 'cash_at_shop' && (
+        </div>
+      )}
+
+      {paymentMethod === 'cash_at_shop' && (
+        <div className="rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs font-medium leading-relaxed text-stone-700">
           <p className="flex items-start gap-1.5">
             <Store className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-            <span>
-              <strong>Retrait en boutique :</strong> Rendez-vous à la boutique du vendeur à Daloa pour
-              vérifier l'article et régler sur place en espèces.
-            </span>
+            <span>Vérifiez l&apos;article en boutique à Daloa et réglez sur place.</span>
           </p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
